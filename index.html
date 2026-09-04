@@ -1,0 +1,946 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="エビングハウスの忘却曲線に沿って、学んだことの復習タイミングを管理する道具。">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#EDE9DF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#10131E" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="忘れる前に">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png" sizes="192x192">
+<title>忘れる前に</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=Shippori+Mincho+B1:wght@600;700&amp;family=Zen+Kaku+Gothic+New:wght@400;500;700&amp;display=swap">
+</head>
+<body>
+<style id="app-css">
+:root{
+  color-scheme:light;
+  --ground:#EDE9DF;
+  --surface:#FBFAF6;
+  --surface-2:#F4F1E8;
+  --ink:#1C2438;
+  --ink-2:#4B5468;
+  --muted:#8D8974;
+  --line:#DAD4C4;
+  --line-soft:#E8E3D6;
+  --accent:#B1541F;
+  --accent-soft:#F3E1CE;
+  --deep:#213459;
+  --on-deep:#FBFAF6;
+  --late:#96302B;
+  --late-soft:#F2DBD5;
+  --calm:#3B6A5B;
+  --calm-soft:#DEE9E1;
+  --t1:#2E5EA0; --t2:#B15A22; --t3:#00918A; --t4:#7458B4; --t5:#5E8A2A; --t6:#AE3A5C;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --ground:#10131E;
+    --surface:#191E2B;
+    --surface-2:#212736;
+    --ink:#E9E4D8;
+    --ink-2:#B0B4C0;
+    --muted:#807F8B;
+    --line:#2B3140;
+    --line-soft:#222836;
+    --accent:#DF9A5C;
+    --accent-soft:#3A2A1A;
+    --deep:#8FA8D9;
+    --on-deep:#10131E;
+    --late:#E2887A;
+    --late-soft:#39221F;
+    --calm:#6FB29A;
+    --calm-soft:#172F29;
+    --t1:#5A8ACC; --t2:#C07240; --t3:#1D9C93; --t4:#9077D0; --t5:#6E9C42; --t6:#C9587C;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#10131E;
+  --surface:#191E2B;
+  --surface-2:#212736;
+  --ink:#E9E4D8;
+  --ink-2:#B0B4C0;
+  --muted:#807F8B;
+  --line:#2B3140;
+  --line-soft:#222836;
+  --accent:#DF9A5C;
+  --accent-soft:#3A2A1A;
+  --deep:#8FA8D9;
+  --on-deep:#10131E;
+  --late:#E2887A;
+  --late-soft:#39221F;
+  --calm:#6FB29A;
+  --calm-soft:#172F29;
+  --t1:#5A8ACC; --t2:#C07240; --t3:#1D9C93; --t4:#9077D0; --t5:#6E9C42; --t6:#C9587C;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--ground);
+  color:var(--ink);
+  font-family:"Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  font-size:15px;
+  line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:900px;margin:0 auto;padding:32px 20px 96px;display:flex;flex-direction:column;gap:28px}
+
+.masthead{display:flex;flex-direction:column;gap:16px}
+.brand{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.wordmark{display:flex;align-items:center;gap:13px;min-width:0}
+.mark{width:26px;height:34px;flex:0 0 auto;color:var(--accent);display:block}
+h1{
+  font-family:"Shippori Mincho B1","Hiragino Mincho ProN",serif;
+  font-weight:700;font-size:clamp(29px,5vw,42px);line-height:1.15;
+  margin:0;letter-spacing:.05em;text-wrap:balance;color:var(--ink);
+}
+h1 .dot{color:var(--accent)}
+.tagline{color:var(--muted);font-size:13px;letter-spacing:.05em;max-width:46ch;margin:0}
+.today-chip{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:12px;letter-spacing:.06em;
+  color:var(--ink-2);background:var(--surface);border:1px solid var(--line);
+  border-radius:999px;padding:5px 12px;white-space:nowrap;font-variant-numeric:tabular-nums;
+}
+
+.curve-card{
+  background:var(--surface);border:1px solid var(--line);border-radius:14px;
+  padding:16px 16px 12px;box-shadow:var(--shadow);overflow:hidden;
+}
+.curve-card svg{display:block;width:100%;height:auto}
+.curve-legend{display:flex;gap:20px;flex-wrap:wrap;margin-top:8px;font-size:11.5px;color:var(--muted);letter-spacing:.03em}
+.curve-legend b{font-weight:500;color:var(--ink-2)}
+.swatch{display:inline-block;width:16px;height:2px;vertical-align:middle;margin-right:6px;border-radius:2px}
+.chart-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:4px;flex-wrap:wrap}
+.chart-title{font-size:11.5px;letter-spacing:.12em;color:var(--muted);margin:0;font-weight:500}
+.chart-more{font-size:11px;color:var(--muted);font-family:"IBM Plex Mono",monospace}
+.curve-card svg .hit{cursor:pointer}
+.chart-cap{
+  margin-top:8px;padding-top:9px;border-top:1px solid var(--line-soft);
+  font-size:12.5px;color:var(--ink-2);display:flex;gap:9px;align-items:center;flex-wrap:wrap;min-height:26px;
+}
+.chart-cap .dim{color:var(--muted);font-size:11.5px}
+.chart-cap .mono{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+.chart-cap .dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+.taglist{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.tagchip{
+  background:var(--surface);border:1px solid var(--line);color:var(--ink-2);
+  font-size:12px;padding:5px 12px;letter-spacing:.03em;display:inline-flex;align-items:center;gap:7px;
+}
+.tagchip .dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+.tagchip .n{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.tagchip:hover{border-color:var(--ink-2)}
+.tagchip[aria-pressed="true"]{border-color:var(--ink-2);color:var(--ink);background:var(--surface-2);font-weight:500}
+.tagchip[aria-pressed="true"] .n{color:var(--ink-2)}
+.pill.tag{background:var(--surface-2);color:var(--ink-2);border:1px solid var(--line);display:inline-flex;align-items:center;gap:6px}
+.pill.tag .dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(136px,1fr));gap:10px}
+.stat{
+  background:var(--surface);border:1px solid var(--line);border-radius:12px;
+  padding:12px 14px;display:flex;flex-direction:column;gap:1px;position:relative;overflow:hidden;
+}
+.stat::before{content:"";position:absolute;top:0;bottom:0;left:0;width:3px;background:var(--line)}
+.stat.is-late::before{background:var(--late)}
+.stat.is-due::before{background:var(--accent)}
+.stat.is-calm::before{background:var(--calm)}
+.stat .n{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:26px;font-weight:500;line-height:1.25;font-variant-numeric:tabular-nums}
+.stat.is-late .n{color:var(--late)}
+.stat.is-due .n{color:var(--accent)}
+.stat.is-calm .n{color:var(--calm)}
+.stat .k{font-size:11.5px;letter-spacing:.07em;color:var(--muted)}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow)}
+.panel-title{font-size:11.5px;letter-spacing:.14em;color:var(--muted);margin:0 0 12px;font-weight:500}
+form.add{display:flex;flex-direction:column;gap:10px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row > *{flex:1 1 170px;min-width:0}
+input[type="text"],input[type="date"],textarea,select{
+  font:inherit;color:var(--ink);background:var(--surface-2);
+  border:1px solid var(--line);border-radius:9px;padding:9px 12px;width:100%;
+  transition:border-color .15s,background .15s;
+}
+textarea{resize:vertical;min-height:62px;line-height:1.7}
+input::placeholder,textarea::placeholder{color:var(--muted)}
+input:focus-visible,textarea:focus-visible,select:focus-visible{
+  outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent);background:var(--surface);
+}
+button{font:inherit;cursor:pointer;border-radius:9px;border:1px solid transparent;transition:background .15s,color .15s,border-color .15s}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn-primary{background:var(--deep);color:var(--on-deep);border-color:var(--deep);padding:9px 24px;font-weight:500;letter-spacing:.08em;flex:0 0 auto}
+.btn-primary:hover{filter:brightness(1.15)}
+.form-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.hint{font-size:11.5px;color:var(--muted);letter-spacing:.03em}
+
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.tab{background:none;border:none;border-bottom:2px solid transparent;border-radius:0;padding:8px 14px;color:var(--muted);font-size:13.5px;letter-spacing:.05em;margin-bottom:-1px}
+.tab:hover{color:var(--ink-2)}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);font-weight:500}
+.tab .badge{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11px;margin-left:7px;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:1px 7px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.tab[aria-selected="true"] .badge{background:var(--accent-soft);border-color:transparent;color:var(--accent)}
+.jump{margin-left:auto;align-self:center;background:none;border:1px solid var(--line);color:var(--ink-2);font-size:12.5px;padding:5px 13px;letter-spacing:.05em;margin-bottom:4px}
+.jump:hover{border-color:var(--accent);color:var(--accent)}
+
+.list{display:flex;flex-direction:column;gap:10px}
+.day-head{display:flex;align-items:center;gap:10px;margin:16px 0 0;font-size:11.5px;letter-spacing:.1em;color:var(--muted)}
+.day-head::after{content:"";flex:1;height:1px;background:var(--line-soft)}
+.card{
+  background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--line);
+  border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:9px;
+}
+.card.sel{box-shadow:0 0 0 2px var(--sel)}
+.card.editing{border-left-color:var(--deep);box-shadow:0 0 0 2px var(--line)}
+.edit-form{display:flex;flex-direction:column;gap:11px}
+.field{display:flex;flex-direction:column;gap:4px;flex:1 1 170px;min-width:0}
+.field > span{font-size:10.5px;letter-spacing:.1em;color:var(--muted)}
+.edit-foot{display:flex;gap:9px;justify-content:flex-end;align-items:center;flex-wrap:wrap}
+.edit-foot .meta-note{margin-right:auto;font-size:11px;color:var(--muted);font-family:"IBM Plex Mono",monospace}
+.btn-ghost{background:none;border:1px solid var(--line);color:var(--ink-2);padding:9px 18px;font-size:13.5px}
+.btn-ghost:hover{border-color:var(--ink-2);color:var(--ink)}
+.edit-err{font-size:11.5px;color:var(--late)}
+.card-title[data-act]{cursor:pointer}
+.card-title[data-act]:hover{color:var(--sel)}
+.card-title:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+.card.due{border-left-color:var(--accent)}
+.card.late{border-left-color:var(--late)}
+.card-top{display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
+.card-title{font-size:16px;font-weight:500;line-height:1.6;word-break:break-word;margin:0}
+.card-note{color:var(--ink-2);font-size:13.5px;white-space:pre-wrap;word-break:break-word;margin:0}
+.meta{display:flex;gap:9px;align-items:center;flex-wrap:wrap;font-size:11.5px;color:var(--muted);letter-spacing:.03em}
+.meta .mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.pill{border-radius:999px;padding:2px 9px;font-size:11px;letter-spacing:.05em;white-space:nowrap}
+.pill.late{background:var(--late-soft);color:var(--late)}
+.pill.due{background:var(--accent-soft);color:var(--accent)}
+.pill.calm{background:var(--calm-soft);color:var(--calm)}
+.pill.tag{background:var(--surface-2);color:var(--ink-2);border:1px solid var(--line)}
+.steps{display:flex;gap:3px;align-items:center}
+.step{width:13px;height:4px;border-radius:2px;background:var(--line)}
+.step.on{background:var(--calm)}
+.card.due .step.on,.card.late .step.on{background:var(--accent)}
+.grades{display:flex;gap:8px;flex-wrap:wrap;padding-top:2px}
+.grade{background:var(--surface-2);border:1px solid var(--line);color:var(--ink);padding:7px 15px;font-size:13px;display:inline-flex;align-items:baseline;gap:8px}
+.grade small{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.grade:hover{border-color:var(--accent);background:var(--accent-soft)}
+.grade:hover small{color:var(--accent)}
+.grade.hard:hover{border-color:var(--late);background:var(--late-soft)}
+.grade.hard:hover small{color:var(--late)}
+.icon-btn{background:none;border:1px solid transparent;color:var(--muted);padding:2px 9px;font-size:12px;line-height:1.7;flex:0 0 auto;white-space:nowrap}
+.icon-btn:hover{color:var(--late);border-color:var(--line)}
+.icon-btn.armed{color:var(--late);border-color:var(--late);background:var(--late-soft)}
+.card-acts{display:flex;gap:2px;flex:0 0 auto}
+.card-acts .icon-btn:first-child:hover{color:var(--deep);border-color:var(--line)}
+.empty{border:1px dashed var(--line);border-radius:12px;padding:30px 18px;text-align:center;color:var(--muted);font-size:13.5px;background:var(--surface-2)}
+.quote{
+  margin:14px 0 0;padding:18px 20px 16px;border-left:3px solid var(--accent);
+  background:var(--surface);border-radius:0 12px 12px 0;box-shadow:var(--shadow);
+  display:flex;flex-direction:column;gap:10px;
+}
+.quote blockquote{
+  margin:0;font-family:"Shippori Mincho B1","Hiragino Mincho ProN",serif;
+  font-size:16.5px;line-height:2;color:var(--ink);letter-spacing:.03em;text-wrap:pretty;
+}
+.quote figcaption{
+  font-size:11.5px;letter-spacing:.08em;color:var(--ink-2);
+  display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;
+}
+.quote figcaption .src{color:var(--muted);font-size:11px}
+.empty strong{display:block;font-family:"Shippori Mincho B1",serif;font-size:17px;color:var(--ink-2);font-weight:600;margin-bottom:5px;letter-spacing:.05em}
+
+.savebar{
+  position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:20;
+  background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);
+  border-radius:999px;padding:7px 18px;font-size:12.5px;letter-spacing:.04em;color:var(--ink-2);
+  display:flex;align-items:center;gap:9px;opacity:0;pointer-events:none;transition:opacity .25s;
+}
+.savebar.show{opacity:1}
+.savebar .led{width:7px;height:7px;border-radius:50%;background:var(--accent);flex:0 0 auto}
+.savebar.ok .led{background:var(--calm)}
+.savebar.err .led{background:var(--late)}
+.savebar.err{color:var(--late);border-color:var(--late)}
+.notice{border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent);border-radius:10px;padding:10px 14px;font-size:12.5px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+.notice button{background:var(--accent);color:var(--surface);border:none;padding:5px 15px;font-size:12px}
+
+footer{color:var(--muted);font-size:11.5px;letter-spacing:.03em;text-align:center;line-height:2}
+.tools{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:2px}
+.tool-btn{background:none;border:1px solid var(--line);color:var(--muted);font-size:11.5px;padding:5px 12px;letter-spacing:.04em}
+.tool-btn:hover{border-color:var(--accent);color:var(--accent)}
+.tool-btn.on{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.tool-box{margin-top:12px;display:flex;flex-direction:column;gap:9px;text-align:left}
+.tool-box textarea{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11.5px;line-height:1.6;min-height:130px;white-space:pre;overflow-wrap:normal;overflow-x:auto}
+.tool-msg{font-size:11.5px;color:var(--muted);text-align:center;line-height:1.8}
+.tool-msg.bad{color:var(--late)}
+.tool-msg.good{color:var(--calm)}
+
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+
+@media (max-width:600px){
+  .wrap{padding:18px 13px 84px;gap:18px}
+  h1{font-size:28px}
+  .masthead{gap:12px}
+  .tagline{font-size:12.5px}
+  .today-chip{font-size:11px;padding:4px 10px}
+  .wordmark{gap:10px}
+  .mark{width:21px;height:28px}
+  .curve-card{padding:12px 12px 10px;border-radius:12px}
+  .curve-legend{gap:4px 16px;font-size:11px;margin-top:6px}
+  .stats{grid-template-columns:1fr 1fr;gap:8px}
+  .stat{padding:10px 12px}
+  .stat .n{font-size:23px}
+  .stat .k{font-size:11px}
+  .panel{padding:15px;border-radius:12px}
+  input[type="text"],input[type="date"],textarea,select{font-size:16px;padding:11px 12px}
+  textarea{min-height:70px}
+  .form-foot{flex-direction:column-reverse;align-items:stretch;gap:10px}
+  .btn-primary{width:100%;padding:13px;min-height:48px;letter-spacing:.12em}
+  .hint{text-align:center;line-height:1.7}
+  .tabs{flex-wrap:nowrap}
+  .tab{padding:10px 7px;font-size:12.5px;letter-spacing:0;white-space:nowrap}
+  .tab .badge{margin-left:5px;padding:1px 6px}
+  .jump{font-size:12px;padding:5px 10px;min-height:32px;white-space:nowrap;margin-bottom:5px}
+  .taglist{gap:5px}
+  .tagchip{font-size:11.5px;padding:4px 10px;gap:6px;min-height:30px}
+  .chart-cap{font-size:12px}
+  .card{padding:13px 14px;border-radius:11px;gap:8px}
+  .card-title{font-size:15.5px}
+  .card-note{font-size:13px}
+  .meta{gap:7px;font-size:11px}
+  .grades{gap:7px}
+  .grade{flex:1 1 0;justify-content:center;min-height:46px;padding:8px 6px;font-size:13.5px;border-radius:10px}
+  .grade small{font-size:11px}
+  .quote{padding:15px 16px 14px}
+  .quote blockquote{font-size:15.5px;line-height:1.95}
+  .edit-foot{justify-content:stretch}
+  .edit-foot .btn-primary,.edit-foot .btn-ghost{flex:1 1 0;min-height:46px;padding:10px 8px;text-align:center}
+  .edit-foot .meta-note{flex:1 1 100%;margin:0 0 2px;text-align:center}
+  .icon-btn{min-height:34px;padding:4px 10px}
+  .day-head{margin-top:14px}
+  .savebar{bottom:14px;font-size:12px;padding:7px 15px}
+}
+</style>
+
+<script id="app-state" type="application/json">{"v":1,"rev":0,"items":[]}</script>
+<div id="app"></div>
+<script id="app-js">
+(function(){
+  "use strict";
+  var FONT='https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=Shippori+Mincho+B1:wght@600;700&amp;family=Zen+Kaku+Gothic+New:wght@400;500;700&amp;display=swap';
+  var LS='wasureru-mae-ni:v1';
+  var INTERVALS=[1,3,7,14,30,60,120,240];
+  var GRADES={hard:'難しい',ok:'普通',easy:'簡単'};
+
+  function pad(n){return (n<10?'0':'')+n;}
+  function fmt(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+  function parse(s){var p=String(s).split('-');return new Date(+p[0],+p[1]-1,+p[2]);}
+  function today(){return fmt(new Date());}
+  function addDays(s,n){var d=parse(s);d.setDate(d.getDate()+n);return fmt(d);}
+  function diff(a,b){return Math.round((parse(b)-parse(a))/86400000);}
+  function jp(s){var d=parse(s);var w='日月火水木金土'.charAt(d.getDay());return (d.getMonth()+1)+'月'+d.getDate()+'日('+w+')';}
+  function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+  function uid(){return Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4);}
+  function clampEase(e){return Math.max(0.5,Math.min(2,Math.round(e*100)/100));}
+  function normalize(it){
+    return {
+      id: it.id||uid(),
+      title: String(it.title||''),
+      note: String(it.note||''),
+      tag: String(it.tag||''),
+      created: it.created||today(),
+      due: it.due||today(),
+      stage: Math.max(0,Math.min(INTERVALS.length-1, it.stage|0)),
+      ease: typeof it.ease==='number'?it.ease:1,
+      reps: it.reps|0,
+      last: it.last||'',
+      log: Array.isArray(it.log)?it.log:[]
+    };
+  }
+  function nextInterval(it,grade){
+    var st=it.stage, ea=it.ease;
+    if(grade==='hard'){st=Math.max(0,st-1);ea=clampEase(ea*0.8);}
+    else if(grade==='easy'){st=Math.min(INTERVALS.length-1,st+1);ea=clampEase(ea*1.3);}
+    else {st=Math.min(INTERVALS.length-1,st+1);}
+    return {stage:st,ease:ea,days:Math.max(1,Math.round(INTERVALS[st]*ea))};
+  }
+
+  var state=(function(){
+    var base={v:1,rev:0,items:[]};
+    try{
+      var raw=localStorage.getItem(LS);
+      if(raw){
+        var m=JSON.parse(raw);
+        if(m&&Array.isArray(m.items)) return {v:1,rev:m.rev||0,items:m.items.map(normalize)};
+      }
+    }catch(e){}
+    try{
+      var s=JSON.parse(document.getElementById('app-state').textContent||'{}');
+      if(s&&Array.isArray(s.items)&&s.items.length) base={v:1,rev:s.rev||0,items:s.items.map(normalize)};
+    }catch(e){}
+    return base;
+  })();
+
+  /* ---------- persistence (localStorage) ---------- */
+  var timer=null, bar=null, hideT=null;
+
+  function schedule(delay){
+    if(timer)clearTimeout(timer);
+    timer=setTimeout(save, delay===undefined?400:delay);
+  }
+  function save(){
+    try{
+      localStorage.setItem(LS, JSON.stringify({v:1,rev:state.rev,items:state.items}));
+      status('保存しました','ok');
+    }catch(e){
+      status('保存できませんでした。ブラウザのプライベートモードでは記録が残りません。','err');
+    }
+  }
+  function mirror(){}
+  function status(text,kind){
+    if(!bar){
+      bar=document.createElement('div');
+      bar.className='savebar';
+      bar.setAttribute('role','status');
+      bar.innerHTML='<span class="led"></span><span class="txt"></span>';
+      document.body.appendChild(bar);
+    }
+    bar.querySelector('.txt').textContent=text;
+    bar.className='savebar show'+(kind?' '+kind:'');
+    if(hideT)clearTimeout(hideT);
+    if(kind==='ok')hideT=setTimeout(function(){bar.className='savebar';},1500);
+  }
+
+  function commit(){state.rev=(state.rev||0)+1;mirror();render();schedule();}
+
+  /* ---------- actions ---------- */
+  function find(id){for(var i=0;i<state.items.length;i++)if(state.items[i].id===id)return state.items[i];return null;}
+  function add(title,note,tag,firstIn){
+    state.items.push(normalize({
+      id:uid(),title:title,note:note,tag:tag,created:today(),
+      due:addDays(today(),firstIn),stage:0,ease:1,reps:0,log:[]
+    }));
+    commit();
+  }
+  function review(id,grade){
+    var it=find(id);if(!it)return;
+    var n=nextInterval(it,grade);
+    it.stage=n.stage;it.ease=n.ease;it.due=addDays(today(),n.days);
+    it.reps++;it.last=today();
+    it.log.push({d:today(),g:grade,iv:n.days});
+    if(it.log.length>40)it.log=it.log.slice(-40);
+    commit();
+  }
+  function saveEdit(id){
+    var it=find(id); if(!it)return;
+    var ti=document.getElementById('e-title'), no=document.getElementById('e-note'),
+        tg=document.getElementById('e-tag'), du=document.getElementById('e-due');
+    if(!ti)return;
+    var title=ti.value.trim();
+    if(!title){editErr='覚えたいことを入力してください。';render();return;}
+    var due=(du&&du.value)?du.value:it.due;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(due)){editErr='復習日の形式が正しくありません。';render();return;}
+    it.title=title;
+    it.note=no?no.value.trim():it.note;
+    it.tag=tg?tg.value.trim():it.tag;
+    it.due=due;
+    editErr=''; editId=null; armed=null;
+    commit();
+  }
+
+  function remove(id){
+    state.items=state.items.filter(function(x){return x.id!==id;});
+    armed=null;commit();
+  }
+
+  /* ---------- derived ---------- */
+  function buckets(){
+    var t=today(),late=[],due=[],soon=[];
+    var all=shown().slice().sort(function(a,b){return a.due<b.due?-1:a.due>b.due?1:0;});
+    all.forEach(function(it){
+      var d=diff(t,it.due);
+      if(d<0)late.push(it);else if(d===0)due.push(it);else soon.push(it);
+    });
+    return {late:late,due:due,soon:soon,all:all};
+  }
+
+  /* ---------- 今日の言葉 ---------- */
+  var QUOTES=[['学びて時にこれを習う、亦説ばしからずや。','孔子','論語 学而'],['故きを温めて新しきを知る。','孔子','論語 為政'],['譬えば山を作るが如し。未だ成らざること一簣、止むは吾が止むなり。','孔子','論語 子罕'],['黙してこれを識し、学びて厭わず。','孔子','論語 述而'],['学は以て已むべからず。','荀子','勧学篇'],['騏驥も一躍に十歩なる能わず。駑馬も十駕すれば、則ちこれに及ぶ。','荀子','勧学篇'],['千里の行も足下に始まる。','老子','道徳経 六十四章'],['我々は正しい行いをすることによって、正しい人になる。','アリストテレス','ニコマコス倫理学'],['困難だからやろうとしないのではない。やろうとしないから困難なのだ。','セネカ','倫理書簡集 104'],['人は教えているあいだに学ぶ。','セネカ','倫理書簡集 7'],['朝、起きるのが億劫なときはこう考えよ。私は人間の務めをするために起きるのだと。','マルクス・アウレリウス','自省録 第五巻'],['習慣は社会の巨大な弾み車である。','ウィリアム・ジェームズ','心理学原理'],['千日の稽古を鍛とし、万日の稽古を練とす。','宮本武蔵','五輪書 地の巻'],['初心の人、二つの矢を持つことなかれ。','吉田兼好','徒然草 第九十二段'],['道になづまず、みだりにせずして年を送れば、上手の位にいたる。','吉田兼好','徒然草 第百五十段'],['賢人と愚人との別は、学ぶと学ばざるとに由りて出来るものなり。','福沢諭吉','学問のすゝめ'],['学は人たる所以を学ぶなり。','吉田松陰','講孟余話'],['小を積みて大を為す。','二宮尊徳','報徳記'],['心理学は長い過去をもつが、その歴史は短い。','エビングハウス','心理学要論'],['知は力なり。','フランシス・ベーコン','聖なる瞑想'],['滴は石を穿つ。力によってではなく、幾度も落ちることによって。','オウィディウス','黒海からの手紙'],['同じ川に二度入ることはできない。','ヘラクレイトス','断片'],['吟味されざる生に、生きる値打ちはない。','ソクラテス','プラトン ソクラテスの弁明'],['強制された学びは、魂のうちに残らない。','プラトン','国家 第七巻'],['人を乱すのは出来事ではない。出来事についての考えである。','エピクテトス','提要'],['歴史は人生の師である。','キケロ','弁論家について'],['彼を知り己を知れば、百戦して殆うからず。','孫子','孫子 謀攻篇'],['仏道をならふといふは、自己をならふなり。','道元','正法眼蔵 現成公案'],['初心忘るべからず。','世阿弥','花鏡'],['秘すれば花なり。秘せずば花なるべからず。','世阿弥','風姿花伝'],['人間は、その習慣と慣れの子である。','イブン・ハルドゥーン','歴史序説'],['鉄は使わなければ錆びる。精神も、働かせなければ力を失う。','レオナルド・ダ・ヴィンチ','手稿'],['私は何を知るか。','モンテーニュ','エセー'],['良識は、この世で最も公平に配分されている。','デカルト','方法序説'],['人間は一本の葦にすぎない。だが、それは考える葦である。','パスカル','パンセ'],['すべて高貴なものは、稀であると同時に困難である。','スピノザ','エチカ'],['急がず、しかし休まず。','ゲーテ','温順なクセーニエン'],['内容なき思考は空虚であり、概念なき直観は盲目である。','カント','純粋理性批判'],['かくも単純な始まりから、限りなく美しい形が生じ、今も生じつつある。','ダーウィン','種の起源'],['人生に恐れるべきものは何もない。ただ理解すべきものがあるだけだ。','マリ・キュリー','講演'],['牛になる事はどうしても必要です。根気づくでお出でなさい。','夏目漱石','芥川龍之介宛書簡'],['悟りといふ事は、如何なる場合にも平気で生きて居る事であつた。','正岡子規','病牀六尺'],['重要なのは、問い続けることをやめないことだ。','アインシュタイン','LIFE誌 一九五五年'],['自分を欺いてはならない。そして自分こそ、最も欺きやすい相手だ。','ファインマン','カリフォルニア工科大学 講演'],['一日生きることは、一歩進むことでありたい。','湯川秀樹','歌集 深山木'],['学びて思わざれば則ち罔し。思いて学ばざれば則ち殆うし。','孔子','論語 為政'],['終日食らわず、終夜寝ねず、以て思う。益なし、学ぶに如かざるなり。','孔子','論語 衛霊公'],['これを知る者はこれを好む者に如かず。これを好む者はこれを楽しむ者に如かず。','孔子','論語 雍也'],['過ちて改めざる、これを過ちと謂う。','孔子','論語 衛霊公'],['学は及ばざるが如くするも、なおこれを失わんことを恐る。','孔子','論語 泰伯'],['日にその亡き所を知り、月にその能くする所を忘るる無し。好学と謂うべきのみ。','子夏','論語 子張'],['士は以て弘毅ならざるべからず。任重くして道遠し。','曾子','論語 泰伯'],['三軍も帥を奪うべきなり。匹夫も志を奪うべからざるなり。','孔子','論語 子罕'],['賢を見ては斉しからんことを思い、不賢を見ては内に自ら省みる。','孔子','論語 里仁'],['博く学びて篤く志し、切に問いて近く思う。','子夏','論語 子張'],['古の学者は己の為にし、今の学者は人の為にす。','孔子','論語 憲問'],['天を怨みず、人を尤めず。下学して上達す。','孔子','論語 憲問'],['憤せずんば啓せず、悱せずんば発せず。','孔子','論語 述而'],['知者は惑わず、仁者は憂えず、勇者は懼れず。','孔子','論語 子罕'],['力足らざる者は中道にして廃す。今なんじは画れり。','孔子','論語 雍也'],['敏にして学を好み、下問を恥じず。','孔子','論語 公冶長'],['黙してこれを識し、学びて厭わず、人を誨えて倦まず。','孔子','論語 述而'],['これを知るをこれを知ると為し、知らざるを知らずと為す。これ知るなり。','孔子','論語 為政'],['人能く道を弘む。道、人を弘むるに非ず。','孔子','論語 衛霊公'],['工そのことを善くせんと欲すれば、必ず先ずその器を利くす。','孔子','論語 衛霊公'],['歳寒くして、然る後に松柏の彫むに後るるを知る。','孔子','論語 子罕'],['逝く者はかくの如きか。昼夜を舎かず。','孔子','論語 子罕'],['仁遠からんや。我、仁を欲すれば、ここに仁至る。','孔子','論語 述而'],['君子はこれを己に求め、小人はこれを人に求む。','孔子','論語 衛霊公'],['過てば則ち改むるに憚ること勿かれ。','孔子','論語 学而'],['吾、日に吾が身を三省す。','曾子','論語 学而'],['人の己を知らざるを患えず、人を知らざるを患う。','孔子','論語 学而'],['発憤して食を忘れ、楽しみて以て憂いを忘れ、老いの将に至らんとするを知らず。','孔子','論語 述而'],['苗にして秀でざる者あり。秀でて実らざる者あり。','孔子','論語 子罕'],['人にして恒なくんば、以て巫医と作るべからず。','孔子','論語 子路'],['善を見ては及ばざるが如くし、不善を見ては湯を探るが如くす。','孔子','論語 季氏'],['それ恕か。己の欲せざる所、人に施すこと勿かれ。','孔子','論語 衛霊公'],['生まれながらにしてこれを知る者は上なり。学びてこれを知る者はこれに次ぐ。','孔子','論語 季氏'],['十室の邑にも、必ず忠信、丘の如き者あらん。丘の学を好むに如かざるなり。','孔子','論語 公冶長'],['篤く信じて学を好み、死を守りて道を善くす。','孔子','論語 泰伯'],['君子は能なきを病う。人の己を知らざるを病えず。','孔子','論語 衛霊公'],['仕えて優なれば則ち学び、学びて優なれば則ち仕う。','子夏','論語 子張'],['困みて学ばざる、民これを下と為す。','孔子','論語 季氏'],['心の官は則ち思う。思えば則ちこれを得、思わざれば則ち得ざるなり。','孟子','孟子 告子上'],['流水の物たるや、科に盈たざれば行かず。','孟子','孟子 尽心上'],['富貴も淫する能わず、貧賤も移す能わず、威武も屈する能わず。','孟子','孟子 滕文公下'],['天の将に大任をこの人に降さんとするや、必ず先ずその心志を苦しむ。','孟子','孟子 告子下'],['行いて得ざる者あらば、皆これを己に反り求む。','孟子','孟子 離婁上'],['憂患に生き、安楽に死す。','孟子','孟子 告子下'],['志を得れば民とこれに由り、志を得ざれば独りその道を行う。','孟子','孟子 滕文公下'],['心ここに在らざれば、視れども見えず、聴けども聞こえず、食らえどもその味を知らず。','曾子','大学'],['物に本末あり、事に終始あり。','曾子','大学'],['博くこれを学び、審らかにこれを問い、慎みてこれを思い、明らかにこれを弁じ、篤くこれを行う。','子思','中庸'],['人一たびしてこれを能くすれば、己はこれを百たびす。人十たびしてこれを能くすれば、己はこれを千たびす。','子思','中庸'],['愚なりといえども必ず明らかに、柔なりといえども必ず強し。','子思','中庸'],['息まざれば則ち久し。久しければ則ち徴あり。','子思','中庸'],['君子の道は、譬えば遠きに行くに必ず邇きよりするが如し。','子思','中庸'],['君子はその位に素して行う。','子思','中庸'],['青はこれを藍より取りて、藍より青し。','荀子','勧学篇'],['大器は晩成す。','老子','道徳経 四十一章'],['足るを知る者は富む。','老子','道徳経 三十三章'],['天下の難事は必ず易きより作り、天下の大事は必ず細より作る。','老子','道徳経 六十三章'],['井の中の蛙、大海を語れず。','荘子','荘子 秋水篇'],['吾が生や涯あり、而して知や涯なし。','荘子','荘子 養生主'],['疾風に勁草を知る。','范曄','後漢書'],['千里の馬は常にあれども、伯楽は常にはあらず。','韓愈','雑説'],['少年老い易く学成り難し。一寸の光陰軽んずべからず。','朱熹に帰される','偶成'],['ゆく河の流れは絶えずして、しかももとの水にあらず。','鴨長明','方丈記'],['少しのことにも、先達はあらまほしきことなり。','吉田兼好','徒然草 第五十二段'],['一事を必ずなさんと思わば、他の事の破るるをも痛むべからず。','吉田兼好','徒然草 第百八十八段'],['時分の花をまことの花と知る心が、まことの花になお遠ざかる心なり。','世阿弥','風姿花伝'],['住する所なきを、まず花と知るべし。','世阿弥','風姿花伝'],['是非の初心忘るべからず。時々の初心忘るべからず。老後の初心忘るべからず。','世阿弥','花鏡'],['観の目つよく、見の目よわく。','宮本武蔵','五輪書 水の巻'],['構えあって構えなし。','宮本武蔵','五輪書 火の巻'],['学道の人は、後日を待って行道せんと思うことなかれ。','道元','正法眼蔵随聞記'],['勇ましい高尚なる生涯。これが誰にも遺すことのできる最大遺物である。','内村鑑三','後世への最大遺物'],['努力は尊い。しかし努力を努力と感ぜぬ努力が真の努力である。','幸田露伴','努力論'],['智に働けば角が立つ。情に棹させば流される。','夏目漱石','草枕'],['自己の個性の発展を仕遂げようと思うならば、同時に他人の個性も尊重すべきである。','夏目漱石','私の個人主義'],['一年の計は穀を樹うるに如くはなし。','管仲に帰される','管子 権修'],['今日を摘め。明日をあてにするな。','ホラティウス','歌集 第一巻'],['いつの日か、これらのことを思い出すのも喜びとなろう。','ウェルギリウス','アエネイス 第一巻'],['何ごとも度を超すな。','ソロンら七賢人','デルポイ神殿の箴言'],['汝自身を知れ。','デルポイ神殿の箴言','古代ギリシア'],['人生は短く、技芸の道は長い。','ヒポクラテス','箴言'],['すべての人間は、生まれつき知ることを欲する。','アリストテレス','形而上学 冒頭'],['習慣は第二の天性である。','キケロ','善と悪の究極について'],['生きることは戦うことである。','セネカ','倫理書簡集 96'],['どこへ向かうかを知らぬ者に、順風は吹かない。','セネカ','倫理書簡集 71'],['我々は短い人生を与えられたのではない。我々がそれを短くしているのだ。','セネカ','人生の短さについて'],['魂は、思考の色に染まる。','マルクス・アウレリウス','自省録 第五巻'],['障害が道となる。','マルクス・アウレリウス','自省録 第五巻'],['求めるな、起こることが起こるままに起こることを願え。','エピクテトス','提要 8'],['自分の力の及ぶものと及ばぬものを、まず見分けよ。','エピクテトス','提要 1'],['哲学者の学校は診療所である。','エピクテトス','語録 第三巻'],['我々の心は、あなたのうちに安らうまで安らぐことがない。','アウグスティヌス','告白 第一巻'],['よく過ごした一日が安らかな眠りをもたらすように、よく用いた一生は安らかな死をもたらす。','レオナルド・ダ・ヴィンチ','手稿'],['障害が私を屈させることはない。あらゆる障害は決意によって砕かれる。','レオナルド・ダ・ヴィンチ','手稿'],['読書は充実した人をつくり、会話は機敏な人をつくり、書くことは正確な人をつくる。','フランシス・ベーコン','随想集 学問について'],['自然は、これに従うことによってでなければ征服されない。','フランシス・ベーコン','ノヴム・オルガヌム'],['世界で最も偉大なことは、自分自身であることを知ることだ。','モンテーニュ','エセー 第一巻'],['困難は分割せよ。','デカルト','方法序説 第二部'],['私が遠くを見ていたとすれば、それは巨人の肩の上に乗っていたからだ。','ニュートン','フック宛書簡'],['人間は自然のうちで最も弱い一本の葦にすぎない。だが、それは考える葦である。','パスカル','パンセ'],['心には、理性の知らない理性がある。','パスカル','パンセ'],['我々の畑を耕さねばならない。','ヴォルテール','カンディード 結び'],['人は努力するかぎり迷うものだ。','ゲーテ','ファウスト 天上の序曲'],['あえて賢くあれ。知ることを敢えてせよ。','カント','啓蒙とは何か'],['読書とは、他人にものを考えてもらうことである。','ショーペンハウアー','読書について'],['なぜ生きるかを知っている者は、ほとんどあらゆる如何に生きるかに耐える。','ニーチェ','偶像の黄昏'],['人が仲間と歩調を合わせないなら、それは別の鼓手の音を聞いているからだろう。','ソロー','ウォールデン'],['我々は、自分が繰り返し注意を向けたものになる。','ウィリアム・ジェームズ','心理学原理'],['習慣とは、社会の巨大な弾み車であり、最も貴重な保存剤である。','ウィリアム・ジェームズ','心理学原理'],['人生において恐れるべきものは何もない。ただ理解すべきものがあるだけだ。','マリ・キュリー','講演'],['楽観主義とは、達成へと導く信念である。','ヘレン・ケラー','楽天主義'],['幸福な人生の秘訣は、興味の範囲をできるだけ広げることだ。','バートランド・ラッセル','幸福論'],['語りえぬものについては、沈黙せねばならない。','ウィトゲンシュタイン','論理哲学論考'],['私は特別な才能を持っていない。ただ、情熱的に好奇心が強いだけだ。','アインシュタイン','書簡 一九五二年'],['何かを学ぶのに、自分で発見する以上によい方法はない。','ポリア','いかにして問題をとくか'],['科学とは整理された知識であり、知恵とは整理された生活である。','ハーバート・スペンサー','教育論'],['これを如何せん、これを如何せんと曰わざる者は、吾これを如何ともする末きのみ。','孔子','論語 衛霊公'],['知はこれに及べども、仁これを守る能わざれば、これを得るといえども必ずこれを失う。','孔子','論語 衛霊公'],['君子は言に訥にして、行いに敏ならんことを欲す。','孔子','論語 里仁'],['徳は孤ならず、必ず隣あり。','孔子','論語 里仁'],['朝に道を聞かば、夕べに死すとも可なり。','孔子','論語 里仁'],['三人行えば、必ず我が師あり。その善き者を択びてこれに従い、その善からざる者はこれを改む。','孔子','論語 述而'],['君子は坦かに蕩蕩たり。小人は長く戚戚たり。','孔子','論語 述而'],['これを譬えば地を平らかにするが如し。一簣を覆すといえども、進むは吾が往くなり。','孔子','論語 子罕'],['後生畏るべし。四十五十にして聞こゆること無くんば、これ亦畏るるに足らざるのみ。','孔子','論語 子罕'],['君子は和して同ぜず。小人は同じて和せず。','孔子','論語 子路'],['速やかならんことを欲する毋かれ。速やかならんことを欲すれば則ち達せず。','孔子','論語 子路'],['其の身正しければ、令せずして行わる。','孔子','論語 子路'],['志士仁人は、生を求めて以て仁を害すること無し。','孔子','論語 衛霊公'],['巧言は徳を乱る。小しきを忍ばざれば則ち大謀を乱る。','孔子','論語 衛霊公'],['人にして遠き慮り無ければ、必ず近き憂いあり。','孔子','論語 衛霊公'],['躬自ら厚くして、薄く人を責むれば、則ち怨みに遠ざかる。','孔子','論語 衛霊公'],['君子は貞にして諒ならず。','孔子','論語 衛霊公'],['性、相近きなり。習い、相遠きなり。','孔子','論語 陽貨'],['道を聴きて塗に説くは、徳をこれ棄つるなり。','孔子','論語 陽貨'],['君子に三畏あり。天命を畏れ、大人を畏れ、聖人の言を畏る。','孔子','論語 季氏'],['益者三友、損者三友。','孔子','論語 季氏'],['これを愛して能く労すること勿からんや。','孔子','論語 憲問'],['君子は上達し、小人は下達す。','孔子','論語 憲問'],['驥はその力を称せず、その徳を称す。','孔子','論語 憲問'],['その為すべからざるを知りてこれを為す者か。','孔子','論語 憲問'],['下学して上達す。我を知る者は其れ天か。','孔子','論語 憲問'],['仁を為すは己に由る。而して人に由らんや。','孔子','論語 顔淵'],['君子は文を以て友を会し、友を以て仁を輔く。','曾子','論語 顔淵'],['これを導くに徳を以てし、これを斉うるに礼を以てすれば、恥ありて且つ格し。','孔子','論語 為政'],['学べば則ち固ならず。','孔子','論語 学而'],['君子は本を務む。本立ちて道生ず。','有子','論語 学而'],['信近く義に、言復むべきなり。','有子','論語 学而'],['貧しくして諂うこと無く、富みて驕ること無し。','子貢','論語 学而'],['切するが如く磋するが如く、琢するが如く磨するが如し。','詩経','論語 学而 引用'],['往を告げて来を知る者なり。','孔子','論語 学而'],['大人は赤子の心を失わざる者なり。','孟子','孟子 離婁下'],['自ら反みて縮くんば、千万人といえども吾往かん。','孟子','孟子 公孫丑上'],['その心を尽くす者は、その性を知る。','孟子','孟子 尽心上'],['人の患いは、好んで人の師と為るに在り。','孟子','孟子 離婁上'],['為さざるなり、能わざるに非ざるなり。','孟子','孟子 梁恵王上'],['君子に三楽あり。而して天下に王たるは与り存せず。','孟子','孟子 尽心上'],['誠は天の道なり。これを誠にするは人の道なり。','孟子','孟子 離婁上'],['驚きこそ、知を愛する者の情念である。','プラトン','テアイテトス'],['一羽の燕は春をつくらない。一日もまた春をつくらない。','アリストテレス','ニコマコス倫理学'],['我々が学ばねばならないことは、それを実際に行うことによって学ぶ。','アリストテレス','ニコマコス倫理学'],['性格は、人間にとって運命である。','ヘラクレイトス','断片 一一九'],['精神は満たすべき器ではなく、燃やすべき薪である。','プルタルコス','モラリア 聴くことについて'],['多くを学びつつ老いてゆく。','ソロン','キケロ 老年について 引用'],['人生は短く、技芸の道は長い。機会は逃げやすく、経験は誤りやすく、判断は難しい。','ヒポクラテス','箴言'],['与えられた時間には限りがある。それを使って自分を解き放たなければ、時は過ぎ去り、二度と戻らない。','マルクス・アウレリウス','自省録 第二巻'],['人が自分の魂のうちより静かな隠れ家を見つけられる場所は、どこにもない。','マルクス・アウレリウス','自省録 第四巻'],['波が絶えず打ち寄せる岩のようであれ。岩は動かず、荒れ狂う水はやがて静まる。','マルクス・アウレリウス','自省録 第四巻'],['自分に習得しがたいことを、人間に不可能なことだと思ってはならない。','マルクス・アウレリウス','自省録 第六巻'],['善き人とはどうあるべきかを論じるのは、もうやめよ。善き人であれ。','マルクス・アウレリウス','自省録 第十巻'],['耐えられないことは、誰にも起こらない。','マルクス・アウレリウス','自省録 第五巻'],['幸福な人生に必要なものは、ごくわずかである。','マルクス・アウレリウス','自省録 第七巻'],['未来に心を乱されるな。行かねばならぬなら、今日と同じ理性を武器に、そこへ赴くのだ。','マルクス・アウレリウス','自省録 第七巻'],['我々が恐れるものは、我々を苦しめるものより多い。','セネカ','倫理書簡集 13'],['あちこちに散らばる者は、どこにもいないのと同じだ。','セネカ','倫理書簡集 2'],['時間だけが、我々が本当に所有しているものである。','セネカ','人生の短さについて'],['運命は志ある者を導き、志なき者を引きずってゆく。','セネカ','倫理書簡集 107'],['汝らの生まれは、獣のごとく生きるためにあらず。徳と知とを求めんがためなり。','ダンテ','神曲 地獄篇 第二十六歌'],['宇宙という書物は、数学の言語で書かれている。','ガリレオ','偽金鑑識官'],['経験は決して誤らない。誤るのは、経験にありえない判断を下す我々のほうだ。','レオナルド・ダ・ヴィンチ','手稿'],['実践なき理論を愛する者は、舵も羅針盤もなく船に乗る者に似ている。','レオナルド・ダ・ヴィンチ','手稿'],['学問は、それを用いる知恵によって完成される。','フランシス・ベーコン','随想集 学問について'],['ある書物は味わうべく、ある書物は呑み込むべく、少数の書物は噛んで消化すべきである。','フランシス・ベーコン','随想集 学問について'],['人間の不幸はただ一つ、部屋に静かに座っていられないことから来る。','パスカル','パンセ'],['我々は皆、他人の不幸に耐えるだけの十分な強さを持っている。','ラ・ロシュフコー','箴言集'],['知識には二種類ある。自分が知っているか、どこで調べられるかを知っているかだ。','サミュエル・ジョンソン','ボズウェル ジョンソン伝'],['今日できることを明日に延ばすな。','ベンジャミン・フランクリン','貧しいリチャードの暦'],['植物は栽培によってつくられ、人間は教育によってつくられる。','ルソー','エミール'],['本と頭がぶつかって空虚な音がした。それは必ずしも本のせいではない。','リヒテンベルク','控え帖'],['わが上なる星空と、わが内なる道徳法則。','カント','実践理性批判 結語'],['教えることは多くをなすが、励ますことはすべてをなす。','ゲーテ','オエーザー宛書簡'],['才能は静けさの中で育ち、性格は世の激流の中で育つ。','ゲーテ','タッソー'],['何かを為すためには、まず何かで在らねばならない。','ゲーテ','エッカーマンとの対話'],['技は長く、生は短い。判断は難しく、機会は移ろいやすい。','ゲーテ','ヴィルヘルム・マイスター遍歴時代'],['知ることが少ないときにだけ、人は知っていると思う。知識とともに疑いは育つ。','ゲーテ','箴言と省察'],['自分で考えて得た真理は、生まれつきの手足のようなものだ。それだけが本当に自分のものである。','ショーペンハウアー','処世術箴言'],['大きな蔵書も乱雑なら、小さくとも整った蔵書に及ばない。膨大な知識も、自分で考え抜いたわずかな知識に及ばない。','ショーペンハウアー','処世術箴言'],['本を買うのはよいことだ。本を読む時間も一緒に買えるなら。','ショーペンハウアー','処世術箴言'],['記憶は集光レンズのように働く。すべてを集め、もとの姿より美しい像をつくる。','ショーペンハウアー','人生の知恵についての箴言'],['ミネルヴァの梟は、黄昏が訪れてはじめて飛び立つ。','ヘーゲル','法の哲学 序文'],['自分自身を信じよ。すべての心は、その鉄の弦に震える。','エマソン','自己信頼'],['私が森へ行ったのは、意図して生きたかったからだ。','ソロー','ウォールデン'],['最も強い戦士は、時間と忍耐である。','トルストイ','戦争と平和'],['怪物と戦う者は、その過程で自らが怪物とならぬよう気をつけねばならない。','ニーチェ','善悪の彼岸'],['人間において偉大なのは、彼が橋であって目的ではないということだ。','ニーチェ','ツァラトゥストラはこう言った'],['観察の領域において、偶然は準備のできた心にのみ味方する。','パスツール','リール大学 講演'],['種の起源は、私がこれまでに書いたどの本より、長く考えた末に書かれた。','ダーウィン','自伝'],['習慣を味方につけよ。習慣は、我々を助けもすれば縛りもする。','ウィリアム・ジェームズ','心理学原理'],['注意とは、同時に可能ないくつかの対象の一つを、明晰な形で心が捉えることである。','ウィリアム・ジェームズ','心理学原理'],['発明とは、有用な組み合わせをつくることである。','ポアンカレ','科学と方法'],['我々は知らねばならない。我々は知るであろう。','ヒルベルト','ケーニヒスベルク 講演'],['専門家とは、非常に狭い分野で犯しうるすべての誤りを、すでに犯した者のことである。','ニールス・ボーア','講義での発言'],['問いそのものを生きよ。いつか、答えのなかへ生きて入ってゆくために。','リルケ','若き詩人への手紙'],['真の発見の旅とは、新しい景色を探すことではなく、新しい目を持つことである。','プルースト','失われた時を求めて'],['注意力とは、思考を宙吊りにし、空にして、対象を迎え入れることである。','シモーヌ・ヴェイユ','神を待ちのぞむ'],['頂上を目指す闘いそれ自体が、人間の心を満たすのに十分である。','カミュ','シーシュポスの神話'],['私は天国を、ある種の図書館のようなものだと想像していた。','ボルヘス','バベルの図書館'],['我々の知識は有限だが、我々の無知は必然的に無限である。','カール・ポパー','推測と反駁'],['哲学は、問いへの明確な答えのためではなく、問いそのもののために学ばれるべきである。','バートランド・ラッセル','哲学入門'],['懐疑への埋没も、教義への埋没も、教育が生むべきものではない。','バートランド・ラッセル','教育論'],['多くの人は考えるくらいなら死んだほうがましだと思っている。そして実際そうしている。','バートランド・ラッセル','相対性理論の哲学'],['知らないままでいることは、間違った答えを持っていることより、はるかに興味深い。','ファインマン','インタビュー 一九八一年'],['科学とは、我々が自分を欺かないための一つの方法である。','ファインマン','カリフォルニア工科大学 講演'],['想像力は知識より重要である。知識には限りがあるが、想像力は世界を包む。','アインシュタイン','サタデー・イブニング・ポスト 一九二九年'],['教育とは、学校で習ったことをすべて忘れた後に残るものである。','アインシュタイン','一九三六年 講演'],['世界は苦しみに満ちている。しかし、それを乗り越えることにも満ちている。','ヘレン・ケラー','楽天主義']];
+  function quoteOfDay(){
+    var d=today(),h=0,i;
+    for(i=0;i<d.length;i++)h=(h*31+d.charCodeAt(i))%100003;
+    return QUOTES[h%QUOTES.length];
+  }
+  function quoteBlock(){
+    var q=quoteOfDay();
+    return '<figure class="quote"><blockquote>'+esc(q[0])+'</blockquote>'
+      +'<figcaption>'+esc(q[1])+'<span class="src">'+esc(q[2])+'</span></figcaption></figure>';
+  }
+
+  /* ---------- wordmark ---------- */
+  function markSVG(){
+    var d='M3.2 2.2 h17.6 v27.4 l-8.8 -6.8 l-8.8 6.8 z';
+    return '<svg class="mark" viewBox="0 0 24 32" aria-hidden="true" focusable="false">'
+      +'<defs><linearGradient id="mk-fade" x1="0" y1="0" x2="0" y2="1">'
+      +'<stop offset="0" stop-color="currentColor" stop-opacity=".85"/>'
+      +'<stop offset="1" stop-color="currentColor" stop-opacity="0"/>'
+      +'</linearGradient></defs>'
+      +'<path d="'+d+'" fill="url(#mk-fade)"/>'
+      +'<path d="'+d+'" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'
+      +'</svg>';
+  }
+
+  /* ---------- tags ---------- */
+  function tagOrder(){
+    var seen=[],i;
+    for(i=0;i<state.items.length;i++){
+      var t=state.items[i].tag;
+      if(t&&seen.indexOf(t)<0)seen.push(t);
+    }
+    return seen;
+  }
+  function tagColor(t){
+    if(!t)return 'var(--muted)';
+    var i=tagOrder().indexOf(t);
+    return (i>=0&&i<6)?('var(--t'+(i+1)+')'):'var(--muted)';
+  }
+  function shown(){
+    if(!filterTag)return state.items;
+    if(filterTag==='__none__')return state.items.filter(function(x){return !x.tag;});
+    return state.items.filter(function(x){return x.tag===filterTag;});
+  }
+  function tagChips(){
+    var order=tagOrder(), untagged=state.items.filter(function(x){return !x.tag;}).length;
+    if(!order.length)return '';
+    var h='<div class="taglist">'
+      +'<button type="button" class="tagchip" data-act="tag" data-tag="" aria-pressed="'+(!filterTag)+'">すべて<span class="n">'+state.items.length+'</span></button>';
+    order.forEach(function(t){
+      var n=state.items.filter(function(x){return x.tag===t;}).length;
+      h+='<button type="button" class="tagchip" data-act="tag" data-tag="'+esc(t)+'" aria-pressed="'+(filterTag===t)+'">'
+        +'<span class="dot" style="background:'+tagColor(t)+'"></span>'+esc(t)+'<span class="n">'+n+'</span></button>';
+    });
+    if(untagged){
+      h+='<button type="button" class="tagchip" data-act="tag" data-tag="__none__" aria-pressed="'+(filterTag==='__none__')+'">'
+        +'<span class="dot" style="background:var(--muted)"></span>タグなし<span class="n">'+untagged+'</span></button>';
+    }
+    return h+'</div>';
+  }
+
+  /* ---------- memory chart (real data) ---------- */
+  function segmentsOf(it){
+    var log=(it.log||[]).slice().sort(function(a,b){return a.d<b.d?-1:a.d>b.d?1:0;}), segs=[];
+    if(log.length){
+      segs.push({from:it.created,to:log[0].d,iv:Math.max(1,diff(it.created,log[0].d))});
+      for(var i=0;i<log.length;i++){
+        segs.push({from:log[i].d,to:(i+1<log.length)?log[i+1].d:null,iv:Math.max(1,log[i].iv||1)});
+      }
+    }else{
+      segs.push({from:it.created,to:null,iv:Math.max(1,diff(it.created,it.due))});
+    }
+    return segs;
+  }
+
+  function memoryChart(items){
+    var narrow=isNarrow();
+    var W=narrow?380:760,H=narrow?186:212,PL=6,PR=narrow?6:8,PT=14,PB=26;
+    var t=today(),i;
+    var draw=items.slice().sort(function(a,b){return a.due<b.due?-1:a.due>b.due?1:0;});
+    var MAXL=narrow?8:12, more=Math.max(0,draw.length-MAXL);
+    draw=draw.slice(0,MAXL);
+
+    var minC=0,maxD=0;
+    draw.forEach(function(it){
+      minC=Math.min(minC,diff(t,it.created));
+      maxD=Math.max(maxD,diff(t,it.due));
+    });
+    var x0=Math.max(-45,Math.min(-3,minC)), x1=Math.min(60,Math.max(10,maxD+3));
+    var span=x1-x0;
+    function X(d){return (PL+((d-x0)/span)*(W-PL-PR)).toFixed(1);}
+    function Y(r){return (PT+(1-Math.max(0,Math.min(1,r)))*(H-PT-PB)).toFixed(1);}
+
+    function pathOf(it){
+      var segs=segmentsOf(it),d='',started=false,k,tt;
+      for(k=0;k<segs.length;k++){
+        var sg=segs[k], a=diff(t,sg.from), b=sg.to?diff(t,sg.to):x1;
+        if(b<x0)continue;
+        var from=Math.max(a,x0), to=Math.min(b,x1);
+        if(to<from)continue;
+        if(a>=x0&&started)d+='L'+X(a)+' '+Y(1);
+        for(tt=from;tt<to+0.001;tt+=0.5){
+          if(tt>to)tt=to;
+          d+=(started?'L':'M')+X(tt)+' '+Y(Math.pow(2,-(tt-a)/sg.iv));
+          started=true;
+        }
+      }
+      return d;
+    }
+
+    var lines='',hits='',dots='',labels='';
+    draw.forEach(function(it){
+      var col=tagColor(it.tag), d=pathOf(it), on=(selId===it.id), dim=(selId&&!on);
+      if(!d)return;
+      lines+='<path d="'+d+'" style="fill:none;stroke:'+col+';stroke-width:'+(on?3:2)+';stroke-linejoin:round;stroke-linecap:round;opacity:'+(dim?0.18:1)+'"/>';
+      hits+='<path class="hit" d="'+d+'" data-act="pick" data-scroll="1" data-id="'+it.id+'" style="fill:none;stroke:transparent;stroke-width:16"><title>'+esc(it.title)+'</title></path>';
+      var dd=diff(t,it.due);
+      if(dd>=x0&&dd<=x1){
+        dots+='<circle cx="'+X(dd)+'" cy="'+Y(0.5)+'" r="'+(on?5:4)+'" style="fill:var(--surface);stroke:'+col+';stroke-width:2;opacity:'+(dim?0.18:1)+'"/>';
+      }
+      if(!narrow&&draw.length<=4){
+        var lx=Math.min(x1,Math.max(x0,x1)), ly=Math.pow(2,0);
+        var segs=segmentsOf(it), last=segs[segs.length-1], la=diff(t,last.from);
+        var endR=Math.pow(2,-(x1-la)/last.iv);
+        labels+='<text x="'+(W-PR-2)+'" y="'+(+Y(endR)-6)+'" text-anchor="end" style="fill:'+col+';font-size:10.5px">'
+          +esc(it.title.length>18?it.title.slice(0,17)+'…':it.title)+'</text>';
+      }
+    });
+
+    var zero=X(0);
+    var half='<line x1="'+PL+'" y1="'+Y(0.5)+'" x2="'+(W-PR)+'" y2="'+Y(0.5)+'" style="stroke:var(--line);stroke-width:1;stroke-dasharray:3 5"/>';
+    var halfLabel=narrow?'':('<rect x="'+(PL-1)+'" y="'+(+Y(0.5)-17)+'" width="55" height="14" rx="3" style="fill:var(--surface)"/>'
+      +'<text x="'+(PL+2)+'" y="'+(+Y(0.5)-6)+'" style="fill:var(--muted);font-size:10px;font-family:IBM Plex Mono,monospace">復習の目安</text>');
+    var nowline='<line x1="'+zero+'" y1="'+PT+'" x2="'+zero+'" y2="'+(H-PB)+'" style="stroke:var(--ink-2);stroke-width:1"/>'
+      +'<text x="'+zero+'" y="'+(H-PB+15)+'" text-anchor="middle" style="fill:var(--ink-2);font-size:10.5px">今日</text>';
+    var ticks='',tk=[-30,-14,-7,7,14,30,60];
+    tk.forEach(function(v){
+      if(v<=x0+1||v>=x1-1)return;
+      ticks+='<line x1="'+X(v)+'" y1="'+PT+'" x2="'+X(v)+'" y2="'+(H-PB)+'" style="stroke:var(--line-soft);stroke-width:1;stroke-dasharray:2 4"/>'
+        +'<text x="'+X(v)+'" y="'+(H-PB+15)+'" text-anchor="middle" style="fill:var(--muted);font-size:10px">'+(v<0?v+'日':'+'+v+'日')+'</text>';
+    });
+
+    return '<div class="chart-head"><h2 class="chart-title">記憶の残りぐあい</h2>'
+      +(more?'<span class="chart-more">ほか '+more+' 件は非表示</span>':'')+'</div>'
+      +'<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="登録した項目ごとの記憶の減衰と、次の復習予定日">'
+      +'<g style="font-family:IBM Plex Mono,monospace;letter-spacing:.03em">'+ticks+'</g>'
+      +half+lines+halfLabel+dots+labels
+      +'<g style="font-family:IBM Plex Mono,monospace">'+nowline+'</g>'
+      +hits+'</svg>'
+      +chartCaption(draw);
+  }
+
+  function chartCaption(draw){
+    var it=selId?find(selId):null;
+    if(it){
+      var d=diff(today(),it.due);
+      return '<div class="chart-cap"><span class="dot" style="background:'+tagColor(it.tag)+'"></span>'
+        +'<span>'+esc(it.title)+'</span>'
+        +'<span class="dim mono">'+(d<0?(-d)+'日 遅れ':d===0?'今日が復習日':'あと'+d+'日')+'</span>'
+        +'<span class="dim mono">'+it.reps+'回復習</span></div>';
+    }
+    return '<div class="chart-cap"><span class="dim">線をタップすると、その項目の場所まで移動します。'
+      +'線が下がるほど忘れかけ、丸印が次の復習予定、破線は復習の目安です。</span></div>';
+  }
+
+  /* ---------- example curve (shown when nothing is registered) ---------- */
+  function curveSVG(){
+    var narrow=isNarrow();
+    var W=narrow?380:760,H=narrow?150:168,PL=6,PR=6,PT=12,PB=narrow?26:28,DAYS=60;
+    var marks=[0,1,4,11,25,55],S=[1.1,2.4,5.6,13,30,72];
+    var names=['学習','1日後','3日後','7日後','14日後','30日後'];
+    var showLabel=narrow?[true,false,false,true,false,true]:[true,true,true,true,true,true];
+    function X(d){return (PL+Math.pow(d/DAYS,0.55)*(W-PL-PR)).toFixed(1);}
+    function Y(r){return (PT+(1-r)*(H-PT-PB)).toFixed(1);}
+    var solo='',saw='',dots='',ticks='',labels='',d,i,t;
+    for(d=0;d<=DAYS;d+=0.2)solo+=(solo?'L':'M')+X(d)+' '+Y(Math.exp(-d/1.1));
+    for(i=0;i<marks.length;i++){
+      var end=(i+1<marks.length)?marks[i+1]:DAYS;
+      saw+=(i?'L':'M')+X(marks[i])+' '+Y(1);
+      for(t=marks[i];t<=end;t+=0.2)saw+='L'+X(t)+' '+Y(Math.exp(-(t-marks[i])/S[i]));
+      dots+='<circle cx="'+X(marks[i])+'" cy="'+Y(1)+'" r="3.4"/>';
+      ticks+='<line x1="'+X(marks[i])+'" y1="'+PT+'" x2="'+X(marks[i])+'" y2="'+(H-PB)+'"/>';
+      if(showLabel[i])labels+='<text x="'+X(marks[i])+'" y="'+(H-PB+(narrow?17:18))+'" text-anchor="'+(i===0?'start':(i===marks.length-1?'end':'middle'))+'">'+names[i]+'</text>';
+    }
+    return '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="復習をはさむと記憶の減衰がゆるやかになることを示す忘却曲線">'
+      +'<g style="stroke:var(--line-soft);stroke-width:1;stroke-dasharray:2 4">'+ticks+'</g>'
+      +'<path d="'+solo+'" style="fill:none;stroke:var(--muted);stroke-width:1.5;stroke-dasharray:4 4;opacity:.75"/>'
+      +'<path d="'+saw+'" style="fill:none;stroke:var(--accent);stroke-width:2.2;stroke-linejoin:round"/>'
+      +'<g style="fill:var(--accent)">'+dots+'</g>'
+      +'<g style="fill:var(--muted);font-family:IBM Plex Mono,monospace;font-size:'+(narrow?11.5:10.5)+'px;letter-spacing:.03em">'+labels+'</g>'
+      +'</svg>';
+  }
+
+  /* ---------- render ---------- */
+  var tab='today', armed=null, tool=null, toolMsg='', toolMsgKind='', filterTag=null, selId=null, editId=null, editErr='';
+  function isNarrow(){try{return window.matchMedia('(max-width:600px)').matches;}catch(e){return false;}}
+  function stat(n,label,cls){return '<div class="stat '+cls+'"><span class="n">'+n+'</span><span class="k">'+label+'</span></div>';}
+  function tabBtn(id,label,n){return '<button class="tab" role="tab" type="button" data-tab="'+id+'" aria-selected="'+(tab===id)+'">'+label+'<span class="badge">'+n+'</span></button>';}
+
+  function editCard(it){
+    var opts=tagOrder().map(function(t){return '<option value="'+esc(t)+'"></option>';}).join('');
+    return '<article class="card editing" data-id="'+esc(it.id)+'" style="--sel:'+tagColor(it.tag)+'">'
+      +'<form class="edit-form" data-id="'+esc(it.id)+'">'
+      +'<label class="field"><span>覚えたいこと</span>'
+      +'<input type="text" id="e-title" value="'+esc(it.title)+'" autocomplete="off"></label>'
+      +'<label class="field"><span>メモ</span><textarea id="e-note">'+esc(it.note)+'</textarea></label>'
+      +'<div class="row">'
+      +'<label class="field"><span>タグ</span>'
+      +'<input type="text" id="e-tag" list="e-taglist" value="'+esc(it.tag)+'" autocomplete="off" placeholder="なし">'
+      +'<datalist id="e-taglist">'+opts+'</datalist></label>'
+      +'<label class="field"><span>次回の復習日</span>'
+      +'<input type="date" id="e-due" value="'+esc(it.due)+'"></label>'
+      +'</div>'
+      +(editErr?'<div class="edit-err">'+esc(editErr)+'</div>':'')
+      +'<div class="edit-foot">'
+      +'<span class="meta-note">登録 '+esc(it.created)+'・'+it.reps+'回復習</span>'
+      +'<button type="button" class="btn-ghost" data-act="cancel-edit">やめる</button>'
+      +'<button type="submit" class="btn-primary">保存する</button>'
+      +'</div></form></article>';
+  }
+
+  function card(it){
+    if(editId===it.id)return editCard(it);
+    var d=diff(today(),it.due);
+    var cls=d<0?'late':(d===0?'due':'');
+    var when=d<0?'<span class="pill late">'+(-d)+'日 遅れ</span>'
+           :d===0?'<span class="pill due">今日</span>'
+           :'<span class="pill calm">'+jp(it.due)+'・あと'+d+'日</span>';
+    var steps='',i;
+    for(i=0;i<INTERVALS.length;i++)steps+='<span class="step'+(it.reps>0&&i<=it.stage?' on':'')+'"></span>';
+    var grades='';
+    if(d<=0){
+      grades='<div class="grades">'+['hard','ok','easy'].map(function(g){
+        var n=nextInterval(it,g);
+        return '<button type="button" class="grade '+g+'" data-act="review" data-id="'+it.id+'" data-g="'+g+'">'+GRADES[g]+'<small>+'+n.days+'日</small></button>';
+      }).join('')+'</div>';
+    }
+    var del=(armed===it.id)
+      ? '<button type="button" class="icon-btn armed" data-act="del" data-id="'+it.id+'">本当に削除</button>'
+      : '<button type="button" class="icon-btn" data-act="arm" data-id="'+it.id+'">削除</button>';
+    del='<span class="card-acts"><button type="button" class="icon-btn" data-act="edit" data-id="'+it.id+'">編集</button>'+del+'</span>';
+    return '<article class="card '+cls+(selId===it.id?' sel':'')+'" data-id="'+it.id+'" style="--sel:'+tagColor(it.tag)+'">'
+      +'<div class="card-top"><h3 class="card-title" data-act="pick" data-id="'+it.id+'" tabindex="0" role="button">'+esc(it.title)+'</h3>'+del+'</div>'
+      +(it.note?'<p class="card-note">'+esc(it.note)+'</p>':'')
+      +'<div class="meta">'+when
+      +(it.tag?'<span class="pill tag"><span class="dot" style="background:'+tagColor(it.tag)+'"></span>'+esc(it.tag)+'</span>':'')
+      +'<span class="steps" title="復習ステージ '+(it.stage+1)+' / '+INTERVALS.length+'">'+steps+'</span>'
+      +'<span class="mono">'+it.reps+'回</span>'
+      +(it.last?'<span class="mono">前回 '+esc(it.last)+'</span>':'<span class="mono">未復習</span>')
+      +(isNarrow()?'':'<span class="mono">係数 '+it.ease.toFixed(2)+'</span>')
+      +'</div>'+grades+'</article>';
+  }
+
+  function listHTML(b){
+    var out='';
+    if(tab==='today'){
+      if(!b.late.length&&!b.due.length){
+        return '<div class="empty"><strong>今日はここまで。</strong>'
+          +(b.soon.length?'次の復習は '+jp(b.soon[0].due)+' です。':'新しく学んだことを登録すると、明日から復習が始まります。')+'</div>'
+          +(state.items.length?quoteBlock():'');
+      }
+      if(b.late.length)out+='<div class="day-head">期限を過ぎている</div>'+b.late.map(card).join('');
+      if(b.due.length)out+='<div class="day-head">今日が復習日</div>'+b.due.map(card).join('');
+      return out;
+    }
+    if(tab==='soon'){
+      if(!b.soon.length)return '<div class="empty"><strong>予定はまだありません。</strong>登録した項目はここに並びます。</div>';
+      var cur='';
+      b.soon.forEach(function(it){
+        if(it.due!==cur){cur=it.due;out+='<div class="day-head">'+jp(cur)+'　あと'+diff(today(),cur)+'日</div>';}
+        out+=card(it);
+      });
+      return out;
+    }
+    if(!b.all.length)return '<div class="empty"><strong>まだ何も登録されていません。</strong>上のフォームから最初の一件を追加してください。</div>';
+    return b.all.map(card).join('');
+  }
+
+  function toolBox(){
+    if(tool==='export'){
+      return '<div class="tool-box"><textarea id="tool-ta" readonly spellcheck="false">'
+        +esc(JSON.stringify({v:1,rev:state.rev,items:state.items},null,1))+'</textarea>'
+        +'<div class="tool-msg">全体を選択してコピーし、テキストファイルなどに保存しておいてください。'
+        +(toolMsg?'<br><span class="'+toolMsgKind+'">'+esc(toolMsg)+'</span>':'')+'</div></div>';
+    }
+    if(tool==='import'){
+      return '<div class="tool-box"><textarea id="tool-ta" spellcheck="false" placeholder="書き出したJSONをここに貼り付けてください"></textarea>'
+        +'<button type="button" class="btn-primary" data-act="do-import">取り込む</button>'
+        +'<div class="tool-msg'+(toolMsgKind?' '+toolMsgKind:'')+'">'
+        +(toolMsg||'同じidの項目は上書きし、ないものは追加します。今ある項目は消えません。')+'</div></div>';
+    }
+    return '';
+  }
+
+  function doImport(){
+    var ta=document.getElementById('tool-ta');
+    if(!ta)return;
+    var raw=ta.value.trim();
+    if(!raw){toolMsg='貼り付けてから押してください。';toolMsgKind='bad';render();return;}
+    var parsed;
+    try{parsed=JSON.parse(raw);}
+    catch(e){toolMsg='JSONとして読めませんでした。書き出したテキスト全体を貼り付けてください。';toolMsgKind='bad';render();return;}
+    var incoming=Array.isArray(parsed)?parsed:(parsed&&Array.isArray(parsed.items)?parsed.items:null);
+    if(!incoming){toolMsg='項目の配列が見つかりませんでした。';toolMsgKind='bad';render();return;}
+    var added=0,updated=0;
+    incoming.forEach(function(raw){
+      if(!raw||!raw.title)return;
+      var it=normalize(raw);
+      var cur=find(it.id);
+      if(cur){for(var k in it)cur[k]=it[k];updated++;}
+      else{state.items.push(it);added++;}
+    });
+    if(!added&&!updated){toolMsg='取り込める項目がありませんでした。';toolMsgKind='bad';render();return;}
+    toolMsg=added+'件を追加、'+updated+'件を更新しました。';toolMsgKind='good';
+    tool=null;
+    commit();
+  }
+
+  function render(){
+    var b=buckets(),t=today();
+    var mastered=b.all.filter(function(x){return x.reps>0&&x.stage>=4;}).length;
+    var h='<div class="wrap">';
+
+    h+='<header class="masthead">'
+      +'<div class="brand"><div class="wordmark">'+markSVG()
+      +'<h1>忘れる前に<span class="dot">.</span></h1></div>'
+      +'<span class="today-chip">'+t+'</span></div>'
+      +'<p class="tagline">エビングハウスの忘却曲線に沿って、学んだことを忘れきる直前に呼び戻す。</p>'
+      +tagChips()
+      +'<div class="curve-card">'
+      +(state.items.length
+        ? memoryChart(b.all)
+        : curveSVG()
+          +'<div class="curve-legend">'
+          +'<span><span class="swatch" style="background:var(--accent)"></span><b>復習したとき</b>　間隔が伸びていく</span>'
+          +'<span><span class="swatch" style="background:var(--muted)"></span><b>復習しないとき</b>　数日でほぼ消える</span>'
+          +'</div>')
+      +'</div></header>';
+
+
+    h+='<div class="stats">'
+      +stat(b.late.length,'期限を過ぎた',b.late.length?'is-late':'')
+      +stat(b.due.length,'今日の復習',b.due.length?'is-due':'')
+      +stat(b.soon.length,'予定に入っている','')
+      +stat(mastered,'定着してきた',mastered?'is-calm':'')
+      +'</div>';
+
+    h+='<section><div class="tabs" role="tablist">'
+      +tabBtn('today','今日やる',b.late.length+b.due.length)
+      +tabBtn('soon','これから',b.soon.length)
+      +tabBtn('all','すべて',b.all.length)
+      +'<button type="button" class="jump" data-act="jump">＋ 登録</button>'
+      +'</div><div class="list">'+listHTML(b)+'</div></section>';
+
+    h+='<section class="panel"><h2 class="panel-title">新しく学んだことを登録する</h2>'
+      +'<form class="add" id="addform">'
+      +'<input type="text" id="f-title" placeholder="覚えたいこと（例：useEffect の依存配列は何を比較しているか）" autocomplete="off" required>'
+      +'<textarea id="f-note" placeholder="要点、あるいは自分への問いかけ（任意）"></textarea>'
+      +'<div class="row">'
+      +'<input type="text" id="f-tag" placeholder="タグ（任意）" autocomplete="off">'
+      +'<select id="f-first" aria-label="最初の復習をいつにするか">'
+      +'<option value="1">最初の復習は 翌日</option>'
+      +'<option value="0">最初の復習は 今日</option>'
+      +'<option value="2">最初の復習は 2日後</option>'
+      +'<option value="3">最初の復習は 3日後</option>'
+      +'</select></div>'
+      +'<div class="form-foot"><span class="hint">1 → 3 → 7 → 14 → 30 → 60 日…と、答えやすさに応じて間隔が伸びます。</span>'
+      +'<button type="submit" class="btn-primary">登録する</button></div>'
+      +'</form></section>';
+
+    h+='<footer>「難しい」を選ぶと間隔は一段戻り、「簡単」なら一気に先へ飛びます。<br>データはこの端末の中だけに保存されます。他の人からは見えません。'
+      +'<div class="tools">'
+      +'<button type="button" class="tool-btn'+(tool==='export'?' on':'')+'" data-act="tool" data-t="export">データを書き出す</button>'
+      +'<button type="button" class="tool-btn'+(tool==='import'?' on':'')+'" data-act="tool" data-t="import">データを読み込む</button>'
+      +'</div>'+toolBox()+'</footer></div>';
+
+    document.getElementById('app').innerHTML=h;
+  }
+
+  /* ---------- events (delegated once) ---------- */
+  var root=document.getElementById('app');
+  root.addEventListener('submit',function(e){
+    if(e.target.classList&&e.target.classList.contains('edit-form')){
+      e.preventDefault();saveEdit(e.target.getAttribute('data-id'));return;
+    }
+    if(e.target.id!=='addform')return;
+    e.preventDefault();
+    var title=document.getElementById('f-title').value.trim();
+    if(!title)return;
+    add(title,
+        document.getElementById('f-note').value.trim(),
+        document.getElementById('f-tag').value.trim(),
+        parseInt(document.getElementById('f-first').value,10)||0);
+  });
+  root.addEventListener('keydown',function(e){
+    if((e.key==='Enter'||e.key===' ')&&e.target.classList&&e.target.classList.contains('card-title')){
+      e.preventDefault();e.target.click();
+    }
+  });
+  root.addEventListener('click',function(e){
+    var el=e.target.closest('[data-act],[data-tab]');
+    if(!el)return;
+    if(el.getAttribute('data-tab')){tab=el.getAttribute('data-tab');armed=null;render();return;}
+    if(el.getAttribute('data-act')==='tag'){
+      var tg=el.getAttribute('data-tag');
+      filterTag=tg?((filterTag===tg)?null:tg):null;
+      selId=null;armed=null;editId=null;editErr='';render();return;
+    }
+    if(el.getAttribute('data-act')==='pick'){
+      var pid=el.getAttribute('data-id');
+      if(selId===pid){selId=null;render();return;}
+      selId=pid;
+      var pit=find(pid);
+      if(pit&&el.getAttribute('data-scroll')){
+        var dd=diff(today(),pit.due);
+        if(dd>0&&tab==='today')tab='soon';
+      }
+      render();
+      if(el.getAttribute('data-scroll')){
+        var card=document.querySelector('.card[data-id="'+pid+'"]');
+        if(card)card.scrollIntoView({behavior:'smooth',block:'center'});
+      }
+      return;
+    }
+    var act=el.getAttribute('data-act'),id=el.getAttribute('data-id');
+    if(act==='review'){armed=null;review(id,el.getAttribute('data-g'));}
+    else if(act==='edit'){
+      editId=id;editErr='';armed=null;selId=null;
+      var wasTab=tab;
+      if(tab==='today'){
+        var eit=find(id);
+        if(eit&&diff(today(),eit.due)>0)tab='all';
+      }
+      render();
+      var ec=document.getElementById('e-title');
+      if(ec){ec.focus();var ecard=document.querySelector('.card.editing');if(ecard)ecard.scrollIntoView({behavior:'smooth',block:'center'});}
+    }
+    else if(act==='cancel-edit'){editId=null;editErr='';render();}
+    else if(act==='arm'){armed=id;render();}
+    else if(act==='del'){remove(id);}
+    else if(act==='tool'){
+      var t=el.getAttribute('data-t');
+      tool=(tool===t)?null:t; toolMsg=''; toolMsgKind=''; render();
+      var ta=document.getElementById('tool-ta');
+      if(ta){ta.scrollIntoView({behavior:'smooth',block:'center'});if(tool==='export')setTimeout(function(){ta.select();},400);}
+    }
+    else if(act==='do-import'){doImport();}
+    else if(act==='jump'){
+      var f=document.getElementById('f-title');
+      if(f){f.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(function(){f.focus();},450);}
+    }
+  });
+
+  var rzT=null,wasNarrow=isNarrow();
+  window.addEventListener('resize',function(){
+    if(rzT)clearTimeout(rzT);
+    rzT=setTimeout(function(){
+      var n=isNarrow();
+      if(n!==wasNarrow){wasNarrow=n;render();}
+    },200);
+  });
+
+  render();
+})();
+</script>
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('sw.js').catch(function(){});
+  });
+}
+</script>
+</body>
+</html>
