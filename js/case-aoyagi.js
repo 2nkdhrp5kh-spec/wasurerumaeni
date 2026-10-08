@@ -41,10 +41,11 @@
   const C = {
     id: 'aoyagi', role: '捜査官', base: { m: 10, d: 3 }, dayCard: true,
     staff: [{ id: 'shirai', name: '白井' }, { id: 'oka', name: '岡' }, { id: 'noguchi', name: '野口' }],
+    chargeHint: '金を奪う罪を分けるのは<b>手段</b>。相手の反抗を抑えるほどの暴行・脅迫（刃物を見せる、縛る）を使えば強盗。使わずにこっそり取れば窃盗。強盗の際に人がけがをすれば強盗致傷になる。けがの有無は、診断書などの記録で確かめる。',
     charges: [
-      { id: 'goto', label: '住居侵入・強盗', law: '刑法130条前段・236条1項', fit: true },
-      { id: 'setto', label: '住居侵入・窃盗', law: '刑法130条前段・235条', els: (S, e) => e.filter(x => !/暴行|脅迫/.test(x.k)) },
-      { id: 'chisho', label: '住居侵入・強盗致傷', law: '刑法130条前段・240条（裁判員裁判の対象）', els: (S, e) => e.concat([{ k: '被害者のけが', v: 0 }]) }
+      { id: 'goto', label: '住居侵入・強盗', law: '刑法130条前段・236条1項', fit: true, arts: ['刑法 第130条', '刑法 第236条'], req: ['正当な理由なく入る', '反抗を抑えるほどの暴行・脅迫', '財物を奪う', '故意'] },
+      { id: 'setto', label: '住居侵入・窃盗', law: '刑法130条前段・235条', arts: ['刑法 第235条'], req: ['財物を盗む', '暴行・脅迫は使わない'], els: (S, e) => e.filter(x => !/暴行|脅迫/.test(x.k)) },
+      { id: 'chisho', label: '住居侵入・強盗致傷', law: '刑法130条前段・240条（裁判員裁判の対象）', arts: ['刑法 第240条'], req: ['強盗', '人にけがをさせた'], els: (S, e) => e.concat([{ k: '被害者のけが', v: 0 }]) }
     ],
     info: S => {
       const c = S.c;

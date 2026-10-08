@@ -13,13 +13,14 @@
     staff: [{ id: 'shirai', name: '白井' }, { id: 'oka', name: '岡' }, { id: 'noguchi', name: '野口' }],
     elemTitle: '立証すべき事実',
     info: S => kit.info(S, '北見坂駅前事件'),
+    chargeHint: '人が死んだ事件で、罪名を分けるのは<b>何を意図していたか</b>。殺す意思（殺意）があれば殺人。押す・殴るといった暴行の意思だけなら傷害致死。暴行の意思もなく重大な不注意なら重過失致死。人が死んでいるのに傷害だけで送ると、結果を書き落とすことになる。<br>なお、正当防衛（刑法36条）は罪名ではない。成り立てば、どの罪名でも罰せられない。',
     charges: [
-      { id: 'shogaichishi', label: '傷害致死', law: '刑法205条（裁判員裁判の対象）', fit: true, saibanin: true },
-      { id: 'satsujin', label: '殺人', law: '刑法199条（裁判員裁判の対象）', saibanin: true,
+      { id: 'shogaichishi', label: '傷害致死', law: '刑法205条（裁判員裁判の対象）', fit: true, saibanin: true, arts: ['刑法 第205条'], req: ['暴行・傷害の行為', '死亡の結果', '行為と死亡のつながり', '暴行・傷害の故意（殺す意思までは要らない）'] },
+      { id: 'satsujin', label: '殺人', law: '刑法199条（裁判員裁判の対象）', saibanin: true, arts: ['刑法 第199条'], req: ['人を殺す行為', '死亡の結果', 'つながり', '殺意（死んでもかまわないという認識を含む）'],
         els: (S, e) => [e[0], { k: '殺意', v: S.c.confession ? 1 : 0 }, e[1], e[2]] },
-      { id: 'jukashitsu', label: '重過失致死', law: '刑法211条後段', saibanin: false,
+      { id: 'jukashitsu', label: '重過失致死', law: '刑法211条後段', saibanin: false, arts: ['刑法 第211条'], req: ['重大な不注意', '死亡の結果', 'つながり', '暴行の故意がないこと'],
         els: (S, e) => [e[0], { k: '重大な過失', v: 1 }, e[1]] },
-      { id: 'shogai', label: '傷害', law: '刑法204条', saibanin: false,
+      { id: 'shogai', label: '傷害', law: '刑法204条', saibanin: false, arts: ['刑法 第204条'], req: ['傷害の行為', 'けがの結果'],
         els: (S, e) => [{ k: '暴行と傷害', v: e[0].v }, e[1], e[2], e[3]] }
     ],
     scene: S => sc(null, 'office'),

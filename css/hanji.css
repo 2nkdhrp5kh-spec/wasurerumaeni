@@ -58,5 +58,5 @@
 .cpage .hj-frag{font-family:'Noto Serif JP',serif;text-align:left;font-size:15px;line-height:2;color:#cfc8b8}
 .cpage .hj-frag p{margin:0 0 1.1em}
 .cpage .hj-frag h3{font-size:14px;color:#888;font-weight:400;margin:0 0 14px;letter-spacing:.2em;text-align:center}
-.hj-reasons .pbtn{width:100%}
+.paper:has(.hj-reasons) .paper-f .pbtn{width:100%}
 .paper .hj-st{font-size:13px;color:var(--ink2)}

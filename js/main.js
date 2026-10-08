@@ -10,13 +10,14 @@
     $('#app').innerHTML = '<div class="title"><div class="sub">— 仮題 —</div><h1>調書</h1>'
       + '<div class="menu">'
       + '<button class="act primary" id="t-keiji"><span class="l">刑事編</span><span class="s">捜査官として</span></button>'
-      + '<button class="act" id="t-hanji" disabled><span class="l">判事編</span><span class="s">制作中（刑事編のあとに遊べるようになる予定）</span></button>'
+      + '<button class="act" id="t-hanji"><span class="l">判事編</span><span class="s">令状当番の夜　（刑事編のあとがおすすめ）</span></button>'
       + '<button class="act" id="t-kyumon" disabled><span class="l">糾問編</span><span class="s">' + (done ? '準備中' : '刑事編と判事編のあとで') + '</span></button>'
       + '<button class="act ghost" id="t-rec"><span class="l">記録</span></button>'
       + '<button class="act ghost" id="t-law"><span class="l">条文帳</span></button>'
       + '<button class="act ghost" id="t-cr"><span class="l">クレジット</span></button></div>'
       + '<div class="foot">本作はフィクションです。登場する人物・団体・地名は架空のものです。<br>暴力的な描写を含みます。<br>手続は現行法に基づいていますが、ゲームとして日数や手順を簡略化しています。</div></div>';
     $('#t-keiji').onclick = () => { G.audio.unlock(); keiji(); };
+    $('#t-hanji').onclick = async () => { G.audio.unlock(); await G.hanji.run(); record(); };
     $('#t-rec').onclick = record;
     $('#t-law').onclick = G.openLaw;
     $('#t-cr').onclick = credits;
@@ -77,7 +78,7 @@
       + (rows.length ? '<table class="kv record"><tr><th>回</th><th>事件</th><th>結果</th><th>自白</th><th>注意の付いた行動</th><th>送らなかった記録</th><th>真相</th></tr>'
         + rows.map(r => '<tr><td>' + r.no + '</td><td>' + (r.mode === '刑事編' ? '青柳書房事件' : r.mode) + '</td><td>' + r.result + '</td><td>' + r.confession + '</td><td>' + r.illegal + '</td><td>' + r.withheld + '</td><td>' + (r.revealed === '判明' ? '偶然、判明した' : '—') + '</td></tr>').join('') + '</table>'
         : G.P('まだ記録はない。'))
-      + G.note('同じ証拠から、違う判断がありえた。違う真実も、ありえた。') + G.note('次は「判事編」：他の誰かが作った記録だけを読んで、裁く側に立つ。（制作中）')
+      + G.note('同じ証拠から、違う判断がありえた。違う真実も、ありえた。') + G.note('「判事編」：他の誰かが作った記録だけを読んで、裁く側に立つ。')
       + '<div class="paper-f"><button class="pbtn" id="r-q">冒頭の言葉</button><button class="pbtn" id="r-t">タイトルへ</button></div></div>';
     $('#app').appendChild(w);
     $('#r-t').onclick = title;

@@ -131,9 +131,18 @@
   kit.title = (S, name) => { const ch = kit.charge(S); return name + (ch ? '（' + ch.label + '）' : ''); };
   kit.chooseCharge = async function (S, C, why, must) {
     if (S.c.charge) return kit.charge(S);
-    const v = await G.openPaper({ title: '罪名を決める', sub: why === 'warrant' ? '逮捕状請求書の「罪名」「被疑事実の要旨」の欄' : why === 'soutchi' ? '送致書の「罪名」の欄' : '捜査の見立て。一度決めると、変えられない',
-      body: G.P('集めた記録から、何の罪にあたるかを決める。', '罪名によって、逮捕・勾留の判断、取調べの録音・録画の義務、裁判の形が変わる。起訴するかどうか、何の罪で起訴するかは、最終的には検察官が決める。'),
-      noClose: true, buttons: C.charges.map(ch => ({ label: ch.label, value: ch.id, small: ch.law })).concat(must ? [] : [{ label: 'まだ決めない', value: null }]) });
+    let v;
+    for (;;) {
+      const cards = C.charges.map(ch => '<div class="chcard"><div class="chh">' + ch.label + '<span>' + ch.law + '</span></div>'
+        + (ch.arts || []).map(k => { const r = G.lawFind(k); return r ? '<div class="chart"><b>' + r[0] + '</b>' + r[1] + '</div>' : ''; }).join('')
+        + (ch.req ? '<div class="chreq">要素：' + ch.req.map(x => '<span>' + x + '</span>').join('') + '</div>' : '') + '</div>').join('');
+      v = await G.openPaper({ title: '罪名を決める', sub: why === 'warrant' ? '逮捕状請求書の「罪名」「被疑事実の要旨」の欄' : why === 'soutchi' ? '送致書の「罪名」の欄' : '捜査の見立て。一度決めると、変えられない',
+        body: G.P('集めた記録から、何の罪にあたるかを決める。罪名によって、逮捕・勾留の判断、取調べの録音・録画の義務、裁判の形が変わる。何の罪で起訴するかは、最終的には検察官が決める。')
+          + (C.chargeHint ? '<div class="howto"><b>見分けるところ</b>' + C.chargeHint + '</div>' : '') + cards,
+        noClose: true, buttons: C.charges.map(ch => ({ label: ch.label, value: ch.id, small: ch.law })).concat([{ label: '条文帳（刑法）を開く', value: '_law' }], must ? [] : [{ label: 'まだ決めない', value: null }]) });
+      if (v !== '_law') break;
+      await G.openLaw('刑法');
+    }
     if (!v) return null;
     S.c.charge = v; const ch = kit.charge(S);
     if (C.charges.find(x => x.fit).id !== v) S.c.chargeMismatch = true;

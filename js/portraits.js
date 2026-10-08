@@ -733,8 +733,15 @@
       if (speaking && now - A.lastMouth > 110) { A.mouth = !A.mouth; A.lastMouth = now; } if (!speaking) A.mouth = false;
       const breath = Math.sin((now - A.t0) / 1700 * Math.PI * 2) > .35 ? 1 : 0;
       const s = sprite(sc.who, sc.stage, { blink: now < A.blinkUntil, mouth: A.mouth });
-      const px = sc.x === 'l' ? 40 : sc.x === 'r' ? 136 : 88;
-      x.drawImage(s, px, (PLACE[sc.bg] ?? H - N) + breath);
+      const px = sc.x === 'l' ? 40 : sc.x === 'r' ? 136 : 88, py = PLACE[sc.bg] ?? H - N;
+      // 歩いて入ってくる：同じ場所で人物が替わったときだけ、横から歩いて来る
+      const e = A.enter, k = e ? Math.min(1, (now - e.t0) / e.dur) : 1, ease = 1 - Math.pow(1 - k, 2);
+      const ox = e && k < 1 ? Math.round((1 - ease) * e.from) : 0, bob = e && k < 1 ? (Math.floor((now - e.t0) / 90) % 2) : 0;
+      x.drawImage(s, px + ox, py + breath - bob + (e && k < 1 && e.sit ? Math.round((1 - ease) * -4) : 0));
+    }
+    if (A.exit) {
+      const ex = A.exit, k = Math.min(1, (performance.now() - ex.t0) / 380);
+      if (k < 1) x.drawImage(ex.s, ex.px + Math.round(k * k * ex.to), ex.py - (Math.floor(k * 6) % 2)); else A.exit = null;
     }
     const fg = fgCanvas(sc.bg); if (fg) x.drawImage(fg, 0, 0);
     if (sc.dim) { x.fillStyle = 'rgba(0,0,0,' + sc.dim + ')'; x.fillRect(0, 0, W, H); }
@@ -742,6 +749,17 @@
   }
   function scene(cv, sc) {
     if (!A.sc || A.sc.who !== sc.who) { A.nextBlink = performance.now() + 1500 + Math.random() * 2000; A.blinkUntil = 0; }
+    const prev = A.sc, sameRoom = prev && prev.bg === sc.bg && A.cv === cv;
+    const now0 = performance.now(); A.recent = A.recent || {};
+    const fresh = sc.who && !(A.recent[sc.bg + ':' + sc.who] > now0 - 30000);
+    if (prev && prev.who) A.recent[prev.bg + ':' + prev.who] = now0;
+    if (sc.who) A.recent[sc.bg + ':' + sc.who] = now0;
+    if (sameRoom && prev.who !== sc.who && (fresh || !sc.who)) {
+      const now = performance.now(), fromRight = sc.x !== 'l';
+      A.enter = sc.who && PEOPLE[sc.who] ? { t0: now, dur: 520, from: fromRight ? 150 : -150, sit: ['interro', 'pros', 'chambers'].includes(sc.bg) } : null;
+      // 前の人は反対側へ歩いて出ていく
+      if (prev.who && PEOPLE[prev.who] && sc.who) A.exit = { s: sprite(prev.who, prev.stage, {}), px: prev.x === 'l' ? 40 : prev.x === 'r' ? 136 : 88, py: PLACE[prev.bg] ?? H - N, to: fromRight ? -150 : 150, t0: now };
+    } else if (!sameRoom) { A.enter = null; A.exit = null; }
     A.cv = cv; A.sc = sc; draw();
     if (!A.timer) A.timer = setInterval(draw, 60);
   }

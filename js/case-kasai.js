@@ -12,11 +12,12 @@
     id: 'kasai', role: '捜査官', base: { m: 1, d: 18 }, dayCard: true,
     staff: [{ id: 'shirai', name: '白井' }, { id: 'oka', name: '岡' }, { id: 'noguchi', name: '野口' }],
     info: S => kit.info(S, '本町三丁目火災'),
+    chargeHint: '火事の罪名を分けるのは<b>わざと火をつけたか</b>。わざとなら放火（燃えたのが人の住む家なら108条）。不注意なら失火（116条、罰金のみ）。不注意の程度が重大なら重過失失火（117条の2）。出火の原因が分からないうちは、どれとも決められない。',
     charges: [
-      { id: 'hoka', label: '現住建造物等放火', law: '刑法108条（裁判員裁判の対象）', fit: true, saibanin: true },
-      { id: 'jushikka', label: '重過失失火', law: '刑法117条の2後段', saibanin: false, noArrest: true,
+      { id: 'hoka', label: '現住建造物等放火', law: '刑法108条（裁判員裁判の対象）', fit: true, saibanin: true, arts: ['刑法 第108条'], req: ['放火する行為', '人が住んでいる建物', '焼損（独立して燃え続ける状態）', '放火の故意'] },
+      { id: 'jushikka', label: '重過失失火', law: '刑法117条の2後段', saibanin: false, noArrest: true, arts: ['刑法 第117条の2', '刑法 第116条'], req: ['重大な不注意', '焼損', '放火の故意がないこと'],
         els: (S, e) => [e[0], { k: '大塚の重大な過失', v: G.keiji.doc('stove') ? 1 : 0 }, e[2]] },
-      { id: 'shikka', label: '失火', law: '刑法116条（罰金のみ）', saibanin: false, noArrest: true,
+      { id: 'shikka', label: '失火', law: '刑法116条（罰金のみ）', saibanin: false, noArrest: true, arts: ['刑法 第116条'], req: ['不注意', '焼損'],
         els: (S, e) => [e[0], { k: '大塚の過失', v: G.keiji.doc('stove') ? 1 : 0 }] }
     ],
     scene: S => sc(null, 'office'),
