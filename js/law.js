@@ -26,8 +26,12 @@ G.LAW = [
   ['判例　約束による自白（最判昭和41年7月1日・要旨）', '起訴不起訴の決定権をもつ検察官の「自白をすれば起訴猶予にする」旨の言葉を信じ、それを期待してした自白は、任意性に疑いがあり、証拠能力を欠く。'],
   ['学説　別件逮捕・勾留', '本命の事件（本件）の取調べのために、要件の備わった別の軽い事件（別件）で逮捕・勾留すること。適法性の判断は分かれている。<br>・別件基準説：別件について逮捕・勾留の要件があれば適法とする。<br>・本件基準説：実質は本件の身柄拘束であり、本件について要件を欠けば違法とする。<br>・実体喪失説：別件の身柄拘束が実際には本件の捜査に使われ、令状審査を経た拘束としての実体を失ったかどうかで判断する。<br>あわせて、拘束中に余罪を取り調べてよい範囲（余罪取調べの限界）も争われている。']
 ];
+// ---- 判事編（令状当番・公判）の条文帳。刑事編とは別の本にする ----
+G.LAW_HANJI = [];
 // 公訴・訴因（e-Gov 現行法：2026年10月確認。312条は令和8年改正後の7項構成）
-G.LAW.push(
+G.LAW_HANJI.push(
+  ['刑法 第246条1項（詐欺）', '人を欺いて財物を交付させた者は、十年以下の拘禁刑に処する。'],
+  ['刑法 第261条（器物損壊等）', '前三条に規定するもののほか、他人の物を損壊し、又は傷害した者は、三年以下の拘禁刑又は三十万円以下の罰金若しくは科料に処する。'],
   ['刑事訴訟法 第256条3項', '公訴事実は、訴因を明示してこれを記載しなければならない。訴因を明示するには、できる限り日時、場所及び方法を以て罪となるべき事実を特定してこれをしなければならない。'],
   ['刑事訴訟法 第312条（抄）', '①裁判所は、検察官の請求があるときは、公訴事実の同一性を害しない限度において、起訴状に記載された訴因又は罰条の追加、撤回又は変更を許さなければならない。<br>②裁判所は、審理の経過に鑑み適当と認めるときは、訴因又は罰条を追加又は変更すべきことを命ずることができる。<br>⑦裁判所は、訴因又は罰条の追加又は変更により被告人の防御に実質的な不利益を生ずるおそれがあると認めるときは、被告人又は弁護人の請求により、決定で、被告人に十分な防御の準備をさせるため必要な期間公判手続を停止しなければならない。'],
 );
@@ -61,14 +65,19 @@ G.LAW_HOWTO = '<div class="howto"><b>罪名の決め方</b>'
   + '<li><b>似た罪との違いを一点に絞る。</b>同じ「人が死んだ」でも、殺す意思があれば殺人、暴行・傷害の意思だけなら傷害致死、意思がなく重大な不注意なら重過失致死。違いはたいてい、<b>何を意図していたか</b>か、<b>行為の態様</b>にある。</li>'
   + '<li><b>重い罪を選べばよいわけではない。</b>立証できない重い罪名は、検察官に改められる。軽すぎる罪名は、事件を小さく扱うことになる。</li></ol></div>';
 
+// どちらの本にも綴じる基本の条文
+const SHARED = /^(日本国憲法 第3[158]|刑事訴訟法 第1条|刑事訴訟法 第199条|刑事訴訟法 第319条|刑事訴訟法 第336条|刑法 第(130|204|235|236|240)条|判例　違法収集|学説　別件|北見坂県)/;
+G.lawRows = () => G.lawMode === 'hanji' ? G.LAW_HANJI.concat(G.LAW.filter(r => SHARED.test(r[0]) && !G.LAW_HANJI.some(x => x[0] === r[0]))) : G.LAW;
 G.openLaw = function (tab) {
-  const books = ['刑法', '刑事訴訟法', '憲法', '判例・学説', 'その他'];
-  tab = books.includes(tab) ? tab : (G.ui && G.ui.lawTab) || '刑事訴訟法';
+  const hanji = G.lawMode === 'hanji';
+  const books = hanji ? ['刑事訴訟法', '刑法', '憲法', '判例・学説', 'その他'] : ['刑法', '刑事訴訟法', '憲法', '判例・学説', 'その他'];
+  const key = hanji ? 'lawTabH' : 'lawTab';
+  tab = books.includes(tab) ? tab : (G.ui && G.ui[key]) || '刑事訴訟法';
   const render = () => {
-    const rows = G.LAW.filter(r => G.lawBook(r[0]) === tab);
+    const rows = G.lawRows().filter(r => G.lawBook(r[0]) === tab);
     if (tab === '刑法' || tab === '刑事訴訟法' || tab === '憲法') rows.sort((a, b) => G.lawNum(a[0]) - G.lawNum(b[0]));
     return '<div class="lawtabs">' + books.map(b => '<button class="lawtab' + (b === tab ? ' on' : '') + '" data-b="' + b + '">' + b + '</button>').join('') + '</div>'
-      + (tab === '刑法' ? G.LAW_HOWTO : '')
+      + (tab === '刑法' && !hanji ? G.LAW_HOWTO : '')
       + rows.map(([h, t, k]) => {
         const tool = k && G.lawTools && G.lawTools[k];
         const use = tool && tool.avail() ? '<button class="pbtn lawuse" data-k="' + k + '">この規定を使う：' + tool.label + '</button>' : '';
@@ -77,10 +86,10 @@ G.openLaw = function (tab) {
   };
   const bind = () => {
     document.querySelectorAll('.lawuse').forEach(b => b.onclick = () => { G.closePaper(); G.lawTools[b.dataset.k].run(); });
-    document.querySelectorAll('.lawtab').forEach(b => b.onclick = () => { tab = b.dataset.b; if (G.ui) G.ui.lawTab = tab; G.audio.sfx('paper'); document.querySelector('#overlay .paper-b').innerHTML = render(); bind(); });
+    document.querySelectorAll('.lawtab').forEach(b => b.onclick = () => { tab = b.dataset.b; if (G.ui) G.ui[key] = tab; G.audio.sfx('paper'); document.querySelector('#overlay .paper-b').innerHTML = render(); bind(); });
   };
   setTimeout(bind, 0);
-  return G.openPaper({ title: '条文帳', sub: '法典ごとに分けてある。上の見出しで切り替える。', body: render() });
+  return G.openPaper({ title: hanji ? '条文帳（令状・公判）' : '条文帳（捜査）', sub: (hanji ? '令状の審査と公判で使う条文。' : '捜査で使う条文。') + '法典ごとに分けてある。上の見出しで切り替える。', body: render() });
 };
 
 G.QUOTES = {

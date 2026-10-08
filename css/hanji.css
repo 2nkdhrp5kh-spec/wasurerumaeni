@@ -60,3 +60,6 @@
 .cpage .hj-frag h3{font-size:14px;color:#888;font-weight:400;margin:0 0 14px;letter-spacing:.2em;text-align:center}
 .paper:has(.hj-reasons) .paper-f .pbtn{width:100%}
 .paper .hj-st{font-size:13px;color:var(--ink2)}
+.hj-eval{border:2px solid #1c1712;background:#efe6cf;padding:8px 10px;margin:0 0 10px}
+.hj-eval .eh{font-weight:700;font-size:15px;margin-bottom:4px}
+.hj-eval p{margin:2px 0;font-size:13px;line-height:1.7}.hj-eval .es{font-size:12px;color:#5a5040}

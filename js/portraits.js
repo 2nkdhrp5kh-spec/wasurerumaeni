@@ -253,7 +253,13 @@
       for (let x = 29; x <= 34; x++) put(x, 39 + md, 'lipLo');
     }
     for (let x = 30; x <= 33; x++) if (at(x, 40 + md) === 'skin') put(x, 40 + md, 'shade');
-    if (o.mouthOpen) { for (let x = 28; x <= 35; x++) put(x, 38 + md, 'lip'); for (let x = 29; x <= 34; x++) put(x, 39 + md, 'mouthIn'); for (let x = 30; x <= 33; x++) { put(x, 40 + md, 'lipLo'); put(x, 39 + md, x === 30 || x === 33 ? 'mouthIn' : 'teeth'); } }
+    // 口を開けたとき：上の歯は口の幅いっぱいに、薄く暗めに（真ん中だけ白い歯が出ると、齧歯類のように見える）
+    if (o.mouthOpen) {
+      for (let x = 28; x <= 35; x++) put(x, 38 + md, 'lip');
+      for (let x = 28; x <= 35; x++) put(x, 39 + md, x === 28 || x === 35 ? 'mouthIn' : 'teeth');
+      for (let x = 29; x <= 34; x++) put(x, 40 + md, 'mouthIn');
+      for (let x = 30; x <= 33; x++) put(x, 41 + md, 'lipLo');
+    }
     if (o.mustache) for (let x = 26; x <= 37; x++) { put(x, 36, 'hair'); if (x > 26 && x < 37) put(x, 37, (x % 3) ? 'hair' : 'hairHi'); }
 
     // ひげ・乱れ・頬
@@ -305,7 +311,7 @@
   }
 
   // ---- 人物の設定 ----
-  const BASE = { mouthIn: '#3a1f1a', teeth: '#cfc6b6', glint: '#f2ede2', line: '#1c1511', white: '#dcd4c4', iris: '#3b2a20', pupil: '#140f0c', lip: '#9a6352', lipLo: '#b27a66', bag: '#a98069', stub: '#8f7b69', frame: '#2a2622', shirt: '#d8d4c8', tie: '#6b2a26', brow: '#5a5550' };
+  const BASE = { mouthIn: '#3a1f1a', teeth: '#a89c8a', glint: '#f2ede2', line: '#1c1511', white: '#dcd4c4', iris: '#3b2a20', pupil: '#140f0c', lip: '#9a6352', lipLo: '#b27a66', bag: '#a98069', stub: '#8f7b69', frame: '#2a2622', shirt: '#d8d4c8', tie: '#6b2a26', brow: '#5a5550' };
   const PEOPLE = {
     kuzumi: st => ({ o: { hair: 'short', eyes: [0, 1, 2, 3][st], stubble: [0, 0, 1, 2][st], messy: [0, 0, 5, 10][st], brows: st === 3 ? 'sad' : 'n', mouth: st === 3 ? 'frown' : 'flat', gaunt: st === 3, cloth: 'sweat' },
                     p: Object.assign({}, KUZUMI_SKIN[st], CLOTH.sweat, { hair: '#2a221d', hairHi: '#3d332b' }) }),

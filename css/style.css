@@ -274,3 +274,7 @@ button{font:inherit;color:inherit}
 .fback{margin-top:12px;border-top:1px dashed #8a7a6a;padding-top:6px}
 .fback .fbh{font-size:11px;color:#5a5040}
 .ftbl td{overflow-wrap:anywhere}.fblank{display:inline-block;max-width:100%;overflow:hidden;vertical-align:bottom}
+.trate{border:2px solid var(--ink);padding:8px 12px;margin:0 0 10px;text-align:center;background:#efe6cf}
+.trate .tl{font-size:12px;letter-spacing:.3em;color:var(--ink2)}
+.trate .tv{font-size:34px;font-weight:700;line-height:1.2}.trate .tv small{font-size:16px;margin-left:2px}
+.trate .ts{font-size:12px;line-height:1.7}.trate .ts2{font-size:11px;color:var(--ink2);margin-top:2px}

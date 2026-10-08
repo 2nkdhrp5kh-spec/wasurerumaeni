@@ -57,7 +57,7 @@
     ['刑事訴訟法 第317条・第318条', '事実の認定は、証拠による。<br>証拠の証明力は、裁判官の自由な判断に委ねる。']
   ];
   // 判事編の条文も、共通の条文帳（法典ごとの見出し）に綴じる
-  H_LAW.forEach(r => { if (!G.LAW.some(x => x[0] === r[0]) && r[0] !== '刑事訴訟法 第218条1項') G.LAW.push(r); });
+  H_LAW.forEach(r => { if (!G.LAW_HANJI.some(x => x[0] === r[0])) G.LAW_HANJI.push(r); });
   function lawBook() { return G.openLaw('刑事訴訟法'); }
 
   /* ---------- 夜 ---------- */
@@ -822,17 +822,22 @@
     return kv([['被疑者', R.sus[0]], ['罪名', R.def.charge]]);
   }
 
+  // 手書きの請求に仕込んだ問題点（評価に使う。画面には出さない）
+  // deny：要件を欠く／fix：請求書の誤り（電話で直れば発付してよい）／part：一部だけ発付が相当／split：判断が分かれる
+  const BAD = { TANI: 'deny', BANDO: 'deny', A3e: 'deny', MASHIBA: 'deny', ISEKI: 'fix', USAMI: 'fix', CHIHAYA: 'fix', ODAGIRI: 'fix', HAMA: 'fix', B1: 'part', A1: 'split', A3k: 'split', D2: 'split' };
+  DEFS.forEach(d => { d.bad = BAD[d.id] || null; });
+
   /* ---------- 夜の始まりと終わり ---------- */
   async function night(n) {
     S.night = n; S.t = 0; S.nightOver = false;
-    S.reqs = DEFS.filter(d => d.night === n && (!d.when || d.when(S))).map(inst).sort((a, b) => a.at - b.at);
+    S.reqs = S.defs.filter(d => d.night === n && (!d.when || d.when(S))).map(inst).sort((a, b) => a.at - b.at);
     G.audio.cue('silence'); G.audio.ambient(null);
     await G.curtain([{ html: '<div class="big">' + NIGHTS[n].name + '</div><div class="small">' + NIGHTS[n].date + '　午後9時　令状当番</div>', wait: 1200 }], { delay: 300 });
     G.audio.ambient('night');
     return new Promise(async res => {
       S._nightDone = res;
       render(n === 1 ? '（午後9時。裁判官室。）' : '');
-      if (n === 1) await tutorial();
+      if (n === 1 && !S.tutDone) { S.tutDone = true; await tutorial(); }
       else await G.talk([['hj_clerk', pick(['今夜もよろしくお願いします。机に回します。', '当番、お疲れさまです。……もう一件、来ています。', '今夜は、少し多いかもしれません。']), { scene: { bg: BG_CHAMBERS, who: 'hj_clerk' } }]]);
       render();
     });
@@ -1048,11 +1053,12 @@
     const decTxt = R => R.dec === 'next' ? '引継ぎ' : R.dec === 'deny' ? '却下' : R.kind === 'koryu' ? '勾留' : R.kind === 'encho' ? '延長' + R.days + '日' : R.how === 'part' ? '一部却下・発付' : R.how === 'cond' ? '条件付き発付' : '発付';
     const rows = S.log.map(R => '<tr><td>' + NIGHTS[R.def.night].name.slice(1, 2) + '</td><td>' + KIND[R.kind].label.replace('許可状', '').replace('請求', '') + '</td><td>' + R.sus[0] + '</td><td class="' + (R.dec === 'deny' ? 'd' : R.dec === 'next' ? 'n' : 'g') + '">' + decTxt(R) + (R.reason && R.reason !== '理由は記さない' ? '<br><small>' + R.reason + '</small>' : '') + '</td></tr>').join('');
     const c = S.count;
+    const ev = evaluate();
     const remark = c.next > 3 ? '引継ぎの件数が、ほかの当番より少し多いようです。'
       : c.call > 5 ? '電話の記録が多い夜でした。警察署から、受付の時刻について問い合わせがありました。'
         : '特記事項はありません。';
     await G.openPaper({ title: '令状事務処理簿（控）', sub: '北見坂地方裁判所　刑事訟廷', noClose: true,
-      body: G.kv([['発付（勾留・延長を含む）', c.grant + '件'], ['却下', c.deny + '件'], ['資料の追加を求めた件数', c.call + '件'], ['次の当番への引継ぎ', c.next + '件']])
+      body: ev + G.kv([['発付（勾留・延長を含む）', c.grant + '件'], ['却下', c.deny + '件'], ['資料の追加を求めた件数', c.call + '件'], ['次の当番への引継ぎ', c.next + '件']])
         + '<table class="kv hj-rec"><tr><th>夜</th><th>種類</th><th>被疑者</th><th>判断</th></tr>' + rows + '</table>'
         + (S.trial ? P('公判：住居侵入、窃盗被告事件（筒井康平）　' + (S.trial.guilty ? '有罪' : '無罪')) : '')
         + (S.trial2 ? P('公判：' + S.trial2.soin + '被告事件（能登和臣）　' + { satsujin: '殺人で有罪', chishi: '訴因変更のうえ傷害致死で有罪', shukusho: '傷害致死を縮小認定', muzai: '無罪' }[S.trial2.kind]) : '')
@@ -1060,33 +1066,110 @@
       buttons: [{ label: '簿冊を閉じる', value: 1 }] });
   }
 
+  /* ---------- 令状当番の評価：却下率を、混ざっていた「却下すべき請求」の割合と比べる ---------- */
+  function evaluate() {
+    const done = S.log.filter(R => R.dec === 'grant' || R.dec === 'deny');
+    if (!done.length) return '';
+    const should = R => { const b = R.def.bad; return b === 'deny' ? 'deny' : b === 'fix' ? (R.fixed ? 'grant' : 'deny') : b === 'part' ? 'part' : b === 'split' ? 'split' : 'grant'; };
+    const judged = done.filter(R => should(R) !== 'split');
+    const bad = judged.filter(R => should(R) === 'deny'), missed = bad.filter(R => R.dec === 'grant'), caught = bad.filter(R => R.dec === 'deny');
+    const okDenied = judged.filter(R => should(R) === 'grant' && R.dec === 'deny');
+    const partMiss = judged.filter(R => should(R) === 'part' && R.dec === 'grant' && R.how !== 'part');
+    const denyRate = Math.round(done.filter(R => R.dec === 'deny').length / done.length * 100), badRate = Math.round(bad.length / done.length * 100);
+    let head, body;
+    if (bad.length && missed.length / bad.length >= .5 && denyRate < badRate * .7) {
+      head = '捜査機関にとって、ちょうどいい令状当番だった。';
+      body = '要件に問題のある請求が' + bad.length + '件あった。そのうち' + missed.length + '件を、そのまま発付した。' + (partMiss.length ? '一部だけ発付すべき請求も、全部を認めた。' : '');
+    } else if (!missed.length && okDenied.length <= 1) {
+      head = '厳格な審査を行った。';
+      body = bad.length ? '要件に問題のある請求' + bad.length + '件を、一件も見落とさなかった。' : '問題のある請求は、この三夜にはほとんどなかった。';
+    } else if (okDenied.length >= 3) {
+      head = '厳格な審査を行った。……その厳しさは、要件を満たした請求にも向けられた。';
+      body = '要件を満たした請求のうち' + okDenied.length + '件を、却下した。警察署から、問い合わせが何件か入っている。';
+    } else {
+      head = '見落としも、行き過ぎもあった。';
+      body = '要件に問題のある請求' + bad.length + '件のうち、却下したのは' + caught.length + '件。要件を満たした請求のうち、却下したのは' + okDenied.length + '件。';
+    }
+    S.verdictWord = head;
+    return '<div class="hj-eval"><div class="eh">' + head + '</div><p>' + body + '</p>'
+      + '<p class="es">あなたの却下率　' + denyRate + '%　／　請求のうち、要件に問題があったもの　' + badRate + '%'
+      + (done.length - judged.length ? '<br>（判断が分かれる請求 ' + (done.length - judged.length) + '件は、数えていない）' : '') + '</p></div>';
+  }
+
+  // 生成した夜の、連なる事件の結末（真相は、偶然によってしか分からない）
+  function genEnd() {
+    const c = S.plan.specs.filter(x => x.chain), nm = c[0].p.name.replace(' ', ''), e = S.eff, out = [];
+    const held = c.slice(1).some(x => e[x.id] === 'grant');
+    out.push(held ? nm + 'は、勾留の満期に起訴された。' + pick(['否認を続けている、と聞いた。', '公判で、捜査段階の供述を翻したという。']) : nm + 'の事件がその後どうなったのか、あなたは知らない。');
+    if (rnd() < .25) {
+      S.revealed = true;
+      out.push(S.truthA ? '翌年。' + nm + 'の知人が、別の事件で取調べを受けたとき、「あれは' + nm.slice(0, 2) + 'がやった。本人から聞いた」と話した。被害品の一部が、その知人の部屋から見つかった。'
+        : '翌年。別の事件で捕まった男が、' + nm.slice(0, 2) + 'の事件も自分がやったと話し始めた。男の話は、現場の状況と細かく合っていた。');
+    }
+    return out;
+  }
+
+  /* ---------- 保存（夜ごと） ---------- */
+  const LIB = { D, REQ, kv, P, note, replaceDoc, NIGHTS, qa };
+  function saveNight(n) {
+    G.meta.hanjiSave = { night: n, hand: S.hand, plan: S.plan || null, eff: S.eff, flags: S.flags, count: S.count, truthA: S.truthA, revealed: S.revealed,
+      log: S.log.map(R => ({ id: R.id, kind: R.kind, sus: R.sus, dec: R.dec, eff: R.eff, how: R.how, reason: R.reason, days: R.days, fixed: !!R.fixed })) };
+    G.saveMeta();
+  }
+
   /* ---------- 全体 ---------- */
-  async function run() {
-    S = { night: 0, t: 0, reqs: [], eff: {}, flags: {}, log: [], count: { grant: 0, deny: 0, call: 0, next: 0 }, truthA: rnd() < .5, revealed: false, busy: false };
-    H._S = S;
+  const fresh = () => ({ night: 0, t: 0, reqs: [], eff: {}, flags: {}, log: [], count: { grant: 0, deny: 0, call: 0, next: 0 }, truthA: rnd() < .5, revealed: false, busy: false });
+
+  // 令状当番（三夜）。resume：保存した夜の続きから
+  async function duty(resume) {
+    G.lawMode = 'hanji';
+    const sv = resume ? G.meta.hanjiSave : null;
+    S = fresh(); H._S = S;
+    if (sv) { Object.assign(S, { eff: sv.eff, flags: sv.flags, count: sv.count, truthA: sv.truthA, revealed: sv.revealed, hand: sv.hand, plan: sv.plan, tutDone: true }); }
+    else {
+      S.hand = !G.meta.hanjiHandDone;
+      if (!S.hand) { S.plan = G.hanjiGen.plan((Math.random() * 2147483647) | 0, G.meta.hanjiUsed || {}); G.meta.hanjiUsed = S.plan.used; G.saveMeta(); }
+    }
+    S.defs = S.hand ? DEFS : G.hanjiGen.defs(S.plan, LIB);
+    if (sv) S.log = sv.log.map(L => Object.assign({ def: S.defs.find(d => d.id === L.id) }, L)).filter(x => x.def);
     G.closePaper();
     G.audio.cue('silence');
-    await G.curtain([{ html: '<div class="big">判事編</div><div class="small">令状当番の夜</div>', wait: 1200 },
+    if (!sv) await G.curtain([{ html: '<div class="big">判事編</div><div class="small">令状当番の夜</div>', wait: 1200 },
       { html: '<div class="law">北見坂地方裁判所　刑事部。<br>裁判官。<br><br>あなたは、捜査をしない。<br>届いた紙を読んで、決める。</div>', wait: 2200 }]);
-    for (let n = 1; n <= 3; n++) {
+    else await G.curtain([{ html: '<div class="big">続きから</div><div class="small">' + NIGHTS[sv.night + 1].name + 'から</div>', wait: 1000 }]);
+    for (let n = sv ? sv.night + 1 : 1; n <= 3; n++) {
       await night(n);
       between(n);
       const fr = fragmentsOf(n);
-      if (n < 3) await showFragments('次の当番までのあいだに、耳に入ったこと', fr);
-      else await showFragments('それから', fr.concat(tsugeEnd()));
+      if (n < 3) { await showFragments('次の当番までのあいだに、耳に入ったこと', fr); saveNight(n); }
+      else await showFragments('それから', fr.concat(S.hand ? tsugeEnd() : genEnd()));
     }
-    await trial();
-    await trial2();
+    delete G.meta.hanjiSave; if (S.hand) G.meta.hanjiHandDone = true; G.saveMeta();
     await recordPage();
     G.audio.cue('quote');
-    // 頁は作者の指示により「407頁以下」とする。
     await G.curtain([{ html: '<div class="quote">「わが国の刑事裁判はかなり絶望的である。」</div><div class="cite">平野龍一「現行刑事訴訟の診断」団藤重光博士古稀祝賀論文集 第4巻（有斐閣、1985年）407頁以下</div>', wait: 4000 }]);
     const c = S.count;
-    G.meta.runs.push({ no: G.meta.runs.length + 1, mode: '判事編', result: '発付' + c.grant + '・却下' + c.deny + '・追加資料' + c.call + (c.next ? '・引継ぎ' + c.next : ''),
+    G.meta.runs.push({ no: G.meta.runs.length + 1, mode: '令状当番', result: '発付' + c.grant + '・却下' + c.deny + '・追加資料' + c.call + (c.next ? '・引継ぎ' + c.next : '') + (S.verdictWord ? '<br><small>' + S.verdictWord + '</small>' : ''),
       confession: '—', illegal: '—', withheld: '—', revealed: S.revealed ? '判明' : '—' });
     G.saveMeta();
     G.audio.ambient(null);
   }
 
-  const H = G.hanji = { run, DEFS, KIND };
+  // 公判（二件）
+  async function trials() {
+    G.lawMode = 'hanji';
+    S = fresh(); H._S = S; G.closePaper();
+    await trial();
+    await trial2();
+    await G.openPaper({ title: '判決書の控え', sub: '北見坂地方裁判所　刑事部', noClose: true,
+      body: P('住居侵入、窃盗被告事件（筒井康平）　' + (S.trial.guilty ? '有罪' : '無罪'), S.trial2.soin + '被告事件（能登和臣）　' + { satsujin: '殺人で有罪', chishi: '訴因変更のうえ傷害致死で有罪', shukusho: '傷害致死を縮小認定', muzai: '無罪' }[S.trial2.kind])
+        + note('どちらの事件も、真相は、記録の外にある。'), buttons: [{ label: '簿冊を閉じる', value: 1 }] });
+    G.meta.runs.push({ no: G.meta.runs.length + 1, mode: '公判', result: (S.trial.guilty ? '有罪' : '無罪') + '・' + { satsujin: '殺人有罪', chishi: '傷害致死有罪', shukusho: '傷害致死（縮小認定）', muzai: '無罪' }[S.trial2.kind],
+      confession: '—', illegal: '—', withheld: '—', revealed: '—' });
+    G.saveMeta();
+    G.audio.ambient(null);
+  }
+  const run = duty;
+
+  const H = G.hanji = { run, duty, trials, DEFS, KIND, hasSave: () => !!(G.meta.hanjiSave) };
 })();
