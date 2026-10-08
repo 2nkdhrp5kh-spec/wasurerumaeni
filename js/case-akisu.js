@@ -7,11 +7,11 @@
   const sc = (who, bg) => ({ bg: bg || 'office', who });
 
   const C = {
-    id: 'akisu', role: '捜査官', base: { m: 9, d: 9 },
+    id: 'akisu', role: '捜査官', base: { m: 9, d: 9 }, dayCard: true,
     staff: [{ id: 'shirai', name: '白井' }, { id: 'oka', name: '岡' }, { id: 'noguchi', name: '野口' }],
     elemTitle: '立証すべき事実',
     info: S => ({ text: '住宅侵入窃盗（空き巣）' + (S.c.arrest != null ? '　・逮捕' + (S.day - S.c.arrest) + '日目' : '') }),
-    scene: S => sc(S.c.arrest != null ? 'sakai' : null, 'office'),
+    scene: S => sc(null, 'office'),
     endHint: S => S.tasks.length ? '部下の報告は日をまたいで届く' : '',
     elements: S => {
       const d = id => !!K.doc(id), c = S.c;
@@ -32,7 +32,7 @@
           ['shirai', '下の「部下に指示する」から、俺たちに仕事を割り振ってください。終わるまでに何日かかかります。'],
           ['shirai', '「自分で動く」は、主任ご自身の行動です。1日にひとつ。'],
           ['shirai', '指示を出し終えたら「一日を終える」。報告は翌朝以降に届きます。'],
-          ['shirai', '右上の欄は、検察に送るまでに固めるべき事実です。証拠が揃うと埋まっていきます。'],
+          ['shirai', '「立証すべき事実」の欄は、検察に送るまでに固めるべき事実です。証拠が揃うと埋まっていきます。'],
           ['shirai', 'まずは被害者の話と、盗品の行方ですかね。']);
       }
       if (S.c.warrant === 'issued' && !S.c.warrantTold) { S.c.warrantTold = true; L.push(['todo', '逮捕状が出た。行ってこい。', { scene: sc('todo') }]); }
@@ -42,13 +42,13 @@
       { id: 'higai', who: 'self', label: '被害者から話を聴く', sub: '森本さん方へ', run: async S => {
           G.drawScene({ bg: 'home' });
           await G.talk([['morimoto', '昼の1時に出かけて、4時過ぎに戻ったら、勝手口のガラスが割られていて……'], ['morimoto', '寝室の引き出しから、金のネックレスと指輪、それから封筒の現金が12万円。'], ['morimoto', 'ネックレスは、母の形見なんです。']]);
-          K.addDoc({ id: 'higai', title: '被害届', kind: 'inc', evid: true, body: G.kv([['被害者', '森本 佳子（55）'], ['日時', '9月8日 午後1時ころから午後4時10分ころまでの間'], ['場所', '北見坂市本町三丁目 被害者方'], ['手口', '勝手口のガラスを割って侵入（ガラス破り）'], ['被害品', '金のネックレス1本、金の指輪2個、現金12万円']]) });
+          K.addDoc({ id: 'higai', title: '被害届', kind: 'inc', evid: true, body: G.kv([['被害者', '森本 佳子（55歳）'], ['日時', '9月8日 午後1時ころから午後4時10分ころまでの間'], ['場所', '北見坂市本町三丁目 被害者方'], ['手口', '勝手口のガラスを割って侵入（ガラス破り）'], ['被害品', '金のネックレス1本、金の指輪2個、現金12万円']]) });
         } },
       { id: 'kikikomi', who: 'staff', days: 1, label: '近所の聞き込み', short: '聞き込み', sub: '不審な人物を見た人はいないか',
         done: S => { K.addDoc({ id: 'kikikomi', title: '聞き込み結果', kind: 'inc', evid: true, body: G.P('隣家の主婦：「2時40分ごろ、灰色の野球帽をかぶった男の人が、森本さんの家の裏から出てきて、駅の方へ歩いていった。40代くらい」') });
           return [['oka', '隣の奥さんが、2時40分ごろ灰色の帽子の男を見てます。', { scene: sc('oka') }]]; } },
       { id: 'kobutsu', who: 'staff', days: 2, label: '古物商の買取記録を照会する', short: '古物台帳の照会', sub: '盗品が売られていないか',
-        done: S => { K.addDoc({ id: 'kobutsu', title: '古物台帳の照会結果', kind: 'inc', evid: true, body: G.kv([['店', 'リサイクルショップ「ハナマル」北見坂駅前店'], ['日時', '9月8日 午後3時52分'], ['品目', '金のネックレス1本（被害品と特徴が一致）'], ['売主', '坂井 稔（43）　運転免許証で本人確認']]) });
+        done: S => { K.addDoc({ id: 'kobutsu', title: '古物台帳の照会結果', kind: 'inc', evid: true, body: G.kv([['店', 'リサイクルショップ「ハナマル」北見坂駅前店'], ['日時', '9月8日 午後3時52分'], ['品目', '金のネックレス1本（被害品と特徴が一致）'], ['売主', '坂井 稔（43歳）　運転免許証で本人確認']]) });
           return [['noguchi', '出ました！ 盗まれたネックレス、駅前のリサイクルショップに売られてます。', { scene: sc('noguchi') }], ['noguchi', '売ったのは坂井稔、43歳。免許証で確認されてます。']]; } },
       { id: 'zenreki', who: 'staff', days: 1, label: '坂井の前歴を照会する', short: '前歴照会', cond: S => !!K.doc('kobutsu'),
         done: S => { K.addDoc({ id: 'zenreki', title: '前歴照会結果', kind: 'memo', body: G.P('坂井稔：窃盗（住宅侵入）の前歴2件。いずれも手口はガラス破り。') });

@@ -31,16 +31,21 @@
         if (T.late) await T.late(S, sent);
         T.retract(S);
         const est = T.weigh(S, sent, false);
+        if (c.how === 'release') {
+          G.layout({ role: '検察', date: '', info: '北見坂地方検察庁', scene: { bg: 'pros', who: 'kenji' } });
+          await G.talk([['kenji', '主任の意見は読みました。……記録を見ても、起訴できるだけのものはない。'], ['kenji', '釈放します。嫌疑不十分で、不起訴とします。'], ['', '（' + T.accusedName + 'は釈放された。）']]);
+        }
         G.layout({ role: '検察', date: '', info: '北見坂地方検察庁', scene: { bg: 'pros', who: 'kenji' } });
         G.audio.ambient(null);
-        const charge = T.charge ? T.charge(S, est) : ((c.confession && !c.retract) || est.pos - est.neg >= 3);
-        await G.talk(T.lines(S, charge));
-        if (charge === 'ryakushiki') verdict = '略式命令（罰金）';
+        const charge = c.how === 'release' ? 'release' : T.charge ? T.charge(S, est) : ((c.confession && !c.retract) || est.pos - est.neg >= 3);
+        if (charge !== 'release') await G.talk(T.lines(S, charge));
+        if (charge === 'release') verdict = '釈放（不起訴）';
+        else if (charge === 'ryakushiki') verdict = '略式命令（罰金）';
         else if (!charge) verdict = '不起訴';
         else {
           G.audio.cue('trial');
           const admit = sent.slice();
-          const drop = (id, why) => { const i = admit.indexOf(id); if (i >= 0) { admit.splice(i, 1); excluded.push(why); } };
+          const drop = (id, why) => { const i = admit.indexOf(id); if (i >= 0) { admit.splice(i, 1); excluded.push(why); if (/任意性|違法|相当な限度/.test(why)) c.excludedIllegal = (c.excludedIllegal || 0) + 1; } };
           T.admit(S, admit, drop);
           const r = T.weigh(S, admit, true);
           const d = T.decide(S, r, admit);
@@ -64,7 +69,9 @@
       if (!revealed) await G.curtain([{ html: '<div class="law">それから、何年かが過ぎた。<br><br>何も起きなかった。<br><br>' + T.nothing(verdict) + '</div>', wait: 2200 },
         { html: '<div class="law" style="font-size:15px;color:#aaa">何も起きなかったことは、何の証明にもならない。</div>', wait: 1800 }]);
       G.audio.cue('finale');
-      const pages = [{ html: '<div class="big" style="letter-spacing:.1em">あなたは、確信していましたか。</div>', wait: 2400 }];
+      const guiltyV = /有罪|略式/.test(verdict);
+      const pages = [{ html: G.kit.honbu(S, verdict, revealed ? (guiltyV ? 'wrong' : 'free') : null), wait: 2400 },
+        { html: '<div class="big" style="letter-spacing:.1em">あなたは、確信していましたか。</div>', wait: 2400 }];
       if (revealed && !G.meta.revealedOnce) {
         G.meta.revealedOnce = true;
         pages.push({ html: '<div class="law" style="font-size:15px">この事件の「真相」は、あなたが捜査を始めたときに、内部で決められていました。<br>' + T.truthText + '<br><br>あなたが集めた証拠の多くは、どちらの世界でも、まったく同じように現れます。<br><br>今回、真相が明らかになったのは、偶然です。<br>現実の事件でも、真相が明らかになるのは、多くの場合、偶然によってです。</div>', wait: 3000 });

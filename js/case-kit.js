@@ -11,6 +11,13 @@
   kit.custodyDay = S => S.day - S.c.arrest;
   kit.stage = S => { const c = S.c; if (c.arrest == null) return 0; const d = S.day - c.arrest; return d < 4 ? 0 : d < 9 ? 1 : d < 16 ? 2 : 3; };
 
+  kit.nextMilestone = S => {
+    if (!kit.inCustody(S)) return null;
+    const d = kit.custodyDay(S);
+    const ms = [[2, '検察官への送致'], [3, '勾留の決定'], [13, '勾留延長'], [LIMIT, '勾留満期']];
+    for (const [day, label] of ms) if (day > d) return { d: day - d, label };
+    return null;
+  };
   kit.limitBar = function (d, left) {
     const seg = (cls, w, t) => '<span class="seg ' + cls + '" style="width:' + (w / LIMIT * 100) + '%">' + t + '</span>';
     return '<div class="limit"><div class="row"><span>身柄拘束 ' + d + '日目</span><span>勾留満期まで あと' + left + '日</span></div>'
@@ -67,7 +74,8 @@
       buttons: [{ label: L.A[0], value: 'A', small: L.A[1] }, { label: L.B[0], value: 'B', small: L.B[1] },
         { label: '夜まで取調べを続ける', value: 'C', cls: 'red', small: '朝9時から、話すまで' },
         { label: '怒鳴りつけ、追い詰める', value: 'E', cls: 'red', small: L.E || '机を叩く。家族のことを持ち出す' },
-        { label: L.D[0], value: 'D', cls: 'red', small: L.D[1] }] });
+        { label: L.D[0], value: 'D', cls: 'red', small: L.D[1] }, { label: 'やめておく', value: null, small: '時間は使わない' }] });
+    if (!k) { G.audio.ambient(null); return false; }
     const R = kit.RISK(cfg.recorded, c.meter || 0);
     if (R[k] && !(await G.confirmRisk(R[k]))) { G.audio.ambient(null); return false; }
     c.sess[k]++; if (cfg.recorded && 'CDE'.includes(k)) c.recordedAbuse = (c.recordedAbuse || 0) + 1;
@@ -83,11 +91,76 @@
     G.audio.ambient(null);
   };
 
+  /* 自白の後の取調べ（共通）
+     cfg: { who, guiltyKey, topics:[{k,label,small,run(S)}], chat:[fn], retracted:[...lines] } */
+  kit.afterConfession = async function (S, cfg) {
+    const c = S.c; c.asked = c.asked || {};
+    if (c.retractCustody) { await G.talk([[cfg.who, 'やってません。前に言ったことは、本当じゃない。'], ['', '（それ以上、何も答えない。）']]); }
+    const topics = (cfg.topics || []).filter(t => !c.asked[t.k]);
+    const done = !topics.length;
+    if (done && !c.retractCustody) await G.talk([['', '（自白の中身は、もう一通り聞いた。これ以上は何も話さなそうだ。）']]);
+    const k = await G.openPaper({ title: '取調べ（自白の後）', body: P(c.retractCustody ? '被疑者は自白を撤回している。' : '自白の内容を確かめ、裏付けを取る。答えが本当なら、裏付けが取れるはずだ。'), noClose: true,
+      buttons: (c.retractCustody ? [] : topics.map(t => ({ label: t.label, value: t.k, small: t.small || '' })))
+        .concat([{ label: '雑談をする', value: '_chat', small: '事件以外の話。人柄が見えるかもしれない' },
+          { label: '何か話すまで続ける', value: '_push', cls: 'red', small: '夜まで。話が変わるかもしれない' },
+          { label: '今日はやめておく', value: null, small: '時間は使わない' }]) });
+    if (!k) return false;
+    if (k === '_chat') {
+      c.chatN = (c.chatN || 0) + 1;
+      await G.talk(kit.poolLines(S, cfg.chat, 'chat'));
+      if (c.truth !== cfg.guiltyKey && !c.confession.voluntary && !c.retractCustody && rnd() < .2) { c.retractCustody = true; await G.talk([[cfg.who, '……刑事さん。'], [cfg.who, 'やっぱり、やってません。前に言ったことは、本当じゃない。'], ['', '（自白を撤回した。）']]); }
+      return;
+    }
+    if (k === '_push') {
+      if (!(await G.confirmRisk(kit.RISK(c.recorded, 0).C))) return false;
+      c.sess.C++; if (c.recorded) c.recordedAbuse = (c.recordedAbuse || 0) + 1;
+      await G.talk([['', '（夜まで続けた。）'], [cfg.who, c.retractCustody ? '……もう、何でもいいです。書いたとおりで。' : '……書いてあるとおりです。もう、それでいいでしょう。']]);
+      if (c.retractCustody) c.retractCustody = false;
+      return;
+    }
+    c.asked[k] = true;
+    const t = cfg.topics.find(x => x.k === k);
+    await t.run(S);
+    if (c.truth !== cfg.guiltyKey && !c.confession.voluntary && rnd() < .2) { c.retractCustody = true; await G.talk([[cfg.who, '……やっぱり、違います。やってません。'], ['', '（自白を撤回した。）']]); }
+  };
+
+  // 釈放を進言する（全事件共通）
+  kit.releaseAction = (gaugeOf, finish) => ({ id: 'release', who: 'self', label: '釈放を進言する', sub: '嫌疑が足りない、または身柄を拘束する必要がない', cond: S => kit.inCustody(S) && kit.custodyDay(S) >= 2 && !S.c.releaseAsked,
+    run: async S => {
+      const ok = await G.openPaper({ title: '釈放の進言', body: P('集めた記録では、起訴するだけの嫌疑がない。あるいは、身柄を拘束し続ける必要がない。そう判断するなら、課長と検事に釈放を進言できる。',
+        '勾留中でも、検察官は被疑者を釈放できる。釈放したうえで在宅のまま捜査を続けることも、嫌疑不十分で不起訴とすることもある。'), noClose: true,
+        buttons: [{ label: '釈放を進言する', value: true, cls: 'green' }, { label: 'やめる', value: false }] });
+      if (!ok) return false;
+      S.c.releaseAsked = true;
+      const e = gaugeOf(S);
+      if (e.ok && e.w >= 4) {
+        await G.talk([['todo', '……何を言ってる。これだけ揃ってて、釈放だと？', { scene: kit.sc('todo') }], ['todo', '却下だ。満期まで、仕事をしろ。'], ['', '（進言は退けられた。この判断は、本部にも伝わった。）']]);
+        S.c.releaseRejected = true; return;
+      }
+      await G.talk([['todo', '…………', { scene: kit.sc('todo') }], ['todo', '分かった。検事に伝える。……お前の名前でな。'], ['', '（課長は受話器を取った。）', { sfx: 'phone' }]]);
+      await finish(S, 'release');
+    } });
+
+  // 本部の評価（組織の帳簿）
+  kit.honbu = function (S, verdict, revealed) {
+    const c = S.c;
+    const base = { '有罪': 4, '有罪（減軽）': 3, '略式命令（罰金）': 3, '無罪': -2, '不起訴': 0, '釈放（不起訴）': -1, '未解決': -2 }[verdict] ?? 0;
+    let sc = base + (c.confession ? 1 : 0) - (c.excludedIllegal || 0) * 2 - (c.releaseRejected ? 1 : 0);
+    const grade = sc >= 4 ? 'A' : sc >= 2 ? 'B' : sc >= 0 ? 'C' : 'D';
+    const word = { A: '「よくやった。次の異動、悪いようにはせん」（東堂課長）', B: '「まあ、及第点だ」（東堂課長）', C: '「署長が渋い顔をしてたぞ」（東堂課長）', D: '「本部長賞は、別の係に行った」（東堂課長）' }[grade];
+    const proc = (c.sess ? (c.sess.C ? 1 : 0) + (c.sess.D ? 1 : 0) + (c.sess.E ? 1 : 0) : 0) + (c.illegalCount || 0) + (c.search === 'illegal' ? 1 : 0) + (c.arrest_kind === 'bekken' ? 1 : 0);
+    let after = '';
+    if (revealed === 'wrong') after = '<br><br>数年後、再審無罪が報じられた日、県警本部は「当時の捜査は適正に行われた」とのコメントを出した。<br>あなたの人事記録の評価は、変わらなかった。';
+    if (revealed === 'free') after = '<br><br>数年後、事件が報じられた日、県警本部は「当時の判断に問題はなかった」とのコメントを出した。';
+    return '<div class="doc-s"><h3>本部の評価　' + grade + '</h3>' + word + '<br><br>結果：' + verdict + (c.confession ? '　／　自白：あり' : '')
+      + '<br><br><span style="color:#aaa">手続の記録：注意の付いた行動 ' + proc + '件　／　送らなかった記録 ' + (c.withheld || []).length + '件</span>' + after + '</div>';
+  };
+
   // 送致書（目録）の画面
   kit.soutchi = async function (C, S) {
     const c = S.c;
     G.audio.cue('soutchi');
-    await G.curtain([{ html: '<div class="big">送致</div>', wait: 900 }]);
+    await G.curtain([{ html: '<div class="big">' + (c.how === 'release' ? '釈放・送致' : '送致') + '</div>', wait: 900 }]);
     const ev = S.docs.filter(d => d.evid && !d.late);
     const sent = {}; ev.forEach(d => sent[d.id] = true);
     G.ui.busy = false;   // 送致画面では、記録を読み、照らし合わせられるようにする

@@ -175,3 +175,7 @@ button{font:inherit;color:inherit}
 .srow .bbtn{min-width:3.5em}
 .srow.off .bbtn{color:#b23a2e;border-color:#b23a2e}
 .lawuse{display:block;margin-top:6px;font-size:13px}
+
+.who .kana{font-size:11px;color:#8c7a50;margin-left:6px;letter-spacing:.05em}
+.cpage,.cpage .big,.cpage .small{font-family:'Noto Serif JP',serif}
+.cpage .big{font-weight:700}

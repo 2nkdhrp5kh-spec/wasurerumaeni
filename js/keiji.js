@@ -94,7 +94,7 @@
     const tab = G.ui.tab;
     wrap.innerHTML = '<div class="tabs"><button class="tab' + (tab === 'staff' ? ' on' : '') + '" data-t="staff">部下に指示する</button><button class="tab' + (tab === 'self' ? ' on' : '') + '" data-t="self">自分で動く</button></div><div class="acts" id="acts"></div>'
       + '<button class="endday" id="endday">一日を終える<span class="s">' + C.endHint(S) + '</span></button>'
-      + (nextReport() ? '<button class="endday skip" id="skip">次の報告が届くまで進める<span class="s">' + nextReport() + '日後。その間に起きたことがあれば、そこで止まる</span></button>' : '');
+      + (nextReport() ? '<button class="endday skip" id="skip">' + skipLabel() + '<span class="s">' + nextReport() + '日後。その間に起きたことがあれば、そこで止まる</span></button>' : '');
     wrap.querySelectorAll('.tab').forEach(t => t.onclick = () => { G.ui.tab = t.dataset.t; G.audio.sfx('click'); renderActs(); });
     const acts = G.$('#acts');
     const list = C.actions.filter(a => a.who === tab && (!a.cond || a.cond(S)) && !(a.once !== false && S.done[a.id]));
@@ -153,9 +153,17 @@
   }
 
   function nextReport() {
-    if (!S.tasks.length) return 0;
-    const d = Math.min(...S.tasks.map(t => t.doneDay)) - S.day;
-    return d > 1 ? d : 0;
+    const t = S.tasks.length ? Math.min(...S.tasks.map(x => x.doneDay)) - S.day : Infinity;
+    const m = C.nextMilestone ? C.nextMilestone(S) : null;
+    const md = m ? m.d : Infinity;
+    const d = Math.min(t, md);
+    if (d === Infinity || d < 2) return 0;
+    return d;
+  }
+  function skipLabel() {
+    const t = S.tasks.length ? Math.min(...S.tasks.map(x => x.doneDay)) - S.day : Infinity;
+    const m = C.nextMilestone ? C.nextMilestone(S) : null;
+    return (m && m.d <= t) ? '次の節目（' + m.label + '）まで進める' : '次の報告が届くまで進める';
   }
   K.skip = async function () {
     if (G.ui.talking || G.ui.busy) return;

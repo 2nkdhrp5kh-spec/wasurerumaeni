@@ -67,11 +67,9 @@
       for (let x = 0; x < N; x++) if (Math.abs(x - cx) <= rx) put(x, y, 'skin');
     }
     // 耳
-    if (o.hair !== 'long') for (let y = 24; y <= 32; y++) {
-      const top = y === 24, bot = y === 32;
-      put(17, y, 'skin'); put(46, y, 'shade');
-      if (!top && !bot) { put(16, y, y > 26 && y < 30 ? 'shade' : 'skin'); put(47, y, y > 26 && y < 30 ? 'deep' : 'shade'); }
-      if (y > 25 && y < 31) { put(15, y, 'skin'); put(48, y, 'shade'); }
+    if (o.hair !== 'long') {
+      const ear = [[24, [16, 17]], [25, [15, 16, 17]], [26, [15, 16, 17]], [27, [15, 16, 17]], [28, [15, 16, 17]], [29, [15, 16, 17]], [30, [15, 16, 17]], [31, [16, 17]], [32, [17]]];
+      ear.forEach(([y, xs]) => xs.forEach(x => { const inner = x === 16 && y >= 26 && y <= 29; put(x, y, inner ? 'shade' : 'skin'); put(M(x), y, inner ? 'deep' : 'shade'); }));
     }
     // 陰影（光は左上から）
     for (let y = 7; y <= 44; y++) for (let x = 0; x < N; x++) {
@@ -95,19 +93,36 @@
       else if (hs === 'thin') fr = Math.abs(x - cx) < 4.5 ? 11 : Math.abs(x - cx) < 10 ? 8 : 12;
       else if (hs === 'bun') fr = 13 + (x < 24 || x > 39 ? 1 : 0);
       else if (hs === 'long') fr = 13 + (x > 32 ? 1 : 0);
-      if (inside && (y <= fr || (side && y <= (hs === 'bun' ? 22 : 25)))) {
-        const strand = (x + Math.floor(y / 3)) % 5 === 0;
-        put(x, y, (y < 10 && x < 30 && hash(x, y, 1) < .4) || strand ? 'hairHi' : 'hair');
+      else if (hs === 'buzz') fr = 11;
+      else if (hs === 'slick') fr = 10;
+      else if (hs === 'shaggy') fr = 17 + (hash(x, 2, 5) < .4 ? 1 : 0);
+      else if (hs === 'spiky') fr = 13 + (x % 3 === 0 ? -1 : 0);
+      else if (hs === 'bald') fr = -1;
+      else if (hs === 'curly') fr = 13 + Math.round(Math.sin(x * 1.7) * 1.5);
+      else if (hs === 'bob') fr = 16;
+      else if (hs === 'wavy') fr = 13 + (x > 30 ? 2 : 0);
+      else if (hs === 'partedR') fr = x > 36 ? 12 + Math.round((x - 36) * .3) : 12 + Math.round((36 - x) * .1);
+      const sideLim = hs === 'bun' ? 22 : hs === 'bald' ? 23 : 23, sideTop = hs === 'bald' ? 14 : 0;
+      if (inside && (y <= fr || (side && y <= sideLim && y >= sideTop))) {
+        let hi = (y < 10 && x < 30 && hash(x, y, 1) < .4) || (x + Math.floor(y / 3)) % 5 === 0;
+        if (hs === 'buzz') hi = hash(x, y, 3) < .35;
+        if (hs === 'slick') hi = (x + y) % 6 === 0;
+        if (hs === 'curly') hi = (x + y) % 2 === 0 && hash(x, y, 4) < .6;
+        put(x, y, hi ? 'hairHi' : 'hair');
       }
+      if ((hs === 'bob') && (x <= 19 || x >= 44) && y >= 12 && y <= 36 && Math.abs(x - cx) <= 15) put(x, y, (x + y) % 5 === 0 ? 'hairHi' : 'hair');
+      if (hs === 'wavy' && y >= 13 && y <= 47) { const off = Math.round(Math.sin(y / 3) * 1.2); for (const bx of [13 + off, 14 + off, 15 + off, 16 + off, 17 + off, 18 + off, 45 + off, 46 + off, 47 + off, 48 + off, 49 + off, 50 + off]) put(bx, y, (bx + y) % 4 === 0 ? 'hairHi' : 'hair'); }
       if (hs === 'long' && ((x >= 13 && x <= 19) || (x >= 44 && x <= 50)) && y >= 13 && y <= 47 && !(y > 41 && (x === 13 || x === 50))) put(x, y, (x + y) % 6 === 0 ? 'hairHi' : 'hair');
     }
     if (hs === 'bun') {
       for (let y = 0; y <= 10; y++) for (let x = 23; x <= 40; x++) { const d = Math.hypot(x - cx, (y - 4.3) * 1.15); if (d <= 5.6 && !at(x, y)) put(x, y, (d < 3 && x < cx) ? 'hairHi' : 'hair'); }
-      for (let y = 12; y <= 25; y++) { put(16, y, 'hair'); put(47, y, 'hair'); if (y < 22) { put(17, y, 'hair'); put(46, y, 'hair'); } }
+      for (let y = 12; y <= 22; y++) { put(16, y, 'hair'); put(47, y, 'hair'); put(17, y, 'hair'); put(46, y, 'hair'); }
       for (let x = 21; x <= 42; x += 3) put(x, 9, 'hairHi');
     }
     if (hs === 'parted') for (let y = 5; y <= 12; y++) put(27, y, 'hairHi');
-    if (hs !== 'long' && hs !== 'bun') for (let y = 21; y <= 25; y++) { put(18, y, 'hair'); put(45, y, 'hair'); }
+    if (hs === 'partedR') for (let y = 5; y <= 12; y++) put(36, y, 'hairHi');
+    if (hs === 'spiky') for (let x = 20; x <= 43; x += 3) { let top = 0; while (top < N && at(x, top) !== 'hair' && at(x, top) !== 'hairHi') top++; if (top < N) { put(x, top - 1, 'hair'); put(x, top - 2, 'hair'); } }
+    if (!['long', 'bun', 'bald', 'bob', 'wavy'].includes(hs)) for (let y = 20; y <= 23; y++) { put(18, y, 'hair'); put(45, y, 'hair'); }
 
     // しわ
     const wr = o.wrinkles || 0;
@@ -122,13 +137,14 @@
       sad: [[21, 22], [22, 22], [23, 21], [24, 21], [25, 20], [26, 20], [27, 19], [28, 19], [22, 21], [24, 20], [26, 19], [28, 18], [27, 18]],
       stern: [[21, 19], [22, 19], [23, 19], [24, 20], [25, 20], [26, 21], [27, 21], [28, 22], [21, 20], [22, 20], [23, 20], [24, 21], [25, 21], [26, 22], [27, 22]]
     };
-    const brow = B[o.brows || 'n'];
+    const ed = o.eyeDy || 0, eg = o.eyeGap || 0, md = o.mouthDy || 0, nl = o.noseLong || 0;
+    const brow = B[o.brows || 'n'].map(([x, y]) => [x - eg, y + ed + (o.browDy || 0)]);
     [...brow, ...mir(brow)].forEach(([x, y]) => put(x, y, o.browColor ? 'brow' : 'line'));
 
     // 目（左目 x22〜28、右目は鏡像）
     function eye(mr) {
-      const X = i => mr ? M(22 + i) : 22 + i;
-      const row = (y, arr) => arr.forEach((c, i) => c && put(X(i), y, c));
+      const X = i => mr ? M(22 - eg + i) : 22 - eg + i;
+      const row = (y, arr) => arr.forEach((c, i) => c && put(X(i), y + ed, c));
       if (eyes > 0) row(23, ['shade', 'shade', 'shade', 'shade', 'shade', 'shade', 'shade']);
       if (o.narrow) {
         row(25, ['line', 'line', 'line', 'line', 'line', 'line', 'line']);
@@ -138,7 +154,7 @@
         row(24, ['line', 'line', 'line', 'line', 'line', 'line', 'line']); if (fem) put(X(-1), 24, 'line');
         row(25, ['white', 'white', 'iris', 'pupil', 'iris', 'white', 'white']);
         row(26, ['shade', 'white', 'iris', 'iris', 'iris', 'white', 'shade']);
-        put(X(2), 25, 'glint');
+        put(X(2), 25 + ed, 'glint');
         if (eyes === 0) row(27, [null, 'shade', 'shade', 'shade', 'shade', 'shade', null]);
         else { row(27, ['bag', 'bag', 'bag', 'bag', 'bag', 'bag', 'bag']); row(28, [null, 'bag', 'bag', 'bag', 'bag', 'bag', null]); }
       } else if (eyes === 2) {
@@ -155,8 +171,8 @@
     }
     eye(false); eye(true);
     if (o.blink) for (const mr of [false, true]) for (let i = 0; i < 7; i++) {
-      const x = mr ? M(22 + i) : 22 + i, low = (eyes >= 2) ? 26 : 25;
-      for (let y = 24; y <= low; y++) put(x, y, y === 24 && eyes > 0 ? 'shade' : 'skin');
+      const x = mr ? M(22 - eg + i) : 22 - eg + i, low = ((eyes >= 2) ? 26 : 25) + ed;
+      for (let y = 24 + ed; y <= low; y++) put(x, y, y === 24 + ed && eyes > 0 ? 'shade' : 'skin');
       put(x, low + 1, 'line');
     }
     if (o.glasses) {
@@ -168,27 +184,27 @@
     }
 
     // 鼻
-    for (let y = 26; y <= 33; y++) put(33, y, 'shade');
-    put(32, 33, 'hi'); put(31, 32, 'hi');
-    for (let x = 30; x <= 34; x++) put(x, 34, 'shade');
-    put(29, 34, 'deep'); put(35, 34, 'deep'); put(28, 33, 'shade'); put(36, 33, 'shade'); put(34, 35, 'shade');
+    for (let y = 26; y <= 33 + nl; y++) put(33, y, 'shade');
+    put(32, 33 + nl, 'hi'); put(31, 32 + nl, 'hi');
+    for (let x = 30; x <= 34; x++) put(x, 34 + nl, 'shade');
+    put(29, 34 + nl, 'deep'); put(35, 34 + nl, 'deep'); put(28, 33 + nl, 'shade'); put(36, 33 + nl, 'shade'); put(34, 35 + nl, 'shade');
 
     // 口
     const mouth = o.mouth || 'flat';
     if (mouth === 'frown') {
-      for (let x = 28; x <= 35; x++) put(x, 38, 'lip'); put(27, 39, 'lip'); put(36, 39, 'lip'); put(26, 40, 'deep'); put(37, 40, 'deep');
-      for (let x = 30; x <= 33; x++) put(x, 39, 'lipLo');
+      for (let x = 28; x <= 35; x++) put(x, 38 + md, 'lip'); put(27, 39 + md, 'lip'); put(36, 39 + md, 'lip'); put(26, 40 + md, 'deep'); put(37, 40 + md, 'deep');
+      for (let x = 30; x <= 33; x++) put(x, 39 + md, 'lipLo');
     } else if (mouth === 'smile') {
-      for (let x = 27; x <= 36; x++) put(x, 39, 'lip'); put(26, 38, 'lip'); put(37, 38, 'lip');
-      for (let x = 30; x <= 33; x++) put(x, 40, 'lipLo');
+      for (let x = 27; x <= 36; x++) put(x, 39 + md, 'lip'); put(26, 38 + md, 'lip'); put(37, 38 + md, 'lip');
+      for (let x = 30; x <= 33; x++) put(x, 40 + md, 'lipLo');
     } else if (mouth === 'tight') {
-      for (let x = 27; x <= 36; x++) put(x, 38, 'deep'); put(26, 38, 'shade'); put(37, 38, 'shade');
+      for (let x = 27; x <= 36; x++) put(x, 38 + md, 'deep'); put(26, 38 + md, 'shade'); put(37, 38 + md, 'shade');
     } else {
-      for (let x = 27; x <= 36; x++) put(x, 38, 'lip'); put(27, 38, 'deep'); put(36, 38, 'deep');
-      for (let x = 29; x <= 34; x++) put(x, 39, 'lipLo');
+      for (let x = 27; x <= 36; x++) put(x, 38 + md, 'lip'); put(27, 38 + md, 'deep'); put(36, 38 + md, 'deep');
+      for (let x = 29; x <= 34; x++) put(x, 39 + md, 'lipLo');
     }
-    for (let x = 30; x <= 33; x++) if (at(x, 40) === 'skin') put(x, 40, 'shade');
-    if (o.mouthOpen) { for (let x = 28; x <= 35; x++) put(x, 38, 'lip'); for (let x = 29; x <= 34; x++) put(x, 39, 'mouthIn'); for (let x = 30; x <= 33; x++) { put(x, 40, 'lipLo'); put(x, 39, x === 30 || x === 33 ? 'mouthIn' : 'teeth'); } }
+    for (let x = 30; x <= 33; x++) if (at(x, 40 + md) === 'skin') put(x, 40 + md, 'shade');
+    if (o.mouthOpen) { for (let x = 28; x <= 35; x++) put(x, 38 + md, 'lip'); for (let x = 29; x <= 34; x++) put(x, 39 + md, 'mouthIn'); for (let x = 30; x <= 33; x++) { put(x, 40 + md, 'lipLo'); put(x, 39 + md, x === 30 || x === 33 ? 'mouthIn' : 'teeth'); } }
     if (o.mustache) for (let x = 26; x <= 37; x++) { put(x, 36, 'hair'); if (x > 26 && x < 37) put(x, 37, (x % 3) ? 'hair' : 'hairHi'); }
 
     // ひげ・乱れ・頬
@@ -224,24 +240,24 @@
   const PEOPLE = {
     kuzumi: st => ({ o: { hair: 'short', eyes: [0, 1, 2, 3][st], stubble: [0, 0, 1, 2][st], messy: [0, 0, 5, 10][st], brows: st === 3 ? 'sad' : 'n', mouth: st === 3 ? 'frown' : 'flat', gaunt: st === 3, cloth: 'sweat' },
                     p: Object.assign({}, KUZUMI_SKIN[st], CLOTH.sweat, { hair: '#2a221d', hairHi: '#3d332b' }) }),
-    todo:     () => ({ o: { hair: 'crop', brows: 'stern', narrow: true, wrinkles: 2, mouth: 'tight', cloth: 'suit', tie: true, wide: 11.2, jaw: 6 }, p: Object.assign({}, SKIN.c, CLOTH.suit, { hair: '#3a3632', hairHi: '#5e5a54', tie: '#3e2a4a' }) }),
-    shirai:   () => ({ o: { hair: 'thin', brows: 'thick', wrinkles: 2, mustache: true, cloth: 'jacket', mouth: 'flat', wide: 11 }, p: Object.assign({}, SKIN.c, CLOTH.jacket, { hair: '#6a655e', hairHi: '#8a857c' }) }),
-    oka:      () => ({ o: { hair: 'parted', glasses: true, cloth: 'navy', tie: true, mouth: 'flat' }, p: Object.assign({}, SKIN.a, CLOTH.navy, { hair: '#231c18', hairHi: '#3a302a', tie: '#2c4a5a' }) }),
-    noguchi:  () => ({ o: { hair: 'short', brows: 'thin', cloth: 'suit', tie: true, mouth: 'flat', wide: 10.2 }, p: Object.assign({}, SKIN.b, CLOTH.suit, { hair: '#2e2420', hairHi: '#4a3a30', tie: '#5a5a2a' }) }),
+    todo:     () => ({ o: { hair: 'crop', brows: 'stern', narrow: true, wrinkles: 2, mouth: 'tight', cloth: 'suit', tie: true, wide: 11.2, jaw: 6, mouthDy: 1, noseLong: 1 }, p: Object.assign({}, SKIN.c, CLOTH.suit, { hair: '#3a3632', hairHi: '#5e5a54', tie: '#3e2a4a' }) }),
+    shirai:   () => ({ o: { hair: 'thin', brows: 'thick', wrinkles: 2, mustache: true, cloth: 'jacket', mouth: 'flat', wide: 11, eyeDy: 1, eyeGap: 1 }, p: Object.assign({}, SKIN.c, CLOTH.jacket, { hair: '#6a655e', hairHi: '#8a857c' }) }),
+    oka:      () => ({ o: { hair: 'parted', glasses: true, cloth: 'navy', tie: true, mouth: 'flat', wide: 10, jaw: 7.4, eyeGap: -1 }, p: Object.assign({}, SKIN.a, CLOTH.navy, { hair: '#231c18', hairHi: '#3a302a', tie: '#2c4a5a' }) }),
+    noguchi:  () => ({ o: { hair: 'spiky', brows: 'thin', cloth: 'suit', tie: true, mouth: 'smile', wide: 10.2, eyeDy: 1, mouthDy: -1 }, p: Object.assign({}, SKIN.b, CLOTH.suit, { hair: '#2e2420', hairHi: '#4a3a30', tie: '#5a5a2a' }) }),
     aoyagi:   () => ({ o: { female: true, hair: 'bun', glasses: true, wrinkles: 2, cloth: 'cardigan', brows: 'thin', mouth: 'flat' }, p: Object.assign({}, SKIN.old, CLOTH.cardigan, { hair: '#8d8880', hairHi: '#b3aea5', lip: '#a06a5c' }) }),
     murai:    () => ({ o: { female: true, hair: 'long', cloth: 'blouse', brows: 'thin', mouth: 'flat' }, p: Object.assign({}, SKIN.b, CLOTH.blouse, { hair: '#3a2c24', hairHi: '#54423a', lip: '#a8645a' }) }),
-    miyashita:() => ({ o: { hair: 'crop', brows: 'stern', narrow: true, stubble: 1, cloth: 'jacket', mouth: 'tight', wide: 10.2, jaw: 7.4 }, p: Object.assign({}, SKIN.c, CLOTH.jacket, { hair: '#1e1a17', hairHi: '#2e2824', stub: '#7a6656' }) }),
-    sakai:    () => ({ o: { hair: 'thin', brows: 'n', stubble: 1, cloth: 'jacket', mouth: 'flat', eyes: 1, wrinkles: 1 }, p: Object.assign({}, SKIN.a, CLOTH.jacket, { hair: '#2b2622', hairHi: '#3e3832', cloth: '#5a4a3a', clothSh: '#43372b', clothHi: '#6a5848' }) }),
-    toda:     st => ({ o: susp({ hair: 'crop', brows: 'thick', cloth: 'navy', tie: true, mouth: 'tight', wide: 11.4, jaw: 6 }, st), p: Object.assign({}, SKIN.c, CLOTH.navy, { hair: '#1e1a17', hairHi: '#34302a', tie: '#3a3a52', stub: '#6e5c4e' }) }),
-    saeki:    st => ({ o: susp({ hair: 'parted', glasses: true, cloth: 'suit', tie: true, mouth: 'flat', wrinkles: 1 }, st), p: Object.assign({}, SKIN.a, CLOTH.suit, { hair: '#4a4540', hairHi: '#6e6860', tie: '#5a2a2a' }) }),
-    misaki:   () => ({ o: { female: true, hair: 'long', cloth: 'beige', brows: 'thin', mouth: 'flat', wide: 10 }, p: Object.assign({}, SKIN.b, CLOTH.beige, { hair: '#2a1e18', hairHi: '#44342a', lip: '#b06a60' }) }),
-    eto:      () => ({ o: { hair: 'thin', narrow: true, cloth: 'coat', mouth: 'tight', wrinkles: 1, stubble: 1 }, p: Object.assign({}, SKIN.a, CLOTH.coat, { hair: '#3a3632', hairHi: '#55504a' }) }),
-    otsuka:   st => ({ o: susp({ hair: 'thin', brows: 'n', cloth: 'cardigan', mouth: 'flat', wrinkles: 2, wide: 10.8 }, st), p: Object.assign({}, SKIN.old, CLOTH.cardigan, { hair: '#77726a', hairHi: '#99948b', cloth: '#5a5a48', clothSh: '#44443a', clothHi: '#6a6a58' }) }),
-    kiyo:     () => ({ o: { female: true, hair: 'bun', wrinkles: 2, cloth: 'cardigan', brows: 'thin', mouth: 'flat', eyes: 1 }, p: Object.assign({}, SKIN.old, CLOTH.cardigan, { hair: '#c8c4bc', hairHi: '#e0dcd4', cloth: '#8a7a8a', clothSh: '#6a5a6a', clothHi: '#9a8a9a' }) }),
-    prof:     () => ({ o: { hair: 'parted', glasses: true, cloth: 'suitBrown', tie: false, mouth: 'flat', wrinkles: 2, brows: 'thin' }, p: Object.assign({}, SKIN.old, CLOTH.suitBrown, { hair: '#a8a49c', hairHi: '#c8c4bc' }) }),
-    kasoken:  () => ({ o: { hair: 'short', glasses: true, cloth: 'lab', mouth: 'tight' }, p: Object.assign({}, SKIN.a, CLOTH.lab, { hair: '#231c18', hairHi: '#3a302a' }) }),
-    clerk:    () => ({ o: { female: true, hair: 'bun', cloth: 'blouse', brows: 'thin', mouth: 'flat', wide: 10 }, p: Object.assign({}, SKIN.b, CLOTH.blouse, { hair: '#3a2a20', hairHi: '#54402e', cloth: '#3a6a5a', clothSh: '#2a5040', clothHi: '#4a7a6a' }) }),
-    kenji:    () => ({ o: { hair: 'parted', brows: 'n', cloth: 'suitBrown', tie: true, mouth: 'tight', glasses: true, wrinkles: 1 }, p: Object.assign({}, SKIN.a, CLOTH.suitBrown, { hair: '#1c1714', hairHi: '#332a24', tie: '#2a3a2a' }) })
+    miyashita:() => ({ o: { hair: 'buzz', brows: 'stern', narrow: true, stubble: 1, cloth: 'jacket', mouth: 'tight', wide: 10.2, jaw: 7.4, noseLong: 1, eyeGap: -1 }, p: Object.assign({}, SKIN.c, CLOTH.jacket, { hair: '#1e1a17', hairHi: '#2e2824', stub: '#7a6656' }) }),
+    sakai:    () => ({ o: { hair: 'curly', brows: 'n', stubble: 1, cloth: 'jacket', mouth: 'flat', eyes: 1, wrinkles: 1, wide: 11.2, eyeGap: 1 }, p: Object.assign({}, SKIN.a, CLOTH.jacket, { hair: '#2b2622', hairHi: '#3e3832', cloth: '#5a4a3a', clothSh: '#43372b', clothHi: '#6a5848' }) }),
+    toda:     st => ({ o: susp({ hair: 'buzz', brows: 'thick', cloth: 'navy', tie: true, mouth: 'tight', wide: 11.6, jaw: 5.6, eyeGap: 1, mouthDy: 1 }, st), p: Object.assign({}, SKIN.c, CLOTH.navy, { hair: '#1e1a17', hairHi: '#34302a', tie: '#3a3a52', stub: '#6e5c4e' }) }),
+    saeki:    st => ({ o: susp({ hair: 'partedR', glasses: true, cloth: 'suit', tie: true, mouth: 'flat', wrinkles: 1, eyeDy: 1, wide: 10.4 }, st), p: Object.assign({}, SKIN.a, CLOTH.suit, { hair: '#4a4540', hairHi: '#6e6860', tie: '#5a2a2a' }) }),
+    misaki:   () => ({ o: { female: true, hair: 'wavy', cloth: 'beige', brows: 'thin', mouth: 'flat', wide: 10, eyeDy: 1 }, p: Object.assign({}, SKIN.b, CLOTH.beige, { hair: '#2a1e18', hairHi: '#44342a', lip: '#b06a60' }) }),
+    eto:      () => ({ o: { hair: 'slick', narrow: true, cloth: 'coat', mouth: 'tight', wrinkles: 1, stubble: 1, wide: 9.8, jaw: 7.8, noseLong: 2 }, p: Object.assign({}, SKIN.a, CLOTH.coat, { hair: '#3a3632', hairHi: '#55504a' }) }),
+    otsuka:   st => ({ o: susp({ hair: 'bald', brows: 'n', cloth: 'cardigan', mouth: 'flat', wrinkles: 2, wide: 11, eyeDy: 1, mouthDy: 1 }, st), p: Object.assign({}, SKIN.old, CLOTH.cardigan, { hair: '#77726a', hairHi: '#99948b', cloth: '#5a5a48', clothSh: '#44443a', clothHi: '#6a6a58' }) }),
+    kiyo:     () => ({ o: { female: true, hair: 'curly', wide: 10.4, eyeDy: 1, wrinkles: 2, cloth: 'cardigan', brows: 'thin', mouth: 'flat', eyes: 1 }, p: Object.assign({}, SKIN.old, CLOTH.cardigan, { hair: '#c8c4bc', hairHi: '#e0dcd4', cloth: '#8a7a8a', clothSh: '#6a5a6a', clothHi: '#9a8a9a' }) }),
+    prof:     () => ({ o: { hair: 'bald', glasses: true, cloth: 'suitBrown', tie: false, mouth: 'flat', wrinkles: 2, brows: 'thin', mustache: true, eyeGap: -1 }, p: Object.assign({}, SKIN.old, CLOTH.suitBrown, { hair: '#a8a49c', hairHi: '#c8c4bc' }) }),
+    kasoken:  () => ({ o: { hair: 'shaggy', glasses: true, cloth: 'lab', mouth: 'tight', wide: 10.2, eyeDy: 1 }, p: Object.assign({}, SKIN.a, CLOTH.lab, { hair: '#231c18', hairHi: '#3a302a' }) }),
+    clerk:    () => ({ o: { female: true, hair: 'bob', cloth: 'blouse', brows: 'thin', mouth: 'smile', wide: 10, eyeGap: -1 }, p: Object.assign({}, SKIN.b, CLOTH.blouse, { hair: '#3a2a20', hairHi: '#54402e', cloth: '#3a6a5a', clothSh: '#2a5040', clothHi: '#4a7a6a' }) }),
+    kenji:    () => ({ o: { hair: 'slick', brows: 'thin', cloth: 'suitBrown', tie: true, mouth: 'tight', glasses: true, wrinkles: 1, wide: 10, jaw: 7.6, noseLong: 1 }, p: Object.assign({}, SKIN.a, CLOTH.suitBrown, { hair: '#1c1714', hairHi: '#332a24', tie: '#2a3a2a' }) })
   };
   // 被疑者は、勾留が長くなるほどやつれていく
   function susp(o, st) {
@@ -335,7 +351,16 @@
       R(x, '#3e3022', 0, 76, W, 29); R(x, '#4a3a29', 0, 76, W, 2);
       R(x, '#d9cfb4', 64, 64, 80, 12); R(x, '#e5dcc4', 68, 60, 72, 6); R(x, '#d4caae', 72, 56, 64, 5); R(x, '#b23a2e', 74, 58, 8, 2);
     },
-    phone: x => { R(x, '#1d1c19', 0, 0, W, H); R(x, '#111', 100, 40, 40, 20); R(x, '#222', 104, 34, 32, 6); }
+    phone: x => {
+      // 刑事部屋の机の上の電話（受話器を取っている）
+      R(x, '#2c2a25', 0, 0, W, H); tex(x, 0, 0, W, 50, '#312e29', .2, 31); R(x, '#4a3a29', 0, 50, W, 55); R(x, '#5a4733', 0, 50, W, 2); tex(x, 0, 52, W, 53, '#3e3021', .15, 32);
+      R(x, '#18191b', 70, 60, 70, 34); R(x, '#26282b', 72, 62, 66, 30); for (let j = 0; j < 4; j++) for (let i = 0; i < 3; i++) R(x, '#d6d0c0', 100 + i * 9, 66 + j * 6, 6, 4);
+      R(x, '#b23a2e', 76, 66, 6, 4); R(x, '#e05a4a', 77, 67, 4, 2);
+      R(x, '#18191b', 150, 20, 14, 46); R(x, '#26282b', 152, 22, 10, 42); R(x, '#18191b', 146, 16, 22, 8); R(x, '#18191b', 146, 60, 22, 8);
+      for (let i = 0; i < 40; i++) R(x, '#2a2a2a', 140 - i, 70 + Math.round(Math.sin(i / 4) * 3), 1, 1);
+      R(x, '#e8e2cc', 20, 64, 40, 30); for (let j = 68; j < 90; j += 4) R(x, '#8a8270', 24, j, 30 - (j % 8), 1); R(x, '#333', 56, 60, 2, 20);
+      R(x, '#d8c37a', 200, 30, 12, 4); R(x, '#555', 205, 34, 2, 16);
+    }
   };
 
   // ---- 描き込みの追加 ----

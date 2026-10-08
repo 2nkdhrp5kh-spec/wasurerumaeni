@@ -55,33 +55,33 @@ G.curtain = function (pages, opt) {
 // voice: 声の高さ(Hz)・音色・速さ
 G.CHAR = {
   you:      { name: 'あなた', voice: { f: 120, w: 'sawtooth', rate: 1 } },
-  todo:     { name: '東堂課長', portrait: 'todo', voice: { f: 95, w: 'sawtooth', rate: .9 } },
-  shirai:   { name: '白井', portrait: 'shirai', voice: { f: 105, w: 'sawtooth', rate: .95 } },
-  oka:      { name: '岡', portrait: 'oka', voice: { f: 135, w: 'triangle', rate: 1.05 } },
-  noguchi:  { name: '野口', portrait: 'noguchi', voice: { f: 150, w: 'triangle', rate: 1.15 } },
-  kuzumi:   { name: '久住', portrait: 'kuzumi', voice: { f: 125, w: 'triangle', rate: .95 } },
-  aoyagi:   { name: '青柳', portrait: 'aoyagi', voice: { f: 340, w: 'triangle', rate: .85 } },
-  murai:    { name: '村井', portrait: 'murai', voice: { f: 370, w: 'triangle', rate: 1.1 } },
-  miyashita:{ name: '宮下', portrait: 'miyashita', voice: { f: 100, w: 'square', rate: .9 } },
-  sakai:    { name: '坂井', portrait: 'sakai', voice: { f: 115, w: 'square', rate: 1.05 } },
+  todo:     { name: '東堂課長', kana: 'とうどう', portrait: 'todo', voice: { f: 95, w: 'sawtooth', rate: .9 } },
+  shirai:   { name: '白井', kana: 'しらい', portrait: 'shirai', voice: { f: 105, w: 'sawtooth', rate: .95 } },
+  oka:      { name: '岡', kana: 'おか', portrait: 'oka', voice: { f: 135, w: 'triangle', rate: 1.05 } },
+  noguchi:  { name: '野口', kana: 'のぐち', portrait: 'noguchi', voice: { f: 150, w: 'triangle', rate: 1.15 } },
+  kuzumi:   { name: '久住', kana: 'くずみ', portrait: 'kuzumi', voice: { f: 125, w: 'triangle', rate: .95 } },
+  aoyagi:   { name: '青柳', kana: 'あおやぎ', portrait: 'aoyagi', voice: { f: 340, w: 'triangle', rate: .85 } },
+  murai:    { name: '村井', kana: 'むらい', portrait: 'murai', voice: { f: 370, w: 'triangle', rate: 1.1 } },
+  miyashita:{ name: '宮下', kana: 'みやした', portrait: 'miyashita', voice: { f: 100, w: 'square', rate: .9 } },
+  sakai:    { name: '坂井', kana: 'さかい', portrait: 'sakai', voice: { f: 115, w: 'square', rate: 1.05 } },
   regular:  { name: '常連客', voice: { f: 110, w: 'sawtooth', rate: .9 } },
-  mother:   { name: '久住和子', voice: { f: 320, w: 'triangle', rate: 1 } },
+  mother:   { name: '久住和子', kana: 'くずみ かずこ', voice: { f: 320, w: 'triangle', rate: 1 } },
   kenji:    { name: '担当検事', portrait: 'kenji', voice: { f: 115, w: 'triangle', rate: 1 } },
   wife:     { name: '妻', voice: { f: 350, w: 'triangle', rate: 1 } },
   daughter: { name: '娘', voice: { f: 480, w: 'triangle', rate: 1.2 } },
   kanri:    { name: '管理人', voice: { f: 130, w: 'square', rate: 1.1 } },
   clerk:    { name: '店員', voice: { f: 300, w: 'triangle', rate: 1.1 } },
-  morimoto: { name: '森本', voice: { f: 330, w: 'triangle', rate: 1 } },
-  toda:     { name: '戸田', portrait: 'toda', voice: { f: 95, w: 'sawtooth', rate: .95 } },
-  saeki:    { name: '佐伯', portrait: 'saeki', voice: { f: 120, w: 'triangle', rate: 1 } },
-  misaki:   { name: '森川', portrait: 'misaki', voice: { f: 400, w: 'triangle', rate: 1.05 } },
-  eto:      { name: '江藤', portrait: 'eto', voice: { f: 100, w: 'square', rate: .9 } },
-  otsuka:   { name: '大塚', portrait: 'otsuka', voice: { f: 110, w: 'sawtooth', rate: .9 } },
-  kiyo:     { name: '大塚キヨ', portrait: 'kiyo', voice: { f: 330, w: 'triangle', rate: .8 } },
-  prof:     { name: '久我教授', portrait: 'prof', voice: { f: 115, w: 'triangle', rate: .9 } },
-  kasoken:  { name: '科捜研・松浦', portrait: 'kasoken', voice: { f: 130, w: 'triangle', rate: 1.05 } },
+  morimoto: { name: '森本', kana: 'もりもと', voice: { f: 330, w: 'triangle', rate: 1 } },
+  toda:     { name: '戸田', kana: 'とだ', portrait: 'toda', voice: { f: 95, w: 'sawtooth', rate: .95 } },
+  saeki:    { name: '佐伯', kana: 'さえき', portrait: 'saeki', voice: { f: 120, w: 'triangle', rate: 1 } },
+  misaki:   { name: '森川', kana: 'もりかわ', portrait: 'misaki', voice: { f: 400, w: 'triangle', rate: 1.05 } },
+  eto:      { name: '江藤', kana: 'えとう', portrait: 'eto', voice: { f: 100, w: 'square', rate: .9 } },
+  otsuka:   { name: '大塚', kana: 'おおつか', portrait: 'otsuka', voice: { f: 110, w: 'sawtooth', rate: .9 } },
+  kiyo:     { name: '大塚キヨ', kana: 'おおつか きよ', portrait: 'kiyo', voice: { f: 330, w: 'triangle', rate: .8 } },
+  prof:     { name: '久我教授', kana: 'くが', portrait: 'prof', voice: { f: 115, w: 'triangle', rate: .9 } },
+  kasoken:  { name: '科捜研・松浦', kana: 'まつうら', portrait: 'kasoken', voice: { f: 130, w: 'triangle', rate: 1.05 } },
   clerk2:   { name: 'コンビニ店員', portrait: 'clerk', voice: { f: 380, w: 'triangle', rate: 1.1 } },
-  witnessA: { name: '目撃者・畑中', voice: { f: 105, w: 'sawtooth', rate: 1 } },
+  witnessA: { name: '目撃者・畑中', kana: 'はたなか', voice: { f: 105, w: 'sawtooth', rate: 1 } },
   stationer:{ name: '駅員', voice: { f: 140, w: 'triangle', rate: 1.1 } },
   passenger:{ name: '乗客', voice: { f: 125, w: 'triangle', rate: 1 } },
   wifeS:    { name: '佐伯の妻', voice: { f: 350, w: 'triangle', rate: 1 } },
@@ -108,7 +108,11 @@ G.layout = function (o) {
   $('#b-snd').onclick = () => { G.meta.muted = !G.meta.muted; G.saveMeta(); G.audio.setMuted(G.meta.muted); $('#b-snd').textContent = G.meta.muted ? '音：切' : '音：入'; };
   G.drawScene(o.scene || { bg: 'dark' });
 };
-G.drawScene = function (sc) { G.lastScene = sc; const cv = $('#cv'); if (cv && G.portraits) G.portraits.scene(cv, sc); };
+G.audit = [];
+G.auditLog = m => { if (G.audit.length < 500) G.audit.push(m); };
+G.drawScene = function (sc) {
+  if (sc && sc.who && G.auditCtx && G.auditCtx.suspect === sc.who && G.auditCtx.inCustody() && !['interro', 'street', 'shop', 'court'].includes(sc.bg)) G.auditLog('拘束中の被疑者が場違いな場所に表示: ' + sc.who + ' @ ' + sc.bg);
+  G.lastScene = sc; const cv = $('#cv'); if (cv && G.portraits) G.portraits.scene(cv, sc); };
 
 /* 台詞：1文字ずつ表示し、つぶやき音を鳴らす */
 G.talk = function (lines, opt) {
@@ -129,12 +133,19 @@ G.talk = function (lines, opt) {
       if (typeof L === 'function') { L(); next(); return; }
       const [who, text, extra] = L;
       if (extra && extra.scene) G.drawScene(extra.scene);
+      const cc = G.CHAR[who];
+      if (who && !cc) G.auditLog('話者が登録されていない: ' + who + '「' + text.slice(0, 20) + '」');
+      // 顔のある人物が話すときは、その人物を表示する（別人の顔のまま台詞が出ないように）
+      if (cc && cc.portrait && G.lastScene && G.lastScene.who !== cc.portrait) {
+        if (!(extra && extra.scene)) G.auditLog('話者と表示人物の不一致を自動修正: ' + who + ' / 表示=' + G.lastScene.who + ' / 背景=' + G.lastScene.bg);
+        G.drawScene({ bg: G.lastScene.bg, who: cc.portrait });
+      }
       if (extra && extra.sfx) G.audio.sfx(extra.sfx);
       const c = G.CHAR[who];
       const name = c ? c.name : (who || '');
       const nar = !who;
       G.anim.speaking = (c && c.portrait) ? c.portrait : null;
-      box.innerHTML = '<div class="who">' + name + '</div><div class="say' + (nar ? ' nar' : '') + '"></div><div class="more">▼</div>';
+      box.innerHTML = '<div class="who">' + name + (c && c.kana ? '<span class="kana">' + c.kana + '</span>' : '') + '</div><div class="say' + (nar ? ' nar' : '') + '"></div><div class="more">▼</div>';
       const say = box.querySelector('.say');
       full = text; let k = 0;
       const step = nar ? 18 : Math.round(34 / ((c && c.voice && c.voice.rate) || 1));

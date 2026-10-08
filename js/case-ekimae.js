@@ -13,10 +13,11 @@
     staff: [{ id: 'shirai', name: '白井' }, { id: 'oka', name: '岡' }, { id: 'noguchi', name: '野口' }],
     elemTitle: '立証すべき事実',
     info: S => kit.info(S, '北見坂駅前事件（傷害致死）'),
-    scene: S => sc(inC(S) ? 'toda' : null, 'office', kit.stage(S)),
+    scene: S => sc(null, 'office'),
     endHint: S => inC(S) ? '満期までに記録を固める' : '',
     stopSkip: S => (inC(S) && (cday(S) >= kit.LIMIT || (cday(S) >= 16 && !S.c.confession && !S.c.takeoverAsked))) || (S.c.arrest == null && S.day >= 21),
     gauge: S => G.trial.gauge(S, TRIAL),
+    nextMilestone: S => kit.nextMilestone(S),
     elements: S => {
       const c = S.c, d = id => !!K.doc(id);
       const first = (c.confession ? 3 : 0) || Math.min(3, (d('witA') ? 1 : 0) + (c.recorder === 'A' ? 3 : 0) + (d('autopsy') ? 1 : 0));
@@ -31,8 +32,8 @@
       const c = S.c, L = [];
       if (first) {
         L.push(['', '（11月15日、午前1時。北見坂駅前のロータリー裏で、男が倒れたと119番通報があった。通報したのは、相手の男だった。）', { sfx: 'phone' }],
-          ['todo', '倒れたのは樋口和也、28歳。会社員。頭を打って意識がない。', { scene: sc('todo') }],
-          ['todo', '相手は戸田誠、41歳、タクシー運転手。「向こうが殴りかかってきたから、振り払っただけだ」と言ってる。'],
+          ['todo', '倒れたのは樋口和也（ひぐち かずや）、28歳。会社員。頭を打って意識がない。', { scene: sc('todo') }],
+          ['todo', '相手は戸田誠（とだ まこと）、41歳、タクシー運転手。「向こうが殴りかかってきたから、振り払っただけだ」と言ってる。'],
           ['todo', '署で任意で話を聴いてる。……逮捕するかどうかは、お前が決めろ。'],
           ['shirai', '主任、一つ。逮捕すれば、取調べは録画されます。死亡事件になれば裁判員裁判の対象ですから。', { scene: sc('shirai') }],
           ['shirai', '逮捕する前の任意の聴取は、録画の義務はありません。……まあ、覚えておいてください。']);
@@ -47,11 +48,12 @@
       if (c.warrantPending && S.day > c.warrantPending) { c.warrantPending = null; c.warrantReady = true; L.push(['todo', '逮捕状が出た。', { scene: sc('todo') }]); }
       if (inC(S)) {
         L.push(...kit.custodyMorning(S, { name: '戸田', kenji2: '……正当防衛の主張は、崩せそうですか。', wantConfession: '「先に手を出した」と認めたか、とな。' }));
-        if (cday(S) === 1) { K.addDoc({ id: 'news', title: '新聞記事', kind: 'memo', body: P('<b>駅前で口論、男性死亡　タクシー運転手を逮捕</b>', '北見坂署は、北見坂駅前で会社員の男性（28）を転倒させ死亡させたとして、傷害致死の疑いで、タクシー運転手の戸田誠容疑者（41）を逮捕した。同容疑者は「相手が殴りかかってきた」と話している。') }); }
+        if (cday(S) === 1) { K.addDoc({ id: 'news', title: '新聞記事', kind: 'memo', body: P('<b>駅前で口論、男性死亡　タクシー運転手を逮捕</b>', '北見坂署は、北見坂駅前で会社員の男性（28歳）を転倒させ死亡させたとして、傷害致死の疑いで、タクシー運転手の戸田誠容疑者（41歳）を逮捕した。同容疑者は「相手が殴りかかってきた」と話している。') }); }
         if (cday(S) === 6) { c.fired = true; L.push(['shirai', '戸田のタクシー会社、乗務停止にしたそうです。逮捕で、二種免許の更新もどうなるか。', { scene: sc('shirai') }]); }
         if (cday(S) === 9) L.push(['', '（樋口の母親が署を訪れた。「息子は、人に殴りかかるような子じゃありません」。）']);
       }
       if (S.day === 4 && c.arrest == null) L.push(['todo', '遺族が「なぜ逮捕しないのか」と言ってきてる。', { scene: sc('todo') }]);
+      if (S.day === 5 && c.arrest == null && rnd() < .4) { c.contacted = true; L.push(['oka', '戸田が、現場のコンビニに来て、店員に「あの夜、見てたよね」と話しかけたそうです。店員、怖がってます。', { scene: sc('oka') }], ['todo', '証人に接触してる。罪証隠滅のおそれありだ。', { scene: sc('todo') }]); }
       return L;
     },
     check: async S => {
@@ -82,7 +84,8 @@
   /* 行動 */
   A.push({ id: 'claimTalk', who: 'self', label: '戸田から任意で話を聴く', sub: '逮捕前。録画の義務はない', cond: S => S.c.arrest == null && !S.fin.claimTalk, run: async S => {
     const v = await G.openPaper({ title: '任意の事情聴取', body: P('戸田は自分から119番通報し、署に来ている。逮捕はしていない。いつでも帰れる。'), noClose: true,
-      buttons: [{ label: '言い分を聴く', value: 'n' }, { label: '「先に手を出したのはお前だろう」と朝まで詰める', value: 'p', cls: 'red', small: '録画されない場所で' }] });
+      buttons: [{ label: '言い分を聴く', value: 'n' }, { label: '「先に手を出したのはお前だろう」と朝まで詰める', value: 'p', cls: 'red', small: '録画されない場所で' }, { label: 'やめる', value: null }] });
+    if (!v) return false;
     G.drawScene(sc('toda', 'interro', 0));
     if (v === 'p' && !(await G.confirmRisk({ id: 'ninniP', title: '任意の取調べで、長時間・強圧的に追及する', law: '刑訴法198条1項ただし書、319条1項（任意捜査の限界）', lure: '課長「逮捕したら録画だ。今のうちに、話を固めておけ」', effects: ['任意取調べでも、社会通念上相当な限度を超えれば違法となりうる', 'ここで得た供述は、任意性を欠くとして証拠から外されうる', '録画がない以上、何があったかは、あなたと戸田の言い分だけになる'] }))) return false;
     if (v === 'p') { S.c.ninniPressure = true; S.c.illegalCount = (S.c.illegalCount || 0) + 1; }
@@ -105,9 +108,9 @@
         + (c.truth === 'D' ? P('23:19:41　男の声「なんだよてめえ、乗せろっつってんだろ」（樋口とみられる）', '23:19:44　布の擦れる音、「離せ」（戸田とみられる）', '23:19:48　「離せって」', '23:19:50　鈍い音、転倒音') : P('23:19:41　男の声「乗せろよ」（樋口とみられる）', '23:19:44　「なめてんのか」（戸田とみられる）', '23:19:47　打撃音', '23:19:50　転倒音')) });
       return [['oka', 'ドラレコ、間に合いました。映像には映ってませんが、音が拾えてます。', { scene: sc('oka') }]]; } });
   A.push({ id: 'witA', who: 'staff', days: 1, label: 'タクシー乗り場の目撃者から話を聴く', short: '目撃者（乗り場）', cond: S => true,
-    done: S => { K.addDoc({ id: 'witA', title: '目撃者・畑中の供述', kind: 'neu', evid: true, body: P('（畑中正樹・52歳、会社員。飲み会の帰りでタクシー乗り場に並んでいた）', '大声がしたので見たら、背の高いほうが、若いほうを殴った。若いのが倒れた。', '距離は30mくらい。結構飲んでたけど、見間違いじゃないと思う。') });
-      return [['witA', '背の高いほうが殴ったんですよ。若いのがひっくり返って。', { scene: { bg: 'street' } }]]; } });
-  A.push({ id: 'witB', who: 'staff', days: 2, label: 'コンビニの店員から話を聴く', short: '目撃者（コンビニ）', cond: S => true,
+    done: S => { K.addDoc({ id: 'witA', title: '目撃者・畑中の供述', kind: 'neu', evid: true, body: P('（畑中正樹〈はたなか まさき〉・52歳、会社員。飲み会の帰りでタクシー乗り場に並んでいた）', '大声がしたので見たら、背の高いほうが、若いほうを殴った。若いのが倒れた。', '距離は30mくらい。結構飲んでたけど、見間違いじゃないと思う。') });
+      return [['witnessA', '背の高いほうが殴ったんですよ。若いのがひっくり返って。', { scene: { bg: 'street' } }]]; } });
+  A.push({ id: 'witB', who: 'staff', days: 2, label: '現場近くのコンビニの店員から話を聴く', short: '目撃者（コンビニ店員）', cond: S => true,
     done: S => { K.addDoc({ id: 'witB', title: 'コンビニ店員の供述', kind: 'neu', evid: true, body: P('（店員・22歳。店の窓から路地の入口が見える）', '若い男の人が、タクシーの運転手さんに掴みかかってるのが見えました。そのあとレジに呼ばれて、戻ったら、もう倒れてました。') });
       return [['clerk2', '若い人のほうが、運転手さんに掴みかかってました。そこまでしか、見てないです。', { scene: sc('clerk', 'street') }]]; } });
   A.push({ id: 'camera', who: 'staff', days: 2, label: '駅前の防犯カメラを集める', short: '防犯カメラ', cond: S => true,
@@ -122,9 +125,31 @@
   A.push({ id: 'prior', who: 'staff', days: 1, label: '戸田の前歴を照会する', short: '前歴照会', cond: S => true,
     done: S => { K.addDoc({ id: 'prior', title: '前歴照会結果', kind: 'neu', evid: true, body: P('戸田誠：10年前、乗客との口論で相手を殴り、傷害で検挙。示談成立により不起訴。') });
       return [['shirai', '10年前に、客を殴ってますな。示談で不起訴。', { scene: sc('shirai') }]]; } });
+  A.push({ id: 'call119', who: 'staff', days: 2, label: '119番通報の録音を取り寄せる', short: '通報の録音', cond: S => S.c.dead,
+    done: S => { K.addDoc({ id: 'call119', title: '119番通報の記録', kind: 'neu', evid: true, body: P('23時21分、戸田の携帯電話から通報。', '「人が倒れてる、頭打って動かない！ 駅前の、ロータリーの裏！ ……酔っ払いに絡まれて、振り払ったら、倒れたんです」') });
+      return [['oka', '通報のときから、「振り払ったら倒れた」と言ってますね。', { scene: sc('oka') }]]; } });
+  A.push({ id: 'taxiLog', who: 'staff', days: 2, label: 'タクシー会社の運行記録を確かめる', short: '運行記録', sub: '予約客を待っていたのは本当か', cond: S => S.fin.claimTalk,
+    done: S => { K.addDoc({ id: 'taxiLog', title: 'タクシー会社の回答', kind: 'neu', evid: true, body: P('事件当夜、戸田の車両には23時30分、駅前での迎車予約が入っていた。戸田は23時05分から現場で待機していた。') });
+      return [['noguchi', '予約は本当に入ってました。だから乗車を断った、という話は合います。', { scene: sc('noguchi') }]]; } });
+  A.push({ id: 'medic', who: 'self', label: '解剖医に、頬の打撲について尋ねる', sub: '補充の質問', cond: S => S.fin.autopsy && !S.fin.medic, run: async S => {
+    G.drawScene({ bg: 'office' });
+    await G.talk([['', '（解剖を担当した法医学者に電話をかけた。）', { scene: { bg: 'phone' } }], ['', '「頬の打撲が拳によるものか、倒れたときのものか、区別はできません。強く押されて倒れても、殴られて倒れても、後頭部の損傷は同じように生じえます」']]);
+    K.addDoc({ id: 'medic', title: '解剖医の補充説明', kind: 'neu', evid: true, body: P('頬の打撲の原因は区別できない。押されて倒れても、殴られて倒れても、後頭部の損傷は同様に生じうる。') });
+  } });
+  A.push({ id: 'flyer', who: 'staff', days: 5, label: 'ほかの目撃者を探す', short: '目撃者探し', sub: '駅前でのビラ配り・呼びかけ', cond: S => S.c.dead,
+    done: S => { const c = S.c; const found = rnd() < .15;
+      if (!found) { K.addDoc({ id: 'flyerNone', title: '目撃者探しの結果', kind: 'neu', body: P('駅前でビラを配り、情報提供を呼びかけた。有力な情報は寄せられなかった。') }); return [['noguchi', 'ビラ、300枚配りましたけど……何も。', { scene: sc('noguchi') }]]; }
+      c.video = true;
+      K.addDoc({ id: 'video', title: '提供された動画', kind: 'neu', evid: true, body: c.truth === 'D' ? P('バスを待っていた女性が撮影した約20秒の動画。若い男（樋口）が運転手（戸田）の襟を掴み、運転手は「離せ」と三度言って手を振り払う。男は自分の勢いで後ろに倒れる。') : P('バスを待っていた女性が撮影した約20秒の動画。若い男（樋口）が運転手（戸田）に詰め寄った直後、運転手が右の拳で男の顔を殴る。男は後ろに倒れる。') });
+      return [['noguchi', '主任！ バス停にいた女の人が、動画を撮ってました！', { scene: sc('noguchi') }]]; } });
+  A.push({ id: 'todaWife', who: 'self', label: '戸田の妻から話を聴く', sub: '人柄・最近の様子', cond: S => S.c.arrest != null && !S.fin.todaWife, run: async S => {
+    G.drawScene({ bg: 'home' });
+    await G.talk([['', '（戸田の妻は、娘を学校に送り出したあとだった。）'], ['', '「夫は、短気なところはあります。10年前のことも、知っています。でも、あれから変わったんです。客に殴られても、手を出さないって」'], ['', '「……あの夜、帰ってきたら、手が震えていました」']]);
+    K.addDoc({ id: 'todaWife', title: '戸田の妻の供述', kind: 'neu', evid: true, body: P('夫は短気なところはあるが、10年前の件以来、客に手を出さないと決めていた。事件の夜は手が震えていた。') });
+  } });
   A.push({ id: 'witAAgain', who: 'self', label: '畑中に、もう一度話を聴く', sub: '見た順番について', cond: S => S.c.orderLead && !S.fin.witAAgain, run: async S => {
     G.drawScene({ bg: 'street' });
-    await G.talk([['witA', '順番、ですか。……大声がして、振り向いたら、もう殴ってたような。'], ['witA', 'バス？ ああ、バスは通ったかもしれない。……その前に何があったかは、正直、分からないです。']]);
+    await G.talk([['witnessA', '順番、ですか。……大声がして、振り向いたら、もう殴ってたような。'], ['witnessA', 'バス？ ああ、バスは通ったかもしれない。……その前に何があったかは、正直、分からないです。']]);
     K.addDoc({ id: 'witA2', title: '目撃者・畑中の供述（2回目）', kind: 'neu', evid: true, body: P('振り向いたときには、もう背の高い男が手を出していた。それより前に何があったかは見ていない。バスが通ったかもしれない。') });
   } });
   A.push({ id: 'warrant', who: 'self', label: '逮捕状の請求を課長に上げる', sub: '傷害致死', primary: true, cond: S => S.c.arrest == null && !S.c.warrantPending && !S.c.warrantReady && S.c.dead, run: async S => {
@@ -136,8 +161,12 @@
     await G.talk([['you', '戸田誠さん。傷害致死の容疑で逮捕します。'], ['toda', '……向こうから来たんですよ。俺は、振り払っただけだ。'], ['', '（逮捕。ここから先の取調べは、録音・録画される。）', { sfx: 'metal' }]]);
     S.c.arrest = S.day; S.c.recorded = true; S.c.warrantReady = false;
   } });
+  A.push(kit.releaseAction(S => G.trial.estimate(S, TRIAL), (S, how) => finish(S, how)));
   A.push({ id: 'interro', who: 'self', once: false, label: '戸田を取り調べる', sub: '録画されている', primary: true, cond: S => inC(S), run: async S => kit.interro(S, ICFG) });
   A.push({ id: 'zaitakuSend', who: 'self', label: '逮捕せず、在宅のまま送致する', sub: '身柄は拘束しない', cond: S => S.c.arrest == null && S.c.dead && S.day >= 3, run: async S => {
+    const ok = await G.openPaper({ title: '在宅送致', body: P('逮捕・勾留をせず、書類と証拠だけを検察官に送る（刑訴法246条）。', '身柄の拘束は、逃亡や罪証隠滅のおそれがあるときに限って認められる。戸田は自ら119番通報し、住所も勤め先もはっきりしている。', '在宅のまま送れば、戸田は普段どおり暮らしながら検察官の判断を待つ。証人に接触するおそれは残る。'), noClose: true,
+      buttons: [{ label: '在宅で送致する', value: true }, { label: 'やめる', value: false }] });
+    if (!ok) return false;
     await G.talk([['todo', '……在宅で送るのか。遺族は納得しないぞ。', { scene: sc('todo') }]]); await finish(S, 'zaitaku');
   } });
 
@@ -162,7 +191,15 @@
       E: [S => [['you', '人が一人死んでるんだぞ！ いい加減にしろ！', { sfx: 'thud' }], ['', '（机を叩く音を、録画装置が拾った。）']], S => [['you', 'お前の嫁さんにも、話を聞くことになるぞ。'], ['toda', '……やめてください。']]]
     },
     confess: confess,
-    afterConfession: async S => { await G.talk([['toda', '……調書に書いてあるとおりです。'], ['', '（彼は、それ以上答えなかった。）']]); return false; }
+    afterConfession: S => kit.afterConfession(S, {
+      who: 'toda', guiltyKey: 'A',
+      topics: [
+        { k: 'hand', label: 'どちらの手で、どう殴ったか聞く', run: async S => { S.c.qHand = true; await G.talk(S.c.truth === 'A' ? [['toda', '右の拳です。頬のあたりを、一発。']] : [['toda', '……右、だったと思います。押したのか、殴ったのか、もう……']]); } },
+        { k: 'word', label: '樋口に何と言ったか聞く', run: async S => { await G.talk(S.c.truth === 'A' ? [['toda', '「なめてんのか」って。……頭に血がのぼって。']] : [['toda', '「離せ」って、何回か言いました。']]); } },
+        { k: 'call', label: 'なぜ自分で119番したのか聞く', run: async S => { S.c.qCall = true; await G.talk([['toda', '倒れて、動かなかったから。……放っておけないでしょう。']]); } }
+      ],
+      chat: [S => [['toda', '娘が、来年高校なんです。……タクシーで送ってやるのが、楽しみで。']], S => [['toda', '夜の駅前は、酔った客ばかりです。殴られたこともある。でも、手は出さなかった。18年。']], S => [['toda', 'あの若い人の、お母さんは……どうしてますか。']]]
+    })
   };
   async function confess(S, voluntary, opt) {
     const c = S.c; opt = opt || {};
@@ -186,7 +223,7 @@
 
   /* 公判 */
   const TRIAL = {
-    name: '駅前事件', court: '北見坂地方裁判所（裁判員裁判：裁判官3人・裁判員6人）', truthText: '樋口が先に襲いかかった世界か、戸田が先に殴った世界か。',
+    accusedName: '戸田誠', name: '駅前事件', court: '北見坂地方裁判所（裁判員裁判：裁判官3人・裁判員6人）', truthText: '樋口が先に襲いかかった世界か、戸田が先に殴った世界か。',
     issue: { pro: '正当防衛が成立しないことを示す事情', yes: '以上によれば、被告人の行為は正当防衛に当たらない。', no: '以上によれば、被告人の行為が正当防衛に当たらないことについて、合理的な疑いが残る。刑訴法336条により、被告人に対し無罪の言渡しをする。' },
     retract(S) { const c = S.c; if (c.confession) c.retract = c.confession.voluntary ? false : c.truth === 'D' ? rnd() < .85 : rnd() < .4; },
     lines(S, charge) { const c = S.c; return [['kenji', c.confession ? (c.retract ? '戸田は公判前に自白を撤回しました。録画を見れば、事情は分かるでしょう。' : '戸田は「先に殴った」と認めています。') : '戸田は一貫して正当防衛を主張しています。'],
@@ -205,6 +242,10 @@
       if (has('shirt')) add(-1, '被告人の襟元の損傷と首のひっかき傷は、被害者に掴みかかられたとの供述と合う');
       if (has('camera')) add(-.5, '防犯カメラには、被害者が被告人に近づき、二人がもみ合う様子が写っている');
       if (has('friend')) add(-.4, '');
+      if (has('call119')) add(-.4, '被告人は自ら119番通報し、その時点から「振り払ったら倒れた」と述べている');
+      if (has('taxiLog')) add(-.3, '被告人には迎車の予約が入っており、乗車を断った経緯は供述と合う');
+      if (has('medic')) add(-.3, '解剖医は、頬の打撲が殴打によるか転倒によるかは区別できないとする');
+      if (has('video') && c.video) add(c.truth === 'D' ? -6 : 5, c.truth === 'D' ? '目撃者の撮影した動画では、被害者が被告人の襟を掴み、被告人は「離せ」と言って手を振り払い、被害者は自らの勢いで転倒している' : '目撃者の撮影した動画では、被告人が被害者の顔を拳で殴り、被害者が転倒している');
       if (has('autopsy')) add(-.3, '被害者は中程度に酩酊していた');
       return { pos, neg, pros, cons };
     },
@@ -232,7 +273,7 @@
       }
       if (!guilty && c.truth === 'A' && rnd() < .55) {
         await G.curtain([{ html: '<div class="big">3年後</div>', wait: 1200 },
-          { html: '<div class="doc-s"><h3>判決（隣県の地方裁判所）</h3>タクシー運転手の戸田誠は、運賃をめぐって口論になった乗客の男性（34）の顔面を拳で多数回殴り、急性硬膜下血腫等の傷害を負わせた。男性には重い後遺障害が残り、言葉を話すことができなくなった。<br><br>戸田は、取調べ（録画）でこう述べた。<br>「前にも一度、駅前でやった。あのときも、先に殴ったのは俺だ。」</div>', wait: 3600 },
+          { html: '<div class="doc-s"><h3>判決（隣県の地方裁判所）</h3>タクシー運転手の戸田誠は、運賃をめぐって口論になった乗客の男性（34歳）の顔面を拳で多数回殴り、急性硬膜下血腫等の傷害を負わせた。男性には重い後遺障害が残り、言葉を話すことができなくなった。<br><br>戸田は、取調べ（録画）でこう述べた。<br>「前にも一度、駅前でやった。あのときも、先に殴ったのは俺だ。」</div>', wait: 3600 },
           { html: '<div class="doc-s"><h3>樋口和也の母の手記（抜粋）</h3>「あの子は酔うと口が悪くなる子でした。それは知っています。<br>でも、殴られて死ぬほどのことを、あの子はしたんでしょうか。<br>『正当防衛』という言葉を、私は、たぶん一生、許せません。」</div>', wait: 3600 },
           { html: '<div class="law">駅前事件について、戸田誠は' + (verdict === '無罪' ? 'すでに無罪の判決を受け、確定している。<br><br>何人も、既に無罪とされた行為については、刑事上の責任を問はれない。</div><div class="cite">日本国憲法　第39条</div>' : '起訴されていなかった。</div>'), wait: 3000 }]);
         return true;
@@ -249,6 +290,7 @@
       const S = { c: { truth: rnd() < .5 ? 'D' : 'A', sess: { A: 0, B: 0, C: 0, D: 0, E: 0 } } };
       G.audio.cue('main'); G.audio.ambient('office');
       await G.curtain(['<div class="big">北見坂駅前事件</div><div class="small">傷害致死</div>']);
+      G.auditCtx = { suspect: 'toda', inCustody: () => inC(S) };
       await K.start(C, S);
       G.audio.ambient(null);
       return S;

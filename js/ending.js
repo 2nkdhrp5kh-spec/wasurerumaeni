@@ -75,16 +75,17 @@
       const est = weigh(S, sent, false).w;
       G.layout({ role: '検察', date: '', info: '北見坂地方検察庁', scene: { bg: 'pros', who: 'kenji' } });
       G.audio.ambient(null);
-      const charge = (c.confession && !c.retract) || est >= 3;
-      await G.talk([['kenji', c.confession ? (c.retract ? '検事調べで、久住は自白を撤回しました。「警察で言わされた」と。' : '久住は、私の前でも自白を維持しました。') : '久住は、一貫して否認しています。'],
+      const charge = c.how === 'release' ? false : (c.confession && !c.retract) || est >= 3;
+      if (c.how === 'release') await G.talk([['kenji', '主任の意見は読みました。……この記録では、起訴できるだけのものはない。'], ['kenji', '釈放します。嫌疑不十分で、不起訴とします。'], ['', '（久住透は釈放された。）']]);
+      else await G.talk([['kenji', c.confession ? (c.retract ? '検事調べで、久住は自白を撤回しました。「警察で言わされた」と。' : '久住は、私の前でも自白を維持しました。') : '久住は、一貫して否認しています。'],
         ['kenji', charge ? '起訴します。' : '……これでは公判を維持できません。嫌疑不十分で、不起訴とします。'],
         ['', charge ? '（久住透は、建造物侵入・強盗で起訴された。）' : '（久住透は釈放された。）']]);
-      if (!charge) verdict = '不起訴';
+      if (!charge) verdict = c.how === 'release' ? '釈放（不起訴）' : '不起訴';
       else {
         // 公判
         G.audio.cue('trial');
         const admit = sent.slice();
-        const drop = (id, why) => { const i = admit.indexOf(id); if (i >= 0) { admit.splice(i, 1); excluded.push(why); } };
+        const drop = (id, why) => { const i = admit.indexOf(id); if (i >= 0) { admit.splice(i, 1); excluded.push(why); if (/任意性|違法|潜脱/.test(why)) c.excludedIllegal = (c.excludedIllegal || 0) + 1; } };
         if (c.search === 'illegal') { drop('jacket', 'ジャケットは、令状も承諾もない居室への立入りで押収されたもので、令状主義の精神を没却する重大な違法がある。証拠能力を否定する'); drop('fiber', '繊維鑑定は、違法に押収されたジャケットに基づくもので、同様に証拠能力を否定する'); }
         drop('hearsay', '捜査報告書（近隣の噂）は伝聞であり、原供述者も特定されていない');
         if (c.confession) {
@@ -128,7 +129,8 @@
 
     // 終幕
     G.audio.cue('finale');
-    const pages = [{ html: '<div class="big" style="letter-spacing:.1em">あなたは、確信していましたか。</div>', wait: 2400 }];
+    const pages = [{ html: G.kit.honbu(S, verdict, revealed === 'enzai' ? 'wrong' : revealed === 'murai' ? 'free' : null), wait: 2400 },
+      { html: '<div class="big" style="letter-spacing:.1em">あなたは、確信していましたか。</div>', wait: 2400 }];
     if (revealed && !G.meta.revealedOnce) {
       G.meta.revealedOnce = true;
       pages.push({ html: '<div class="law" style="font-size:15px">この事件の「真相」は、あなたが捜査を始めたときに、内部で決められていました。<br>久住が犯人である世界か、そうでない世界か。<br><br>あなたが集めた証拠の多くは、どちらの世界でも、まったく同じように現れます。<br><br>今回、真相が明らかになったのは、偶然です。<br>現実の事件でも、真相が明らかになるのは、多くの場合、偶然によってです。</div>', wait: 3000 });
@@ -146,7 +148,7 @@
     const place = c.safeFound ? '店の裏の用水路に捨てた。' : '北見橋の下、橋脚の脇に沈めた。';
     await G.curtain([
       { html: '<div class="big">6年後</div>', wait: 1200 },
-      { html: '<div class="doc-s"><h3>隣の市で起きた強盗致傷事件</h3>宮下剛（52）が逮捕された。<br>強盗致傷は裁判員裁判の対象事件である。取調べは、最初から最後まで録画された。<br><br>4日目、宮下は言った。<br>「ついでに言っとく。北見坂の古本屋もおれだ。」</div>', wait: 2600 },
+      { html: '<div class="doc-s"><h3>隣の市で起きた強盗致傷事件</h3>宮下剛（52歳）が逮捕された。<br>強盗致傷は裁判員裁判の対象事件である。取調べは、最初から最後まで録画された。<br><br>4日目、宮下は言った。<br>「ついでに言っとく。北見坂の古本屋もおれだ。」</div>', wait: 2600 },
       { html: '<div class="doc-s"><h3>宮下剛の供述（録音録画記録より）</h3>「裏口の鍵は、植木鉢の下。前に一度、客として入ったときに見た。」<br>「ばあさんの手は、布のテープで三重に巻いた。」<br>「金庫は、' + place + '」<br><br>' + (c.safeFound ? '金庫は、6年前に見つかっていた。あの「秘密の暴露」は、久住の自白どおりの場所だった。<br>真犯人も、同じ場所に捨てていたのである。' : '北見橋の下から、錆びた緑色の手提げ金庫が引き上げられた。') + '</div>', wait: 3200 },
       { html: '<div class="doc-s"><h3>再審</h3>久住透は、刑期を務め終えて出所していた。<br>弁護人は再審を請求した（刑訴法435条6号）。裁判所は再審の開始を決定した。<br>2026年の法改正により、検察官が再審開始決定に不服を申し立てられるのは、「取り消されるべきものと認めるに足りる十分な根拠がある場合」に限られている（同法450条の2）。検察官は、不服を申し立てなかった。<br><br>再審公判で、久住透は無罪となった。逮捕から、6年と7か月が経っていた。</div>', wait: 3200 },
       { html: '<div class="doc-s"><h3>久住透の言葉（記者会見）</h3>「取調室で、ぼくは何度も『やってない』と言いました。<br>あのとき、あの部屋にいた人たちに、聞きたいことはありません。<br>ただ、あの部屋にもカメラがあったら、と思います。」</div>', wait: 3000 }
@@ -155,7 +157,7 @@
   async function miyashitaOnly(S) {
     await G.curtain([
       { html: '<div class="big">6年後</div>', wait: 1200 },
-      { html: '<div class="doc-s"><h3>隣の市で起きた強盗致傷事件</h3>逮捕された宮下剛（52）は、録画された取調べの中で、北見坂の古書店の強盗も自分だと述べた。<br>北見橋の下から、錆びた緑色の金庫が見つかった。<br><br>青柳書房事件は、6年ぶりに解決した。<br>あのとき、誰も起訴されていなかった。</div>', wait: 3000 }
+      { html: '<div class="doc-s"><h3>隣の市で起きた強盗致傷事件</h3>逮捕された宮下剛（52歳）は、録画された取調べの中で、北見坂の古書店の強盗も自分だと述べた。<br>北見橋の下から、錆びた緑色の金庫が見つかった。<br><br>青柳書房事件は、6年ぶりに解決した。<br>あのとき、誰も起訴されていなかった。</div>', wait: 3000 }
     ]);
   }
   async function murai(S, verdict) {
@@ -168,7 +170,7 @@
       { html: '<div class="doc-s"><h3>取調べ（録音録画記録より）</h3>強盗殺人は裁判員裁判の対象事件であり、取調べは全過程が録画された。<br>久住は、録画の中でこうも述べた。<br>「古本屋も、おれです。金庫は裏の用水路に投げた。」<br><br>' + (S.c.safeFound ? '3年前に用水路から見つかっていた金庫の内側を改めて調べると、久住の指紋が検出された。' : '用水路の泥の中から、錆びた緑色の手提げ金庫が見つかった。<br>内側から、久住の指紋が検出された。') + '</div>', wait: 3400 }
     ];
     if (verdict === '無罪') pages.push({ html: '<div class="law">青柳書房事件について、久住透はすでに無罪の判決を受け、確定している。<br><br>何人も、既に無罪とされた行為については、刑事上の責任を問はれない。</div><div class="cite">日本国憲法　第39条</div>', wait: 3200 });
-    else pages.push({ html: '<div class="law">青柳書房事件は、' + (verdict === '不起訴' ? '一度は不起訴となっていた。不起訴には、無罪判決のような確定の効力はない。' : '未解決のままだった。') + '<br><br>久住透は、青柳書房事件についても起訴された。<br>3年前の時点で、彼を止める方法はあったのだろうか。</div>', wait: 3000 });
+    else pages.push({ html: '<div class="law">青柳書房事件は、' + (/不起訴/.test(verdict) ? '一度は不起訴となっていた。不起訴には、無罪判決のような確定の効力はない。' : '未解決のままだった。') + '<br><br>久住透は、青柳書房事件についても起訴された。<br>3年前の時点で、彼を止める方法はあったのだろうか。</div>', wait: 3000 });
     await G.curtain(pages);
   }
 })();
