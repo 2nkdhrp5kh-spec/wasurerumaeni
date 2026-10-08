@@ -33,16 +33,39 @@
       await G.curtain([{ html: '<div class="big">序章</div><div class="small">空き巣</div>', wait: 1000 }]);
       await G.cases.akisu.run();
     }
-    const id = await G.openPaper({ title: '事件を選ぶ', sub: '刑事課の机に、四つの事件記録がある。', noClose: true, body: G.P('どの事件の主任になるか。'),
-      buttons: [
-        { label: '青柳書房事件', value: 'aoyagi', small: '古書店で、店主が縛られ、金庫が奪われた' },
-        { label: '北見坂駅前事件', value: 'ekimae', small: '深夜の駅前で、男性が倒れて頭を打った。タクシー運転手が通報' },
-        { label: '8時12分発', value: 'chikan', small: '朝の電車で、女性が男の手をつかんだ。駅員が男を引き渡した' },
-        { label: '本町三丁目火災', value: 'kasai', small: '未明の住宅火災。住人の母と息子は避難した' }] });
+    backfill();
+    const id = await G.openPaper({ title: '事件を選ぶ', sub: '刑事課の机に、四つの事件記録がある。', noClose: true, body: G.P('どの事件の主任になるか。') + G.note('結末の数は、この事件で起こりうる捜査の結果と、数年後に起こりうる出来事の数。見た結末だけ名前が出る。'),
+      buttons: CASES.map(k => ({ label: k.label + stampOf(k), value: k.id, cls: 'case', small: k.small + progressOf(k) })) });
+    const cm = caseMeta(id); cm.started++; G.saveMeta();
+    G.lastOutcome = null;
     const S = await G.cases[id].run();
     if (id === 'aoyagi') await G.ending.run(S);
     else await G.trial.run(S, G.cases[id].trial);
+    if (G.lastOutcome) { cm.finished++; cm.results[G.lastOutcome.verdict] = (cm.results[G.lastOutcome.verdict] || 0) + 1; if (G.lastOutcome.reveal) cm.reveals[G.lastOutcome.reveal] = 1; G.saveMeta(); }
     record();
+  }
+
+  // 事件ごとの進み具合（遊んだ回数・見た結末）
+  const CASES = [
+    { id: 'aoyagi', label: '青柳書房事件', small: '古書店で、店主が縛られ、金庫が奪われた', results: ['有罪', '無罪', '不起訴', '釈放（不起訴）', '未解決'], reveals: { enzai: '再審', murai: '別の事件', miyashita: '別の男の逮捕' } },
+    { id: 'ekimae', label: '北見坂駅前事件', small: '深夜の駅前で、男性が倒れて頭を打った。タクシー運転手が通報', results: ['有罪', '有罪（減軽）', '無罪', '不起訴', '釈放（不起訴）'], reveals: { wrong: '有罪のあとで', free: '有罪にならなかったあとで' } },
+    { id: 'chikan', label: '8時12分発', small: '朝の電車で、女性が男の手をつかんだ。駅員が男を引き渡した', results: ['有罪', '略式命令（罰金）', '無罪', '不起訴', '釈放（不起訴）'], reveals: { wrong: '有罪のあとで', free: '有罪にならなかったあとで' } },
+    { id: 'kasai', label: '本町三丁目火災', small: '未明の住宅火災。住人の母と息子は避難した', results: ['有罪', '無罪', '不起訴', '釈放（不起訴）'], reveals: { wrong: '有罪のあとで', free: '有罪にならなかったあとで' } }
+  ];
+  // この機能より前の記録からも、印を付ける
+  function backfill() {
+    if (G.meta.casesBackfilled) return; G.meta.casesBackfilled = true;
+    const map = { '刑事編': 'aoyagi', '青柳書房事件': 'aoyagi', '駅前事件': 'ekimae', '北見坂駅前事件': 'ekimae', '8時12分発': 'chikan', '本町三丁目火災': 'kasai' };
+    (G.meta.runs || []).forEach(r => { const id = map[r.mode]; if (!id) return; const m = caseMeta(id); m.started++; m.finished++; m.results[r.result] = (m.results[r.result] || 0) + 1; });
+    G.saveMeta();
+  }
+  function caseMeta(id) { G.meta.cases = G.meta.cases || {}; return G.meta.cases[id] = G.meta.cases[id] || { started: 0, finished: 0, results: {}, reveals: {} }; }
+  function stampOf(k) { const m = caseMeta(k.id); return m.finished ? '<span class="cstamp done">済</span>' : m.started ? '<span class="cstamp mid">途中</span>' : ''; }
+  function progressOf(k) {
+    const m = caseMeta(k.id); if (!m.started) return '';
+    const seen = k.results.filter(r => m.results[r]), rv = Object.keys(k.reveals).filter(r => m.reveals[r]);
+    return '<span class="cprog">' + m.finished + '回　結末 ' + seen.length + '/' + k.results.length + (seen.length ? '（' + seen.join('・') + '）' : '')
+      + '　数年後 ' + rv.length + '/' + Object.keys(k.reveals).length + (rv.length ? '（' + rv.map(r => k.reveals[r]).join('・') + '）' : '') + '</span>';
   }
 
   function record() {

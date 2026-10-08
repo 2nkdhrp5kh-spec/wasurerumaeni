@@ -552,6 +552,159 @@
     R(x, '#f1ece0', 100, 8, 12, 12); R(x, '#222', 105, 10, 1, 5); R(x, '#222', 105, 14, 4, 1);
     R(x, '#555', 212, 58, 2, 22); R(x, '#d8c37a', 204, 54, 18, 5); x.fillStyle = 'rgba(232,210,140,.06)'; x.fillRect(150, 59, 90, 21);
   };
+  // ---- 遠近法：消失点を相手の目の高さに置いた一点透視で描き直す ----
+  // 凸多角形を走査線で塗る（ドットがにじまないよう、整数の矩形で塗る）
+  function poly(x, c, pts) {
+    const ys = pts.map(p => p[1]), y0 = Math.max(0, Math.ceil(Math.min(...ys))), y1 = Math.min(H - 1, Math.floor(Math.max(...ys)));
+    x.fillStyle = c;
+    for (let y = y0; y <= y1; y++) {
+      const xs = [];
+      for (let i = 0; i < pts.length; i++) {
+        const [ax, ay] = pts[i], [bx, by] = pts[(i + 1) % pts.length];
+        if ((ay <= y + .5 && by > y + .5) || (by <= y + .5 && ay > y + .5)) xs.push(ax + (y + .5 - ay) * (bx - ax) / (by - ay));
+      }
+      if (xs.length >= 2) { const l = Math.round(Math.min(...xs)), r = Math.round(Math.max(...xs)); if (r > l) x.fillRect(l, y, r - l, 1); }
+    }
+  }
+  function ln(x, c, x0, y0, x1, y1) {
+    x.fillStyle = c; const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)) | 0;
+    for (let i = 0; i <= n; i++) x.fillRect(Math.round(x0 + (x1 - x0) * i / n), Math.round(y0 + (y1 - y0) * i / n), 1, 1);
+  }
+  // 奥の壁 [l,t,r,b] と、四方へ広がる天井・側壁・床
+  function room(x, o) {
+    const [l, t, r, b] = o.back;
+    poly(x, o.ceil, [[0, 0], [W, 0], [r, t], [l, t]]);
+    poly(x, o.side, [[0, 0], [l, t], [l, b], [0, H]]);
+    poly(x, o.sideR || o.side, [[W, 0], [W, H], [r, b], [r, t]]);
+    poly(x, o.floor, [[0, H], [l, b], [r, b], [W, H]]);
+    R(x, o.wall, l, t, r - l, b - t); tex(x, l, t, r - l, b - t, o.wallTex || o.wall, .2, l + t);
+    const e = o.edge || 'rgba(0,0,0,.35)';
+    ln(x, e, 0, 0, l, t); ln(x, e, W - 1, 0, r, t); ln(x, e, 0, H - 1, l, b); ln(x, e, W - 1, H - 1, r, b);
+    R(x, e, l, t, r - l, 1); R(x, e, l, b, r - l, 1); R(x, e, l, t, 1, b - t); R(x, e, r - 1, t, 1, b - t);
+    // 巾木（床と壁の境）
+    R(x, 'rgba(0,0,0,.25)', l, b - 2, r - l, 2);
+  }
+  // 側壁の上に、奥へ縮む四角を置く（窓・棚など）。u0,u1 は壁の手前(0)〜奥(1)、v0,v1 は上(0)〜下(1)
+  function onSide(o, right, u0, u1, v0, v1) {
+    const [l, t, r, b] = o.back, ex = right ? W : 0, bx = right ? r : l;
+    const P = (u, v) => { const X = ex + (bx - ex) * u, top = 0 + (t - 0) * u, bot = H + (b - H) * u; return [X, top + (bot - top) * v]; };
+    return [P(u0, v0), P(u1, v0), P(u1, v1), P(u0, v1)];
+  }
+  // 手前の机：奥の縁 y0（x l〜r）から、画面の下へ向かって広がる台形
+  function deskP(x, y0, l, r, top, grain, edge, lip) {
+    poly(x, top, [[l, y0], [r, y0], [r + (r - l) * 1.2, H + 40], [l - (r - l) * 1.2, H + 40]]);
+    for (let k = 0; k < 9; k++) { const u = (k + .5) / 9, gx = l + (r - l) * u; ln(x, grain, gx, y0 + 2, gx + (gx - 120) * 1.5, H); }
+    R(x, edge, l, y0, r - l, 1); if (lip) R(x, lip, l, y0 + 1, r - l, 1);
+  }
+  // 手前の紙（奥ほど狭い）
+  function sheetP(x, X, Y, w, h, lines, c) {
+    const k = .18, a = [[X + w * k * .5, Y], [X + w - w * k * .5, Y], [X + w, Y + h], [X, Y + h]];
+    poly(x, 'rgba(0,0,0,.35)', a.map(([p, q]) => [p + 2, q + 2])); poly(x, c || '#e4dbc2', a);
+    if (lines) for (let j = Y + 3; j < Y + h - 2; j += 3) { const f = (j - Y) / h, ins = w * k * .5 * (1 - f) + 3; R(x, '#9a917c', Math.round(X + ins), j, Math.round(w - ins * 2 - (j % 6 ? 5 : 0)), 1); }
+  }
+  // 手前から伸びる前腕と手（近いので大きい）
+  function armP(x, X, Y, w, sleeve, right) {
+    const line = '#1c1511', dir = right ? 1 : -1;
+    poly(x, line, [[X - 2, Y + 8], [X + w + 2, Y + 8], [X + w + 10 + dir * 14, H + 2], [X - 10 + dir * 14, H + 2]]);
+    poly(x, sleeve, [[X - 1, Y + 9], [X + w + 1, Y + 9], [X + w + 9 + dir * 14, H + 2], [X - 9 + dir * 14, H + 2]]);
+    poly(x, 'rgba(255,255,255,.07)', [[X - 1, Y + 9], [X + 3, Y + 9], [X - 5 + dir * 14, H + 2], [X - 9 + dir * 14, H + 2]]);
+    R(x, line, X, Y - 1, w, 1); R(x, line, X - 1, Y, 1, 10); R(x, line, X + w, Y, 1, 10);
+    R(x, '#c99f7b', X, Y, w, 10); R(x, '#dcb592', X + 1, Y + 1, w - 4, 3); R(x, '#a67d5e', X, Y + 7, w, 3);
+    for (let k = 0; k < 4; k++) { const fx = X + 2 + Math.round(k * (w - 4) / 4); R(x, '#86624b', fx, Y, 1, 5); }
+    const tx = right ? X - 5 : X + w; R(x, line, tx, Y + 3, 6, 7); R(x, '#c99f7b', tx + (right ? 1 : 0), Y + 4, 5, 5); R(x, '#a67d5e', tx, Y + 8, 5, 1);
+  }
+  const lightCone = (x, cx0, y0, w0, y1, w1, a) => { poly(x, 'rgba(216,195,122,' + a + ')', [[cx0 - w0, y0], [cx0 + w0, y0], [cx0 + w1, y1], [cx0 - w1, y1]]); };
+
+  // 取調室：目の高さ y≈49。狭い部屋、奥にドア、右の壁にマジックミラー
+  const RI = { back: [62, 20, 178, 74], ceil: '#1e1c18', side: '#26241f', sideR: '#211f1b', floor: '#1b1916', wall: '#2b2923', wallTex: '#302d27' };
+  BG.interro = x => {
+    room(x, RI);
+    R(x, '#1b1a17', 76, 36, 20, 38); R(x, '#2b2924', 77, 37, 18, 37); R(x, '#141311', 80, 41, 12, 7); R(x, '#888', 92, 56, 2, 1);   // ドア
+    R(x, '#151412', 146, 28, 10, 10); R(x, '#d6d0c0', 147, 29, 8, 8); R(x, '#222', 151, 30, 1, 4); R(x, '#222', 151, 33, 3, 1);       // 時計
+    const mm = onSide(RI, true, .1, .75, .22, .55); poly(x, '#111', mm); poly(x, '#1d2224', mm.map(([p, q], i) => [p + (i % 3 ? -1 : 1), q + (i < 2 ? 1 : -1)]));  // マジックミラー
+    poly(x, '#3a3a3a', [[104, 8], [136, 8], [138, 11], [102, 11]]); poly(x, '#d8c37a', [[106, 9], [134, 9], [135, 10], [105, 10]]);   // 天井灯
+    lightCone(x, 120, 11, 16, 80, 64, .05);
+    R(x, '#111', 24, 60, 22, 45); R(x, '#191816', 26, 56, 18, 8);   // 手前の椅子の影
+  };
+  // 刑事部屋：目の高さ y≈55。奥へ机が並び、左の壁に窓、奥にホワイトボード
+  const RO = { back: [50, 18, 190, 76], ceil: '#26241f', side: '#2e2c27', sideR: '#2a2823', floor: '#22201c', wall: '#2c2a25', wallTex: '#312e29' };
+  BG.office = x => {
+    room(x, RO);
+    const win = onSide(RO, false, .05, .7, .2, .55); poly(x, '#1b1f22', win);
+    for (let k = 0; k < 9; k++) { const v = .22 + k * .036; poly(x, '#5f6d73', onSide(RO, false, .06, .69, v, v + .02)); }
+    R(x, '#1d1c19', 120, 26, 52, 26); R(x, '#d6d3c8', 121, 27, 50, 24);                                   // ホワイトボード
+    [[124, 29], [136, 29], [148, 29]].forEach(([a, b]) => { R(x, '#c9bfa6', a, b, 9, 11); R(x, '#8a8070', a + 3, b + 3, 4, 4); });
+    R(x, '#b23a2e', 126, 43, 32, 1); R(x, '#3a4a6a', 124, 47, 26, 1);
+    R(x, '#1d1c19', 92, 24, 16, 22); R(x, '#cdbf9a', 93, 25, 14, 20); R(x, '#a3342b', 93, 25, 14, 3);    // ポスター
+    R(x, '#f1ece0', 64, 22, 8, 8); R(x, '#222', 67, 24, 1, 3); R(x, '#222', 67, 26, 3, 1);               // 時計
+    R(x, '#4a463c', 176, 40, 12, 36); for (let j = 43; j < 74; j += 8) { R(x, '#3a362e', 177, j, 10, 6); R(x, '#8a8270', 181, j + 3, 2, 1); }  // 書類棚
+    // 奥の机の列（小さく）
+    for (let k = 0; k < 3; k++) { const y = 70 + k * 6, w = 40 + k * 22, X = 120 - w / 2 - 50 - k * 8; R(x, '#3e3123', X, y, w, 3); R(x, '#151515', X + 4, y - 5, 7, 5); }
+    for (let k = 0; k < 3; k++) { const y = 70 + k * 6, w = 40 + k * 22, X = 120 + 50 + k * 8 - w / 2; R(x, '#3e3123', X, y, w, 3); R(x, '#d9cfb4', X + w - 12, y - 3, 8, 3); }
+    for (let k = 0; k < 3; k++) { const y = 4 + k * 4, w = 12 + k * 10; poly(x, '#d8d4c0', [[120 - w - 30, y], [120 - 30, y], [120 - 30, y + 1], [120 - w - 30, y + 1]]); poly(x, '#d8d4c0', [[120 + 30, y], [120 + 30 + w, y], [120 + 30 + w, y + 1], [120 + 30, y + 1]]); }  // 蛍光灯
+  };
+  // 検事室：目の高さ y≈51。奥に窓、右の壁に本棚
+  const RP = { back: [58, 16, 182, 72], ceil: '#25241e', side: '#2d2b25', sideR: '#2a2822', floor: '#211f1a', wall: '#2f2d26', wallTex: '#33302a' };
+  BG.pros = x => {
+    room(x, RP);
+    R(x, '#1d201f', 72, 24, 40, 28); R(x, '#6d7a72', 74, 26, 36, 24); R(x, '#4a5550', 91, 26, 2, 24);    // 窓
+    R(x, '#ddd6c2', 128, 28, 20, 14); R(x, '#a3342b', 136, 31, 4, 4);                                     // 額
+    for (let j = 0; j < 4; j++) { const v0 = .12 + j * .16; poly(x, '#3a3224', onSide(RP, true, .05, .8, v0, v0 + .15)); poly(x, '#2a2218', onSide(RP, true, .05, .8, v0 + .13, v0 + .15)); }
+    for (let k = 0; k < 14; k++) { const u = .07 + k * .05, c = ['#6a3a2a', '#3a4a5a', '#5a5a3a', '#4a3a4a', '#7a6a4a'][k % 5]; for (let j = 0; j < 4; j++) { const v0 = .12 + j * .16; poly(x, c, onSide(RP, true, u, u + .03, v0 + .03, v0 + .13)); } }
+    R(x, '#4a463c', 62, 56, 22, 16); for (let j = 58; j < 70; j += 5) R(x, '#d9cfb4', 64, j, 18, 3);       // 記録の棚
+  };
+  // 令状当番の部屋（夜）：目の高さ y≈53
+  const RC = { back: [56, 16, 184, 74], ceil: '#1a1814', side: '#211e1a', sideR: '#1e1b17', floor: '#1a1814', wall: '#221f1b', wallTex: '#26231e' };
+  BG.chambers = x => {
+    room(x, RC);
+    R(x, '#0c0e14', 120, 24, 50, 34); R(x, '#141826', 122, 26, 46, 30); R(x, '#2a2e36', 144, 24, 2, 34);   // 夜の窓
+    for (let i = 0; i < 16; i++) R(x, hash(i, 1, 42) < .5 ? '#c9b46a' : '#6a7a9a', 123 + Math.floor(hash(i, 2, 42) * 44), 44 + Math.floor(hash(i, 3, 42) * 11), 1, 1);
+    for (let j = 0; j < 4; j++) { const v0 = .1 + j * .19; poly(x, '#3a3224', onSide(RC, false, .05, .85, v0, v0 + .17)); poly(x, '#2a2218', onSide(RC, false, .05, .85, v0 + .15, v0 + .17)); }
+    for (let k = 0; k < 15; k++) { const u = .07 + k * .052, c = ['#5a2f2f', '#2f4a3a', '#3a4a5a', '#7a6a4a', '#4a3a4a'][k % 5]; for (let j = 0; j < 4; j++) { const v0 = .1 + j * .19; poly(x, c, onSide(RC, false, u, u + .035, v0 + .03, v0 + .15)); } }
+    R(x, '#f1ece0', 90, 26, 9, 9); R(x, '#222', 94, 28, 1, 4); R(x, '#222', 94, 31, 3, 1);
+  };
+  // 手前の層（遠近つき）
+  FG.interro = x => {
+    deskP(x, 80, 46, 194, '#3b3227', 'rgba(0,0,0,.12)', '#1c1712', '#4a3f31');
+    R(x, '#e8e4d8', 160, 76, 7, 5); R(x, '#8a7a5a', 161, 77, 5, 1);                       // 向こう側の湯のみ
+    sheetP(x, 92, 86, 58, 22, true); R(x, '#b23a2e', 136, 90, 9, 2);                        // 調書
+    ln(x, '#151515', 152, 98, 170, 92); ln(x, '#2a2a2a', 152, 99, 170, 93); R(x, '#c9b46a', 169, 92, 3, 2);  // ペン
+    armP(x, 40, 88, 28, SLEEVE, false); armP(x, 174, 90, 28, SLEEVE, true);
+  };
+  FG.office = x => {
+    deskP(x, 86, 40, 200, '#4a3a29', 'rgba(0,0,0,.12)', '#2b2118', '#5a4733');
+    for (let k = 0; k < 4; k++) sheetP(x, 8 + k, 92 - k * 2, 52, 16, false);
+    R(x, '#151515', 194, 88, 30, 13); R(x, '#26282b', 196, 90, 26, 9); R(x, '#151515', 190, 86, 38, 4);
+    R(x, '#e8e4d8', 164, 88, 10, 11); R(x, '#8a5a3a', 165, 89, 8, 2); R(x, '#e8e4d8', 174, 91, 3, 4);
+    armP(x, 104, 92, 26, SLEEVE, false);
+  };
+  FG.pros = x => {
+    deskP(x, 82, 44, 196, '#3e3022', 'rgba(0,0,0,.12)', '#211a12', '#4a3a29');
+    sheetP(x, 74, 84, 66, 12, false); sheetP(x, 78, 81, 58, 6, false); R(x, '#b23a2e', 82, 82, 8, 2);
+    R(x, '#2a2a2a', 168, 80, 22, 6); R(x, '#4a4a4a', 170, 78, 18, 3);
+    armP(x, 22, 92, 26, SLEEVE, false);
+  };
+  FG.chambers = x => {
+    deskP(x, 80, 40, 200, '#3a2f24', 'rgba(0,0,0,.12)', '#1a140e', '#4a3c2e');
+    lightCone(x, 196, 80, 30, 105, 70, .07);
+    R(x, '#555', 196, 54, 2, 26); poly(x, '#d8c37a', [[188, 50], [206, 50], [210, 56], [184, 56]]);   // 卓上灯
+    for (let k = 0; k < 6; k++) sheetP(x, 12 + (k % 2), 96 - k * 3, 58, 12, false);
+    sheetP(x, 92, 84, 64, 22, true);
+    R(x, '#7a1e1a', 170, 90, 16, 9); R(x, '#a3342b', 171, 91, 14, 3); R(x, '#2a2420', 190, 84, 6, 15); R(x, '#c9b46a', 190, 84, 6, 2);
+    armP(x, 68, 90, 26, '#2a2622', false);
+  };
+  FG.shop = x => {
+    deskP(x, 86, 30, 210, '#5a4733', 'rgba(0,0,0,.1)', '#2b2118', '#6a5440');
+    R(x, '#2a2a2a', 172, 84, 40, 18); R(x, '#3a3a3a', 174, 86, 36, 14);
+    R(x, '#e4dbc2', 176, 87, 15, 12); R(x, '#e4dbc2', 193, 87, 15, 12); for (let j = 90; j < 98; j += 2) { R(x, '#8a8270', 178, j, 11, 1); R(x, '#8a8270', 195, j, 9, 1); }
+    armP(x, 150, 92, 22, SLEEVE, false);
+  };
+  FG.home = x => {
+    deskP(x, 88, 30, 210, '#5a4430', 'rgba(0,0,0,.1)', '#2e2216', '#6a5440');
+    R(x, '#1c1511', 104, 90, 24, 12); R(x, '#e8e0d0', 105, 90, 22, 10); R(x, '#f4f0e4', 107, 90, 18, 3);
+    ln(x, '#7a4a2a', 134, 100, 160, 94); ln(x, '#7a4a2a', 134, 102, 160, 96);
+    R(x, '#3a5a6a', 56, 93, 28, 8); R(x, '#4a6a7a', 57, 94, 26, 2);
+  };
   // 人物の立ち位置：机の向こうに座る／立つ高さ（スプライト上端の y）
   const PLACE = { interro: 24, office: 30, pros: 26, shop: 28, home: 30, chambers: 28, street: 41, court: 41, phone: 41, dark: 41 };
   const fgCache = {};

@@ -66,6 +66,7 @@
       }
       G.audio.cue('years');
       const revealed = await T.reveal(S, verdict);
+      G.lastOutcome = { verdict, reveal: revealed ? (/有罪|略式/.test(verdict) ? 'wrong' : 'free') : null };
       if (!revealed) await G.curtain([{ html: '<div class="law">それから、何年かが過ぎた。<br><br>何も起きなかった。<br><br>' + T.nothing(verdict) + '</div>', wait: 2200 },
         { html: '<div class="law" style="font-size:15px;color:#aaa">何も起きなかったことは、何の証明にもならない。</div>', wait: 1800 }]);
       G.audio.cue('finale');

@@ -120,6 +120,7 @@
     if (verdict === '有罪' && T === 'I' && rnd() < .55) revealed = 'enzai';
     if (verdict !== '有罪' && T === 'G' && rnd() < .55) revealed = 'murai';
     if (verdict === '未解決' && T === 'I' && rnd() < .4) revealed = 'miyashita';
+    G.lastOutcome = { verdict, reveal: revealed };
     G.audio.cue('years');
     if (revealed === 'enzai') await enzai(S);
     else if (revealed === 'murai') await murai(S, verdict);
