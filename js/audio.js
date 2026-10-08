@@ -31,7 +31,7 @@
     silence:      { t: null }
   };
 
-  let AC = null, master = null, bgmGain = null, ambGain = null, sfxGain = null;
+  let AC = null, master = null, bgmGain = null, ambGain = null, sfxGain = null, voiceGain = null;
   let current = null; // { name, el, gain }
   let muted = !!(G.meta && G.meta.muted);
   function ctx() {
@@ -42,6 +42,7 @@
         bgmGain = AC.createGain(); bgmGain.gain.value = .55; bgmGain.connect(master);
         ambGain = AC.createGain(); ambGain.gain.value = .5; ambGain.connect(master);
         sfxGain = AC.createGain(); sfxGain.gain.value = .8; sfxGain.connect(master);
+        voiceGain = AC.createGain(); voiceGain.gain.value = 1.6; voiceGain.connect(master);
       } catch (e) { AC = null; }
     }
     if (AC && AC.state === 'suspended') AC.resume();
@@ -115,7 +116,14 @@
     if (!ctx()) return; const t = AC.currentTime;
     switch (name) {
       case 'stamp': burst(t, .09, 700, 'lowpass', .9); tone(t, 130, .16, 'sine', .5, 40); break;
-      case 'paper': burst(t, .18, 2500, 'bandpass', .25, .7); burst(t + .06, .12, 4000, 'highpass', .08); break;
+      case 'paper': {
+        // 紙の繊維がこすれる細かい音（パラ）と、めくり終わりの空気の音（リ）
+        for (let i = 0; i < 9; i++) { const tt = t + i * .022 + Math.random() * .012; burst(tt, .018 + Math.random() * .02, 2200 + Math.random() * 3500, 'bandpass', .22 + Math.random() * .15, 1.2); }
+        const s2 = AC.createBufferSource(); s2.buffer = noiseBuffer(.4); const f2 = AC.createBiquadFilter(); f2.type = 'bandpass'; f2.Q.value = .8;
+        f2.frequency.setValueAtTime(900, t + .05); f2.frequency.exponentialRampToValueAtTime(4200, t + .32);
+        const g2 = AC.createGain(); g2.gain.setValueAtTime(0, t + .05); g2.gain.linearRampToValueAtTime(.28, t + .14); g2.gain.exponentialRampToValueAtTime(.0001, t + .36);
+        s2.connect(f2); f2.connect(g2); g2.connect(sfxGain); s2.start(t + .05); s2.stop(t + .4);
+        burst(t + .2, .03, 1500, 'lowpass', .18); break; }
       case 'click': tone(t, 900, .03, 'square', .04); break;
       case 'tick': tone(t, 2400, .012, 'square', .02); break;
       case 'pen': for (let i = 0; i < 6; i++) burst(t + i * .07, .05, 3500, 'bandpass', .08, 2); break;
@@ -140,11 +148,11 @@
     const code = ch.charCodeAt(0), [f1, f2] = VOW[code % 5];
     const o = AC.createOscillator(); o.type = v.w || 'sawtooth';
     o.frequency.setValueAtTime(v.f * (0.94 + ((code >> 3) % 7) * .02), t);
-    const g = AC.createGain(); env(g, t, .008, .075, .09);
+    const g = AC.createGain(); env(g, t, .008, .085, .32);
     const a = AC.createBiquadFilter(); a.type = 'bandpass'; a.frequency.value = f1; a.Q.value = 5;
     const b = AC.createBiquadFilter(); b.type = 'bandpass'; b.frequency.value = f2; b.Q.value = 7;
     const lp = AC.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2600;
-    o.connect(a); o.connect(b); a.connect(lp); b.connect(lp); lp.connect(g); g.connect(sfxGain);
+    o.connect(a); o.connect(b); a.connect(lp); b.connect(lp); lp.connect(g); g.connect(voiceGain);
     o.start(t); o.stop(t + .1);
   }
 

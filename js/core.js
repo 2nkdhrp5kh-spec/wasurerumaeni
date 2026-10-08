@@ -81,7 +81,7 @@ G.layout = function (o) {
     + '<span class="info">' + (o.info || '') + '</span>'
     + '<button class="bbtn" id="b-law">条文帳</button><button class="bbtn" id="b-snd">' + (G.meta.muted ? '音：切' : '音：入') + '</button>'
     + (o.clock ? '<div class="clock">' + o.clock + '</div>' : '') + '</header>'
-    + '<section class="scene"><canvas id="cv" width="320" height="140"></canvas><div class="dlg" id="dlg"><div class="who"></div><div class="say nar">' + (o.hint || '') + '</div></div></section>'
+    + '<section class="scene"><canvas id="cv" width="480" height="210"></canvas><div class="dlg" id="dlg"><div class="who"></div><div class="say nar">' + (o.hint || '') + '</div></div></section>'
     + (o.body || '')
     + '<div id="acts-wrap"></div>';
   $('#b-law').onclick = () => G.openLaw();

@@ -158,3 +158,13 @@ button{font:inherit;color:inherit}
 .limit .seg.s1{background:#3a2e26}.limit .seg.s2{background:#2e2a24}.limit .seg.s3{background:#342a22}
 .limit .now{position:absolute;top:-3px;bottom:-3px;width:3px;background:var(--shu);box-shadow:0 0 0 1px #000}
 .limit .done{position:absolute;inset:0 auto 0 0;background:rgba(178,58,46,.35)}
+
+.doc.sel{outline:3px solid var(--amber);outline-offset:1px}
+.cmphint{font-size:12px;color:var(--amber);margin:-2px 0 6px}
+.desk .ph .bbtn{color:#d8c9a8;border-color:#7a6a4a}
+.gauge{margin-bottom:6px;padding-bottom:6px;border-bottom:1px dotted #3a372f}
+.gauge .gt{font-size:12px;color:var(--muted)}
+.gauge .gb{display:flex;gap:3px;margin:3px 0}
+.gauge .gb span{flex:1;height:8px;background:#2a2824;border:1px solid #000}
+.gauge .gb span.on{background:var(--amber)}
+.gauge .gw{font-size:13px}

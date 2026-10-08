@@ -15,7 +15,10 @@
       const cf = c.confession;
       if (cf.form === 'qa' && c.leaks.length) add(1.5, '自白調書には、取調官の問いの中に現場の事実が含まれており、信用性は限定的である');
       else add(3.5, '捜査段階の自白は、具体的で、客観的状況とよく符合する');
+      const d = cf.det; if (!d.tape || !d.safe || !d.light) add(-1.5, '自白には、現場の客観的状況と食い違う部分がある');
     }
+    if (has('routeCam') && c.qRoute === 'main') add(-.7, '自白で述べられた帰り道の防犯カメラに、被告人は映っていない');
+    if (has('customers')) add(-.5, '裏口の鍵の所在を知りえた者は少なくとも14人に及ぶ');
     if (c.safeFound && has('safe')) add(3, '自白に基づき、捜査機関の知らなかった金庫の所在が判明した（秘密の暴露）');
     else if (has('safe')) add(-.5, '自白どおりの場所から金庫は発見されていない');
     if (has('lineup')) {
@@ -42,6 +45,7 @@
     return { w, notes: notes.filter(Boolean) };
   }
 
+  E.estimate = S => weigh(S, S.docs.filter(d => d.evid).map(d => d.id), false).w;
   E.run = async function (S) {
     const c = S.c;
     let verdict = null, errors = [], excluded = [];
@@ -58,7 +62,7 @@
       }
       // 検察官
       const pressured = c.sess.C > 0 || c.sess.D > 0 || c.sess.E > 0;
-      if (c.confession) c.retract = c.confession.voluntary ? false : c.truth === 'I' ? rnd() < .85 : rnd() < (pressured ? .6 : .3);
+      if (c.confession) c.retract = c.retractCustody ? true : c.confession.voluntary ? false : c.truth === 'I' ? rnd() < .85 : rnd() < (pressured ? .6 : .3);
       const est = weigh(S, sent, false).w;
       G.layout({ role: '検察', date: '', info: '北見坂地方検察庁', scene: { bg: 'pros', who: 'kenji' } });
       G.audio.ambient(null);

@@ -42,7 +42,8 @@
   }
   function elemPanel() {
     const els = C.elements(S);
-    return els.map(e => '<div class="elem"><span class="k">' + e.k + '</span><span class="boxes">'
+    const gz = C.gauge ? C.gauge(S) : '';
+    return gz + els.map(e => '<div class="elem"><span class="k">' + e.k + '</span><span class="boxes">'
       + [1, 2, 3].map(i => '<span class="bx' + (e.v >= i ? (e.conf ? ' conf' : ' on') : '') + '"></span>').join('')
       + '</span><span class="src">' + (e.src || '') + '</span></div>').join('');
   }
@@ -52,18 +53,41 @@
     G.layout({ role: C.role, date: K.date(), info: info.text, clock: info.clock, scene: C.scene(S), hint: hint || '（今日の指示を出す。）',
       body: '<div class="row2"><div class="panel"><div class="ph"><span>捜査員</span></div>' + staffPanel() + '</div>'
         + '<div class="panel"><div class="ph"><span>' + (C.elemTitle || '立証すべき事実') + '</span><span>■=証拠 <span style="color:#b23a2e">■</span>=自白</span></div>' + elemPanel() + '</div></div>'
-        + '<div class="desk"><div class="ph"><span>捜査記録</span><span>' + S.docs.length + '綴</span></div><div class="docs" id="docs"></div></div>' });
+        + '<div class="desk"><div class="ph"><span>捜査記録　' + S.docs.length + '綴</span>' + (C.compare ? '<button class="bbtn" id="cmp">' + (G.ui.compare ? '照合をやめる' : '二つの記録を照らし合わせる') + '</button>' : '') + '</div>'
+        + (G.ui.compare ? '<div class="cmphint">照らし合わせる記録を二つ選ぶ（' + G.ui.compare.length + '/2）</div>' : '') + '<div class="docs" id="docs"></div></div>' });
+    const cb = G.$('#cmp'); if (cb) cb.onclick = () => { if (G.ui.talking || G.ui.busy) return; G.ui.compare = G.ui.compare ? null : []; G.audio.sfx('click'); K.render(); };
     renderDocs(); renderActs();
   };
   function renderDocs() {
     const el = G.$('#docs'); if (!el) return; el.innerHTML = '';
     S.docs.forEach(d => {
       const b = document.createElement('button');
-      b.className = 'doc' + (d.isNew ? ' new' : '') + (d.kind === 'memo' ? ' memo' : '') + (d.kind === 'exc' ? ' exc' : '');
+      b.className = 'doc' + (d.isNew ? ' new' : '') + (d.kind === 'memo' ? ' memo' : '') ;
       b.textContent = d.title;
-      b.onclick = () => { if (G.ui.talking) return; d.isNew = false; b.classList.remove('new'); G.openPaper({ title: d.title, sub: d.sub, body: typeof d.body === 'function' ? d.body(S) : d.body, stamps: d.stamps }); };
+      if (G.ui.compare && G.ui.compare.includes(d.id)) b.classList.add('sel');
+      b.onclick = () => {
+        if (G.ui.talking) return;
+        if (G.ui.compare) { compareClick(d); return; }
+        d.isNew = false; b.classList.remove('new'); G.openPaper({ title: d.title, sub: d.sub, body: typeof d.body === 'function' ? d.body(S) : d.body, stamps: d.stamps }); };
       el.appendChild(b);
     });
+  }
+  async function compareClick(d) {
+    const sel = G.ui.compare;
+    if (sel.includes(d.id)) { sel.splice(sel.indexOf(d.id), 1); K.render(); return; }
+    sel.push(d.id); G.audio.sfx('paper');
+    if (sel.length < 2) { K.render(); return; }
+    const [a, b] = sel; G.ui.compare = null; K.render();
+    S.compared = S.compared || {};
+    const key = [a, b].sort().join('|');
+    const r = C.compare(S, a, b);
+    if (!r) { await G.talk([['', '（二つの記録を並べて読んだ。特に食い違いや、つながりは見つからない。）']]); return; }
+    if (S.compared[key]) { await G.talk([['', '（この二つは、もう照らし合わせた。）']]); return; }
+    S.compared[key] = true;
+    await G.talk(r.lines);
+    if (r.memo) K.addDoc({ id: 'memo_' + key, title: '捜査メモ：' + r.memo.title, kind: 'memo', body: G.P(r.memo.text) });
+    if (r.then) r.then(S);
+    K.render();
   }
   function renderActs() {
     const wrap = G.$('#acts-wrap'); if (!wrap) return;
