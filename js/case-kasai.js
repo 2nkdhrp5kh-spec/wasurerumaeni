@@ -12,6 +12,14 @@
     id: 'kasai', role: '捜査官', base: { m: 1, d: 18 }, dayCard: true,
     staff: [{ id: 'shirai', name: '白井' }, { id: 'oka', name: '岡' }, { id: 'noguchi', name: '野口' }],
     info: S => kit.info(S, '本町三丁目火災'),
+    suspect: { name: '大塚　茂', kana: 'おおつか しげる', age: '58歳', job: '無職', addr: '北見坂市本町三丁目4番2号（焼損。現在は市内の親族方に身を寄せている）' },
+    koryuGrounds: [2],
+    factsOf: S => {
+      const id = S.c.charge, head = '被疑者は、1月18日午前2時40分ころ、北見坂市本町三丁目4番2号の被疑者方木造2階建て住宅（被疑者及びその母大塚キヨが現に住居に使用するもの）において、';
+      if (id === 'jushikka') return head + '居間の石油ストーブを使用するに当たり、重大な過失により、その転倒を防止する措置を講じないまま就寝し、同ストーブから出火させ、同住宅の1階の約8割等を焼損したものである。';
+      if (id === 'shikka') return head + '過失により、居間の石油ストーブから出火させ、同住宅の1階の約8割等を焼損したものである。';
+      return head + '居間の床に灯油を撒いた上、これに火を放ち、その火を同住宅に燃え移らせ、同住宅の1階の約8割等を焼損したものである。';
+    },
     chargeHint: '火事の罪名を分けるのは<b>わざと火をつけたか</b>。わざとなら放火（燃えたのが人の住む家なら108条）。不注意なら失火（116条、罰金のみ）。不注意の程度が重大なら重過失失火（117条の2）。出火の原因が分からないうちは、どれとも決められない。',
     charges: [
       { id: 'hoka', label: '現住建造物等放火', law: '刑法108条（裁判員裁判の対象）', fit: true, saibanin: true, arts: ['刑法 第108条'], req: ['放火する行為', '人が住んでいる建物', '焼損（独立して燃え続ける状態）', '放火の故意'] },
@@ -48,7 +56,7 @@
           '・記録を開いて「横に並べる」と、二枚を見比べられる。食い違いやつながりに気づけば、捜査の糸口になる。') });
         return L;
       }
-      if (c.warrantPending && S.day > c.warrantPending) { c.warrantPending = null; c.warrantReady = true; L.push(['todo', '逮捕状が出た。', { scene: sc('todo') }]); }
+      if (c.warrantPending && S.day > c.warrantPending) { c.warrantPending = null; c.warrantReady = true; kit.forms.issued(S, C); L.push(['todo', '逮捕状が出た。', { scene: sc('todo') }]); }
       if (S.day === 9 && c.arrest == null && rnd() < .4) { c.sceneDisturbed = true; L.push(['noguchi', '大塚が、規制線をくぐって焼け跡に入ってました。「母の写真を探してた」って。', { scene: sc('noguchi') }], ['shirai', '現場を荒らされたかもしれませんな。……鑑定は、もう試料を取ってあるのが救いです。', { scene: sc('shirai') }]); }
       if (S.day === 6 && c.arrest == null) L.push(['todo', '近所が騒いでる。「保険金目当ての放火だ」ってな。週刊誌も嗅ぎつけた。', { scene: sc('todo') }]);
       if (inC(S)) {
@@ -149,6 +157,7 @@
       return [['oka', c.phone === 'A' ? '……検索履歴です。「灯油 火事 証拠」。' : c.phone === 'N' ? '12月に「ストーブ 倒れても消えない」と検索してます。' : 'スマホには、関係しそうなものは何も。', { scene: sc('oka') }]]; } });
   A.push({ id: 'warrant', who: 'self', label: '逮捕状の請求を課長に上げる', sub: '罪名を決めて請求する', primary: true, cond: S => S.c.arrest == null && !S.c.warrantPending && !S.c.warrantReady && !(kit.charge(S) || {}).noArrest, run: async S => {
     const ch = await kit.chooseCharge(S, C, 'warrant'); if (!ch) return false;
+    if (!ch.noArrest) kit.forms.request(S, C);
     if (ch.noArrest) { await G.talk([['todo', ch.label + 'で、身柄を取る気か。', { scene: sc('todo') }], ['todo', '住居も分かってる、母親の世話もある男だ。逃げも隠れもせん。……逮捕の必要がないと、裁判官に突き返されるぞ。'], ['', '（逮捕状は請求しなかった。在宅のまま捜査を続け、送致することになる。）']]); return; }
     if (!K.doc('kanteiP') && !(K.doc('insurance') && K.doc('debt'))) { await G.talk([['todo', '放火だと言える材料がない。鑑定を待て。', { scene: sc('todo') }]]); return false; }
     await G.talk([['todo', '請求する。', { scene: sc('todo') }], ['', '（逮捕状は翌日発付される。）']]); S.c.warrantPending = S.day;

@@ -33,9 +33,10 @@
   ];
 
   function face(o) {
-    const g = Array.from({ length: N }, () => Array(N).fill(null));
-    const put = (x, y, c) => { if (x >= 0 && y >= 0 && x < N && y < N) g[y][x] = c; };
-    const at = (x, y) => (x >= 0 && y >= 0 && x < N && y < N) ? g[y][x] : null;
+    const NH = o.tall ? 88 : N;   // 立っている人は、胴を長く（腰のあたりまで）
+    const g = Array.from({ length: NH }, () => Array(N).fill(null));
+    const put = (x, y, c) => { if (x >= 0 && y >= 0 && x < N && y < NH) g[y][x] = c; };
+    const at = (x, y) => (x >= 0 && y >= 0 && x < N && y < NH) ? g[y][x] : null;
     const cx = 31.5, fem = !!o.female, eyes = o.eyes || 0, M = x => 63 - x;
     const mir = pts => pts.map(([x, y]) => [M(x), y]);
     const R0 = (o.wide || 10.6) * 4 / 3 - (fem ? 1 : 0), jaw = (o.jaw || 6.8) * 4 / 3 + (fem ? .8 : 0);
@@ -47,30 +48,39 @@
       const t = Math.min(1, (y - 46) / 7);
       let h = NB + (SH - NB) * (1 - Math.pow(1 - t, 2.2));
       if (y >= 52 && y <= 54) h -= [1, .4, 0][y - 52] * (y === 52 ? 1 : 1);
-      return y > 54 ? SH + (y - 54) * .25 : h;
+      return y > 54 ? SH + Math.min(y - 54, 10) * .25 - Math.max(0, y - 70) * .12 : h;
     };
-    for (let y = 46; y < N; y++) { const h = bodyHalf(y); for (let x = 0; x < N; x++) if (Math.abs(x - cx) <= h) put(x, y, 'cloth'); }
+    for (let y = 46; y < NH; y++) { const h = bodyHalf(y); for (let x = 0; x < N; x++) if (Math.abs(x - cx) <= h) put(x, y, 'cloth'); }
     // 光は左上から：右側を暗く、肩の上を明るく
-    for (let y = 46; y < N; y++) for (let x = 0; x < N; x++) if (at(x, y) === 'cloth') {
+    for (let y = 46; y < NH; y++) for (let x = 0; x < N; x++) if (at(x, y) === 'cloth') {
       if (x > cx + SH * .55) put(x, y, 'clothSh');
       else if (y <= 52 && x < cx - 6 && at(x, y - 1) == null) put(x, y + 1, 'clothHi');
     }
     // 腕と胴の境（袖の付け根の線）
-    for (let y = 55; y < N; y++) { const k = (y - 55) * .15; put(Math.round(cx - SH + 4 + k), y, 'clothSh'); put(Math.round(cx + SH - 4 - k), y, 'clothSh'); }
-    for (let x = 4; x < 26; x++) for (let y = 54; y < N; y++) if (at(x, y) === 'cloth' && hash(x, y, 3) < .12) put(x, y, 'clothHi');
+    for (let y = 55; y < NH; y++) { const k = (y - 55) * .15; put(Math.round(cx - SH + 4 + k), y, 'clothSh'); put(Math.round(cx + SH - 4 - k), y, 'clothSh'); }
+    for (let x = 4; x < 26; x++) for (let y = 54; y < NH; y++) if (at(x, y) === 'cloth' && hash(x, y, 3) < .12) put(x, y, 'clothHi');
     // 首
     for (let y = 39; y <= 51; y++) for (let x = fem ? 27 : 26; x <= (fem ? 36 : 37); x++) put(x, y, x > 34 ? 'shade' : 'skin');
     for (let x = 26; x <= 37; x++) { if (at(x, 42)) put(x, 42, 'deep'); if (at(x, 43)) put(x, 43, 'shade'); if (at(x, 44) && x > 31) put(x, 44, 'shade'); }
     // 服の形
     if (o.cloth === 'suit' || o.cloth === 'suitBrown' || o.cloth === 'navy') {
       for (let y = 49; y < N; y++) { const w = Math.max(0, 8 - (y - 49) * .5); for (let x = Math.round(cx - w); x <= Math.round(cx + w); x++) put(x, y, 'shirt'); put(Math.round(cx - w) - 1, y, 'clothSh'); put(Math.round(cx + w) + 1, y, 'clothSh'); }
-      if (o.tie) for (let y = 50; y < N; y++) { put(31, y, 'tie'); put(32, y, 'tie'); if (y > 53) { put(30, y, 'tie'); put(33, y, 'tie'); } if (y === 51) { put(30, y, 'tie'); put(33, y, 'tie'); } }
+      if (o.tie) for (let y = 50; y < Math.min(NH, 76); y++) { put(31, y, 'tie'); put(32, y, 'tie'); if (y > 53) { put(30, y, 'tie'); put(33, y, 'tie'); } if (y === 51) { put(30, y, 'tie'); put(33, y, 'tie'); } }
     } else if (o.cloth === 'cardigan' || o.cloth === 'blouse') {
       for (let x = 23; x <= 40; x++) { put(x, 49, 'shirt'); if (Math.abs(x - cx) < 6) put(x, 50, 'shirt'); if (Math.abs(x - cx) < 3) put(x, 51, 'shirt'); }
-      if (o.cloth === 'cardigan') for (let y = 53; y < N; y += 3) put(32, y, 'clothSh');
+      if (o.cloth === 'cardigan') for (let y = 53; y < NH; y += 3) put(32, y, 'clothSh');
     } else {
       for (let x = 21; x <= 42; x++) { const d = Math.abs(x - cx); if (d < 10) put(x, Math.round(50 + (10 - d) * .35), 'clothSh'); }
-      if (o.cloth === 'jacket') for (let y = 52; y < N; y++) { put(Math.round(cx - 3 - (y - 52) * .6), y, 'clothSh'); put(Math.round(cx + 3 + (y - 52) * .6), y, 'clothSh'); }
+      if (o.cloth === 'jacket') for (let y = 52; y < NH; y++) { put(Math.round(cx - 3 - (y - 52) * .6), y, 'clothSh'); put(Math.round(cx + 3 + (y - 52) * .6), y, 'clothSh'); }
+    }
+
+    if (o.tall) {
+      const suit = ['suit', 'suitBrown', 'navy'].includes(o.cloth);
+      if (suit) { for (let y = 64; y < NH; y++) put(Math.round(cx) + (y > 76 ? 1 : 0), y, 'clothSh'); [68, 76].forEach(y => { put(Math.round(cx) - 2, y, 'clothHi'); put(Math.round(cx) - 2, y + 1, 'clothSh'); }); }
+      if (o.tie) { put(31, 76, 'tie'); put(32, 76, 'tie'); put(31, 77, 'tie'); put(32, 77, 'tie'); }
+      // 腕：胴の脇で、少し暗く。袖口の線
+      for (let y = 60; y < NH; y++) { const xl = Math.round(cx - bodyHalf(y)), xr = Math.round(cx + bodyHalf(y)); for (let k = 0; k < 4; k++) { if (at(xl + k, y)) put(xl + k, y, k < 1 ? 'clothHi' : 'cloth'); if (at(xr - k, y)) put(xr - k, y, 'clothSh'); } }
+      for (let x = 0; x < N; x++) { const y = 84; const xl = cx - bodyHalf(y), xr = cx + bodyHalf(y); if ((x > xl && x < xl + 5) || (x < xr && x > xr - 5)) { put(x, y, 'clothSh'); put(x, y + 1, 'skin'); put(x, y + 2, 'skin'); put(x, y + 3, 'shade'); } }
     }
 
     // 頭（各行の半幅 hw(y) を先に決め、耳も髪もこの輪郭から作る）
@@ -286,7 +296,7 @@
 
     // 輪郭線
     const out = [];
-    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    for (let y = 0; y < NH; y++) for (let x = 0; x < N; x++) {
       if (!g[y][x]) continue;
       if (!at(x - 1, y) || !at(x + 1, y) || !at(x, y - 1)) out.push([x, y]);
     }
@@ -327,12 +337,12 @@
   const cache = {};
   function sprite(id, stage, v) {
     v = v || {};
-    const key = id + ':' + (stage || 0) + ':' + (v.blink ? 1 : 0) + (v.mouth ? 1 : 0);
+    const key = id + ':' + (stage || 0) + ':' + (v.blink ? 1 : 0) + (v.mouth ? 1 : 0) + (v.tall ? 't' : '');
     if (cache[key]) return cache[key];
-    const def = PEOPLE[id](stage || 0), grid = face(Object.assign({}, def.o, { blink: v.blink, mouthOpen: v.mouth })), pal = Object.assign({}, BASE, def.p);
-    const c = document.createElement('canvas'); c.width = N; c.height = N; const x = c.getContext('2d');
-    for (let yy = 0; yy < N; yy++) for (let xx = 0; xx < N; xx++) { const k = grid[yy][xx]; if (!k) continue; x.fillStyle = pal[k] || '#f0f'; x.fillRect(xx, yy, 1, 1); }
-    cache[key] = c; return c;
+    const def = PEOPLE[id](stage || 0), grid = face(Object.assign({}, def.o, { blink: v.blink, mouthOpen: v.mouth, tall: v.tall })), pal = Object.assign({}, BASE, def.p);
+    const c = document.createElement('canvas'); c.width = N; c.height = grid.length; const x = c.getContext('2d');
+    for (let yy = 0; yy < grid.length; yy++) for (let xx = 0; xx < N; xx++) { const k = grid[yy][xx]; if (!k) continue; x.fillStyle = pal[k] || '#f0f'; x.fillRect(xx, yy, 1, 1); }
+    c._key = key; cache[key] = c; return c;
   }
 
   // ---- 背景（論理 240×105） ----
@@ -603,7 +613,10 @@
     if (lines) for (let j = Y + 3; j < Y + h - 2; j += 3) { const f = (j - Y) / h, ins = w * k * .5 * (1 - f) + 3; R(x, '#9a917c', Math.round(X + ins), j, Math.round(w - ins * 2 - (j % 6 ? 5 : 0)), 1); }
   }
   // 手前から伸びる前腕と手（近いので大きい）
+  const HANDS = {};
+  let fgBuilding = null;
   function armP(x, X, Y, w, sleeve, right) {
+    if (fgBuilding) (HANDS[fgBuilding] = HANDS[fgBuilding] || []).push([X, Y, w, right]);
     const line = '#1c1511', dir = right ? 1 : -1;
     poly(x, line, [[X - 2, Y + 8], [X + w + 2, Y + 8], [X + w + 10 + dir * 14, H + 2], [X - 10 + dir * 14, H + 2]]);
     poly(x, sleeve, [[X - 1, Y + 9], [X + w + 1, Y + 9], [X + w + 9 + dir * 14, H + 2], [X - 9 + dir * 14, H + 2]]);
@@ -706,13 +719,15 @@
     R(x, '#3a5a6a', 56, 93, 28, 8); R(x, '#4a6a7a', 57, 94, 26, 2);
   };
   // 人物の立ち位置：机の向こうに座る／立つ高さ（スプライト上端の y）
+  // 立って話す場面（自分は座っている。相手の目は、こちらの目の高さ＝消失点より上に来る）
+  const TALL = { office: 6, street: 17, shop: 10 };
   const PLACE = { interro: 24, office: 30, pros: 26, shop: 28, home: 30, chambers: 28, street: 41, court: 41, phone: 41, dark: 41 };
   const fgCache = {};
   function fgCanvas(k) {
     if (!FG[k]) return null;
     if (fgCache[k]) return fgCache[k];
     const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.imageSmoothingEnabled = false;
-    FG[k](x); fgCache[k] = c; return c;
+    fgBuilding = k; FG[k](x); fgBuilding = null; fgCache[k] = c; return c;
   }
   const bgCache = {};
   function bgCanvas(k) {
@@ -721,29 +736,95 @@
     (BG[k] || BG.dark)(x); bgCache[k] = c; return c;
   }
   const A = { cv: null, sc: null, t0: performance.now(), blinkUntil: 0, nextBlink: 0, mouth: false, lastMouth: 0, timer: null };
+  // ---- 解像度を2倍に：Scale2x（ドット絵の斜めの線をなめらかにする、古典的な拡大法）----
+  function s2x(src) {
+    const w = src.width, h = src.height, sx = src.getContext('2d').getImageData(0, 0, w, h), a = new Uint32Array(sx.data.buffer);
+    const c = document.createElement('canvas'); c.width = w * 2; c.height = h * 2; const cx2 = c.getContext('2d');
+    const out = cx2.createImageData(w * 2, h * 2), b = new Uint32Array(out.data.buffer), W2 = w * 2;
+    const P = (x, y) => a[Math.min(h - 1, Math.max(0, y)) * w + Math.min(w - 1, Math.max(0, x))];
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const p = a[y * w + x], A1 = P(x, y - 1), B1 = P(x + 1, y), C1 = P(x - 1, y), D1 = P(x, y + 1);
+      const i = (y * 2) * W2 + x * 2;
+      b[i] = (C1 === A1 && C1 !== D1 && A1 !== B1) ? A1 : p;
+      b[i + 1] = (A1 === B1 && A1 !== C1 && B1 !== D1) ? B1 : p;
+      b[i + W2] = (D1 === C1 && D1 !== B1 && C1 !== A1) ? C1 : p;
+      b[i + W2 + 1] = (B1 === D1 && B1 !== A1 && D1 !== C1) ? D1 : p;
+    }
+    cx2.putImageData(out, 0, 0); return c;
+  }
+  const c2 = {};
+  const hi = (key, make, detail) => { if (c2[key]) return c2[key]; const src = make(); if (!src) return c2[key] = null; const c = s2x(src); if (detail) { const x = c.getContext('2d'); x.imageSmoothingEnabled = false; detail(x); } return c2[key] = c; };
+  // 2倍の細かさで描き足す小物
+  function mug2(x, X, Y, band) {
+    const ell = (cx0, cy0, rx, ry, col) => { x.fillStyle = col; for (let j = -ry; j <= ry; j++) { const w = Math.round(rx * Math.sqrt(1 - (j / ry) * (j / ry))); x.fillRect(cx0 - w, cy0 + j, w * 2, 1); } };
+    ell(X + 10, Y + 22, 12, 3, 'rgba(0,0,0,.35)');                                                     // 影
+    x.fillStyle = '#2a2420'; x.fillRect(X - 1, Y + 3, 22, 20);                                            // 輪郭
+    const cols = ['#cfc9bb', '#f4f0e6', '#f6f2e9', '#ebe6da', '#e2ddd0', '#ddd8ca', '#d8d2c4', '#d2ccbe', '#ccc6b8', '#c4beb0', '#bbb5a7', '#b2ac9e', '#a9a395'];
+    for (let i = 0; i < 20; i++) { x.fillStyle = cols[Math.min(cols.length - 1, Math.round(i * (cols.length - 1) / 19))]; x.fillRect(X + i, Y + 3, 1, 19); }
+    ell(X + 10, Y + 21, 10, 2, '#9f998b');
+    if (band) { for (let i = 0; i < 20; i++) { x.fillStyle = i < 3 ? '#4a6a8a' : i > 14 ? '#2a3a4e' : '#3a5a7a'; x.fillRect(X + i, Y + 11, 1, 3); } }
+    ell(X + 10, Y + 3, 11, 3, '#2a2420'); ell(X + 10, Y + 3, 10, 3, '#f8f5ec'); ell(X + 10, Y + 3, 8, 2, '#3a2416'); x.fillStyle = '#6a4a30'; x.fillRect(X + 6, Y + 2, 4, 1);   // 縁とコーヒー
+    x.fillStyle = '#2a2420'; x.fillRect(X + 20, Y + 6, 6, 12); x.fillStyle = '#c4beb0'; x.fillRect(X + 21, Y + 7, 4, 10); x.fillStyle = '#2a2420'; x.fillRect(X + 21, Y + 9, 2, 6); x.fillStyle = '#e2ddd0'; x.fillRect(X + 21, Y + 7, 2, 1);   // 取っ手
+    x.fillStyle = 'rgba(255,255,255,.10)'; for (let j = 0; j < 9; j++) { x.fillRect(X + 6 + Math.round(Math.sin(j * .9) * 2), Y - 3 - j, 1, 1); x.fillRect(X + 13 + Math.round(Math.sin(j * .9 + 2) * 2), Y - 5 - j, 1, 1); }   // 湯気
+  }
+  // 手（2倍の細かさ）：甲を上にして机に置いた手。指を1本ずつ、関節、爪、親指
+  function hand2(x, X, Y, w, right) {
+    X *= 2; Y *= 2; w *= 2; const h = 20, line = '#1c1511';
+    const sk = ['#e2c0a0', '#d9b391', '#cfa784', '#c99f7b', '#bf9471', '#b58a67', '#a67d5e'];
+    x.fillStyle = line; x.fillRect(X - 2, Y - 2, w + 4, h + 4);
+    for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+      const u = i / w, v = j / h; let k = Math.round(1 + u * 3 + v * 2.2); if (j < 2) k -= 1;
+      x.fillStyle = sk[Math.max(0, Math.min(6, k))]; x.fillRect(X + i, Y + j, 1, 1);
+    }
+    // 指（4本）：先端を丸め、指のあいだに影、第二関節の線、爪
+    const fw = Math.floor(w / 4);
+    for (let f = 0; f < 4; f++) {
+      const fx = X + f * fw;
+      x.fillStyle = line; x.fillRect(fx, Y - 2, 1, 1); x.fillRect(fx + fw - 1, Y - 2, 1, 1);
+      if (f > 0) { x.fillStyle = '#86624b'; x.fillRect(fx, Y, 1, 9); x.fillStyle = 'rgba(0,0,0,.18)'; x.fillRect(fx + 1, Y, 1, 7); }
+      x.fillStyle = '#a67d5e'; x.fillRect(fx + 2, Y + 6, fw - 4, 1);
+      x.fillStyle = '#ead2bb'; x.fillRect(fx + 2, Y, fw - 4, 2); x.fillStyle = '#c9a789'; x.fillRect(fx + 2, Y + 2, fw - 4, 1);
+    }
+    x.fillStyle = 'rgba(0,0,0,.18)'; x.fillRect(X, Y + h - 5, w, 5);
+    for (let f = 0; f < 4; f++) { x.fillStyle = '#d9b391'; x.fillRect(X + f * fw + 3, Y + 10, 3, 2); }   // 指の付け根の関節
+    // 親指（内側）
+    const tx = right ? X - 9 : X + w + 1;
+    x.fillStyle = line; x.fillRect(tx - 1, Y + 5, 11, 12); x.fillStyle = '#c99f7b'; x.fillRect(tx, Y + 6, 9, 10);
+    x.fillStyle = '#dcb592'; x.fillRect(tx + (right ? 1 : 0), Y + 6, 8, 2); x.fillStyle = '#ead2bb'; x.fillRect(right ? tx + 1 : tx + 5, Y + 7, 3, 2); x.fillStyle = '#a67d5e'; x.fillRect(tx, Y + 14, 9, 2);
+  }
+  const DETAIL_FG = {};
+  Object.keys(FG).forEach(k => { DETAIL_FG[k] = x => { (HANDS[k] || []).forEach(([X, Y, w, r]) => hand2(x, X, Y, w, r)); if (k === 'office') mug2(x, 326, 174, true); }; });
   function draw() {
     const cv = A.cv, sc = A.sc; if (!cv || !sc || !cv.isConnected) return;
     const x = cv.getContext('2d'); x.imageSmoothingEnabled = false;
-    x.setTransform(cv.width / W, 0, 0, cv.height / H, 0, 0);
-    x.drawImage(bgCanvas(sc.bg), 0, 0);
+    x.setTransform(cv.width / (W * 2), 0, 0, cv.height / (H * 2), 0, 0);
+    x.drawImage(hi('bg:' + sc.bg, () => bgCanvas(sc.bg)), 0, 0);
+    x.scale(2, 2);   // 以下、位置は従来の座標で指定し、拡大済みの絵を半分の大きさで置く
     if (sc.who && PEOPLE[sc.who]) {
       const now = performance.now();
       if (now > A.nextBlink) { A.blinkUntil = now + 130; A.nextBlink = now + 2400 + Math.random() * 3200; }
       const speaking = G.anim && G.anim.speaking === sc.who;
       if (speaking && now - A.lastMouth > 110) { A.mouth = !A.mouth; A.lastMouth = now; } if (!speaking) A.mouth = false;
       const breath = Math.sin((now - A.t0) / 1700 * Math.PI * 2) > .35 ? 1 : 0;
-      const s = sprite(sc.who, sc.stage, { blink: now < A.blinkUntil, mouth: A.mouth });
-      const px = sc.x === 'l' ? 40 : sc.x === 'r' ? 136 : 88, py = PLACE[sc.bg] ?? H - N;
+      const tall = TALL[sc.bg] != null;
+      const s = sprite(sc.who, sc.stage, { blink: now < A.blinkUntil, mouth: A.mouth, tall });
+      const px = sc.x === 'l' ? 40 : sc.x === 'r' ? 136 : 88, py = tall ? TALL[sc.bg] : PLACE[sc.bg] ?? H - N;
       // 歩いて入ってくる：同じ場所で人物が替わったときだけ、横から歩いて来る
-      const e = A.enter, k = e ? Math.min(1, (now - e.t0) / e.dur) : 1, ease = 1 - Math.pow(1 - k, 2);
-      const ox = e && k < 1 ? Math.round((1 - ease) * e.from) : 0, bob = e && k < 1 ? (Math.floor((now - e.t0) / 90) % 2) : 0;
-      x.drawImage(s, px + ox, py + breath - bob + (e && k < 1 && e.sit ? Math.round((1 - ease) * -4) : 0));
+      // 一歩ごとに体が上下し、足音が鳴る（コツ、コツ、コツ）
+      const e = A.enter, k = e ? Math.min(1, (now - e.t0) / e.dur) : 1;
+      const stepI = e ? Math.floor((now - e.t0) / STEP_MS) : 0, inStep = e ? ((now - e.t0) % STEP_MS) / STEP_MS : 0;
+      const ease = k < .85 ? k / .85 * .95 : .95 + (k - .85) / .15 * .05;   // ほぼ一定の速さで歩き、最後に止まる
+      const ox = e && k < 1 ? Math.round((1 - ease) * e.from) : 0, bob = e && k < 1 ? (inStep < .5 ? 1 : 0) : 0;
+      if (e && k < 1 && stepI > (e.lastStep ?? -1)) { e.lastStep = stepI; G.audio.sfx('step'); }
+      if (e && k >= 1) A.enter = null;
+      x.drawImage(hi('sp:' + s._key, () => s), px + ox, py + breath - bob, s.width, s.height);
     }
     if (A.exit) {
-      const ex = A.exit, k = Math.min(1, (performance.now() - ex.t0) / 380);
-      if (k < 1) x.drawImage(ex.s, ex.px + Math.round(k * k * ex.to), ex.py - (Math.floor(k * 6) % 2)); else A.exit = null;
+      const ex = A.exit, el = performance.now() - ex.t0, k = Math.min(1, el / ex.dur), si = Math.floor(el / STEP_MS);
+      if (si > (ex.lastStep ?? -1) && k < 1) { ex.lastStep = si; G.audio.sfx('step'); }
+      if (k < 1) x.drawImage(hi('sp:' + ex.s._key, () => ex.s), ex.px + Math.round(k * ex.to), ex.py - ((el % STEP_MS) / STEP_MS < .5 ? 1 : 0), ex.s.width, ex.s.height); else A.exit = null;
     }
-    const fg = fgCanvas(sc.bg); if (fg) x.drawImage(fg, 0, 0);
+    const fg = hi('fg:' + sc.bg, () => fgCanvas(sc.bg), DETAIL_FG[sc.bg]); if (fg) x.drawImage(fg, 0, 0, W, H);
     if (sc.dim) { x.fillStyle = 'rgba(0,0,0,' + sc.dim + ')'; x.fillRect(0, 0, W, H); }
     x.setTransform(1, 0, 0, 1, 0, 0);
   }
@@ -754,14 +835,20 @@
     const fresh = sc.who && !(A.recent[sc.bg + ':' + sc.who] > now0 - 30000);
     if (prev && prev.who) A.recent[prev.bg + ':' + prev.who] = now0;
     if (sc.who) A.recent[sc.bg + ':' + sc.who] = now0;
+    // 歩いて来るのは、刑事部屋に報告に来る同僚だけ。取調べの相手や目撃者は、最初からそこにいる
+    const walker = w => WALKERS.includes(w) && sc.bg === 'office';
     if (sameRoom && prev.who !== sc.who && (fresh || !sc.who)) {
       const now = performance.now(), fromRight = sc.x !== 'l';
-      A.enter = sc.who && PEOPLE[sc.who] ? { t0: now, dur: 520, from: fromRight ? 150 : -150, sit: ['interro', 'pros', 'chambers'].includes(sc.bg) } : null;
+      A.enter = walker(sc.who) && PEOPLE[sc.who] ? { t0: now, dur: STEP_MS * 7, from: fromRight ? 150 : -150 } : null;
       // 前の人は反対側へ歩いて出ていく
-      if (prev.who && PEOPLE[prev.who] && sc.who) A.exit = { s: sprite(prev.who, prev.stage, {}), px: prev.x === 'l' ? 40 : prev.x === 'r' ? 136 : 88, py: PLACE[prev.bg] ?? H - N, to: fromRight ? -150 : 150, t0: now };
+      A.exit = prev.who && PEOPLE[prev.who] && sc.who && walker(prev.who) ? { s: sprite(prev.who, prev.stage, { tall: TALL[prev.bg] != null }), px: prev.x === 'l' ? 40 : prev.x === 'r' ? 136 : 88, py: TALL[prev.bg] ?? PLACE[prev.bg] ?? H - N, to: fromRight ? -150 : 150, t0: now, dur: STEP_MS * 5 } : null;
     } else if (!sameRoom) { A.enter = null; A.exit = null; }
     A.cv = cv; A.sc = sc; draw();
     if (!A.timer) A.timer = setInterval(draw, 60);
   }
-  G.portraits = { scene, sprite, PEOPLE, face };
+  const STEP_MS = 300, WALKERS = ['shirai', 'oka', 'noguchi', 'todo'];
+  // 歩いて来る人が着くまでの残り時間（台詞は着いてから出す）
+  const arrivalLeft = () => A.enter ? Math.max(0, A.enter.t0 + A.enter.dur - performance.now()) : 0;
+  const skipArrival = () => { if (A.enter) A.enter.t0 = performance.now() - A.enter.dur; };
+  G.portraits = { scene, sprite, PEOPLE, face, arrivalLeft, skipArrival };
 })();

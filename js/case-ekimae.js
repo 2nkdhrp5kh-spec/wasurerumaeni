@@ -13,6 +13,15 @@
     staff: [{ id: 'shirai', name: '白井' }, { id: 'oka', name: '岡' }, { id: 'noguchi', name: '野口' }],
     elemTitle: '立証すべき事実',
     info: S => kit.info(S, '北見坂駅前事件'),
+    suspect: { name: '戸田　誠', kana: 'とだ まこと', age: '41歳', job: 'タクシー運転手', addr: '北見坂市栄町二丁目6番14号' },
+    koryuGrounds: [2],
+    factsOf: S => {
+      const id = S.c.charge, head = '被疑者は、11月14日午後11時19分ころ、北見坂市北見坂駅前ロータリー付近の路上において、樋口和也（当時28歳）に対し、';
+      if (id === 'satsujin') return head + '殺意をもって、その胸部を両手で強く突き飛ばして路上に転倒させ、縁石に後頭部を打ち付けさせ、よって、翌15日午前10時12分ころ、搬送先の病院において、同人を急性硬膜下血腫により死亡させて殺害したものである。';
+      if (id === 'jukashitsu') return head + '重大な過失により、その胸部を両手で押して路上に転倒させ、縁石に後頭部を打ち付けさせ、よって、翌15日午前10時12分ころ、搬送先の病院において、同人を急性硬膜下血腫により死亡させたものである。';
+      if (id === 'shogai') return head + 'その胸部を両手で突き飛ばす暴行を加えて路上に転倒させ、縁石に後頭部を打ち付けさせ、よって、同人に急性硬膜下血腫の傷害を負わせたものである。';
+      return head + 'その胸部を両手で突き飛ばす暴行を加えて路上に転倒させ、縁石に後頭部を打ち付けさせ、よって、同人に急性硬膜下血腫の傷害を負わせ、翌15日午前10時12分ころ、搬送先の病院において、同人を同傷害により死亡させたものである。';
+    },
     chargeHint: '人が死んだ事件で、罪名を分けるのは<b>何を意図していたか</b>。殺す意思（殺意）があれば殺人。押す・殴るといった暴行の意思だけなら傷害致死。暴行の意思もなく重大な不注意なら重過失致死。人が死んでいるのに傷害だけで送ると、結果を書き落とすことになる。<br>なお、正当防衛（刑法36条）は罪名ではない。成り立てば、どの罪名でも罰せられない。',
     charges: [
       { id: 'shogaichishi', label: '傷害致死', law: '刑法205条（裁判員裁判の対象）', fit: true, saibanin: true, arts: ['刑法 第205条'], req: ['暴行・傷害の行為', '死亡の結果', '行為と死亡のつながり', '暴行・傷害の故意（殺す意思までは要らない）'] },
@@ -55,7 +64,7 @@
         return L;
       }
       if (S.day === 1) { c.dead = true; L.push(['', '（午前10時12分。樋口和也が、搬送先の病院で死亡した。急性硬膜下血腫。）', { sfx: 'bell' }], ['todo', '……人が死んだ。何の罪で、どう扱うか。逮捕状を取るなら、今日明日だぞ。', { scene: sc('todo') }]); }
-      if (c.warrantPending && S.day > c.warrantPending) { c.warrantPending = null; c.warrantReady = true; L.push(['todo', '逮捕状が出た。', { scene: sc('todo') }]); }
+      if (c.warrantPending && S.day > c.warrantPending) { c.warrantPending = null; c.warrantReady = true; kit.forms.issued(S, C); L.push(['todo', '逮捕状が出た。', { scene: sc('todo') }]); }
       if (inC(S)) {
         L.push(...kit.custodyMorning(S, { name: '戸田', kenji2: '……正当防衛の主張は、崩せそうですか。', wantConfession: '「先に手を出した」と認めたか、とな。' }));
         if (cday(S) === 1) { K.addDoc({ id: 'news', title: '新聞記事', kind: 'memo', body: P('<b>駅前で口論、男性死亡　タクシー運転手を逮捕</b>', '北見坂署は、北見坂駅前で会社員の男性（28歳）を転倒させ死亡させたとして、傷害致死の疑いで、タクシー運転手の戸田誠容疑者（41歳）を逮捕した。同容疑者は「相手が殴りかかってきた」と話している。') }); }
@@ -176,6 +185,7 @@
   } });
   A.push({ id: 'warrant', who: 'self', label: '逮捕状の請求を課長に上げる', sub: '罪名を決めて請求する', primary: true, cond: S => S.c.arrest == null && !S.c.warrantPending && !S.c.warrantReady && S.c.dead, run: async S => {
     const ch = await kit.chooseCharge(S, C, 'warrant'); if (!ch) return false;
+    kit.forms.request(S, C);
     if (ch.id === 'satsujin') await G.talk([['todo', '殺人？ ……殺す気があったと、何で言える。', { scene: sc('todo') }], ['todo', 'まあいい。請求書はお前の名前だ。']]);
     await G.talk([['todo', '死んでるんだ。相手は「押した」と認めてる。令状は出るさ。', { scene: sc('todo') }], ['', '（逮捕状は翌日発付される。）']]);
     S.c.warrantPending = S.day;

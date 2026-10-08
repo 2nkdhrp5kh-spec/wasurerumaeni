@@ -54,6 +54,7 @@
   }
 
   K.render = function (hint) {
+    if (S && S._closed) return;
     const info = C.info(S);
     G.layout({ role: C.role, date: K.date(), info: info.text, clock: info.clock, scene: C.scene(S), hint: hint || '（今日の指示を出す。）',
       body: '<div class="row2"><div class="panel"><div class="ph"><span>捜査員</span></div>' + staffPanel() + '</div>'
@@ -127,6 +128,7 @@
     });
   }
   function renderActs() {
+    if (S && S._closed) return;
     const wrap = G.$('#acts-wrap'); if (!wrap) return;
     const tab = G.ui.tab;
     wrap.innerHTML = '<div class="tabs"><button class="tab' + (tab === 'staff' ? ' on' : '') + '" data-t="staff">部下に指示する</button><button class="tab' + (tab === 'self' ? ' on' : '') + '" data-t="self">自分で動く</button></div><div class="acts" id="acts"></div>'
@@ -153,7 +155,7 @@
     if (G.$('#skip')) G.$('#skip').onclick = () => K.skip();
   }
   const acts = () => { if (C.actsOverride && C.actsOverride(S, G.$('#acts-wrap'))) return; renderActs(); };
-  K.refresh = () => { renderDocs(); acts(); const p = document.querySelectorAll('.panel'); if (p[0]) p[0].innerHTML = '<div class="ph"><span>捜査員</span></div>' + staffPanel(); if (p[1]) { p[1].innerHTML = '<div class="ph"><span>' + (C.elemTitle || '立証すべき事実') + '</span><span>■=証拠 <span style="color:#b23a2e">■</span>=自白</span></div>' + elemPanel(); } };
+  K.refresh = () => { if (S && S._closed) return; renderDocs(); acts(); const p = document.querySelectorAll('.panel'); if (p[0]) p[0].innerHTML = '<div class="ph"><span>捜査員</span></div>' + staffPanel(); if (p[1]) { p[1].innerHTML = '<div class="ph"><span>' + (C.elemTitle || '立証すべき事実') + '</span><span>■=証拠 <span style="color:#b23a2e">■</span>=自白</span></div>' + elemPanel(); } };
 
   K.doAction = async function (a) {
     if (G.ui.talking || G.ui.busy) return;
@@ -259,5 +261,6 @@
     const m = C.morning(S, first) || [];
     return m.concat(lines).concat(C.after ? (C.after(S) || []) : []);
   }
-  K.end = function (result) { S._ended = true; const f = S._finish; S._finish = null; f && f(result); };
+  // 事件が終わったあとは、この画面を描き直さない（次の画面＝検察・公判を上書きしないように）
+  K.end = function (result) { S._ended = true; S._closed = true; const f = S._finish; S._finish = null; f && f(result); };
 })();

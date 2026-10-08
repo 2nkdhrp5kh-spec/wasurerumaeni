@@ -41,6 +41,14 @@
   const C = {
     id: 'aoyagi', role: '捜査官', base: { m: 10, d: 3 }, dayCard: true,
     staff: [{ id: 'shirai', name: '白井' }, { id: 'oka', name: '岡' }, { id: 'noguchi', name: '野口' }],
+    suspect: { name: '久住　透', kana: 'くずみ とおる', age: '34歳', job: '物流会社契約社員', addr: '北見坂市北見坂二丁目9番5号 コーポ北見202号室' },
+    koryuGrounds: [2, 3],
+    factsOf: (S, bekken) => {
+      if (bekken) return '被疑者は、9月中、北見坂市北見坂二丁目9番5号コーポ北見202号室の被疑者方において、インターネットを介して海外のオンラインカジノに接続し、金銭を賭けて賭博をしたものである。';
+      const id = S.c.charge, head = '被疑者は、10月2日午後9時40分ころ、北見坂市本町一丁目の古書店「青柳書房」（青柳静江方）に、裏口から侵入し、同店帳場において、';
+      if (id === 'setto') return head + '同人管理の現金約38万円在中の手提げ金庫1個を窃取したものである。';
+      return head + '同人（当時68歳）に対し、刃物様の物を示して「金を出せ」と申し向け、布製粘着テープでその両手首を緊縛するなどの暴行・脅迫を加えてその反抗を抑圧し、同人管理の現金約38万円在中の手提げ金庫1個を強取したものである。' + (id === 'chisho' ? 'その際、同人に傷害を負わせた。' : '');
+    },
     chargeHint: '金を奪う罪を分けるのは<b>手段</b>。相手の反抗を抑えるほどの暴行・脅迫（刃物を見せる、縛る）を使えば強盗。使わずにこっそり取れば窃盗。強盗の際に人がけがをすれば強盗致傷になる。けがの有無は、診断書などの記録で確かめる。',
     charges: [
       { id: 'goto', label: '住居侵入・強盗', law: '刑法130条前段・236条1項', fit: true, arts: ['刑法 第130条', '刑法 第236条'], req: ['正当な理由なく入る', '反抗を抑えるほどの暴行・脅迫', '財物を奪う', '故意'] },
@@ -118,8 +126,8 @@
       // 令状の発付
       if (c.warrantPending && S.day > c.warrantPending.day) {
         const w = c.warrantPending; c.warrantPending = null;
-        if (w.kind === 'search') { c.searchWarrant = true; L.push(['', '（捜索差押許可状が発付された。）']); }
-        else { c.warrantReady = w.kind; L.push(['todo', w.kind === 'bekken' ? '賭博で逮捕状が出た。……分かってるな。本命は強盗だ。' : '逮捕状が出た。行ってこい。', { scene: sc('todo') }]); }
+        if (w.kind === 'search') { c.searchWarrant = true; const fd = G.kit.forms.data(S, C); K.addDoc({ id: 'searchWarrant', title: '捜索差押許可状', kind: 'neu', body: G.forms.search(Object.assign(fd, { place: '北見坂市北見坂二丁目9番5号 コーポ北見202号室（被疑者方居室）', items: '灰色の上着、白色マスク、刃物、布製粘着テープ、手提げ金庫（緑色）、現金、金銭の出入りを記録した帳簿・メモ類、携帯電話機その他本件に関係する通信の記録' })) }); L.push(['', '（捜索差押許可状が発付された。）']); }
+        else { c.warrantReady = w.kind; G.kit.forms.issued(S, C, w.kind === 'bekken'); L.push(['todo', w.kind === 'bekken' ? '賭博で逮捕状が出た。……分かってるな。本命は強盗だ。' : '逮捕状が出た。行ってこい。', { scene: sc('todo') }]); }
       }
       if (inCustody(S)) {
         const d = custodyDay(S);
@@ -128,10 +136,10 @@
           L.push(['', '（朝刊の地域面に、久住の名前が出た。）', { scene: { bg: 'office' } }]);
         }
         if (d === 2) L.push(['', '（48時間。久住は検察官に送致された。）'], ['kenji', '担当の検事です。勾留を請求します。……自白は、まだですか。', { scene: sc('kenji', 'pros') }]);
-        if (d === 3) L.push(['', '（裁判官は勾留を認めた。10日間。）']);
+        if (d === 3) { L.push(['', '（裁判官は勾留を認めた。10日間。勾留状が届いた。）']); G.kit.forms.koryu(S, C); }
         if (d === 5 && !S.staffGone.noguchi) { K.loseStaff('noguchi'); L.push(['todo', '野口は窃盗の応援に回す。被疑者はもう押さえてるんだ。', { scene: sc('todo') }]); }
         if (d === 13) {
-          L.push(['', '（勾留延長。あと10日。）']);
+          L.push(['', '（勾留延長。あと10日。）']); G.kit.forms.ext(S, C);
           if (!S.staffGone.oka) { K.loseStaff('oka'); L.push(['todo', '岡も外す。残りは白井とお前でやれ。', { scene: sc('todo') }]); }
         }
         if (d === 8 && !c.confession) L.push(['todo', '検事が電話してきた。自白はまだか、とな。', { scene: sc('todo') }]);
@@ -451,6 +459,7 @@
       const s = soumei(S);
       if (s.p < 3) { await G.talk([['todo', '……これで裁判官を説得できると思うか。'], ['todo', s.why.length ? s.why.join('、') + '。それだけじゃ弱い。' : '何もないじゃないか。'], ['todo', 'もう少し固めてこい。']]); return false; }
       const ch = await G.kit.chooseCharge(S, C, 'warrant'); if (!ch) return false;
+      G.kit.forms.request(S, C);
       if (ch.id === 'chisho') await G.talk([['todo', '致傷？ 青柳さんにけがの診断書はないぞ。……まあいい、請求書はお前の名前だ。']]);
       await G.talk([['todo', s.why.join('、') + '。'], ['todo', '十分だ。請求する。'], ['', '（逮捕状は翌日発付される。）']]);
       S.c.warrantPending = { kind: 'honken', day: S.day };
@@ -460,6 +469,7 @@
       effects: ['裁判所が本件基準説などの立場を採れば、身柄拘束は違法とされ、その間に得た自白は証拠から外される', '別件基準説を採る裁判所なら、適法とされうる', 'どちらの立場が採られるかは、事前には分からない'], always: true },
     run: async S => {
       G.drawScene(sc('todo'));
+      G.kit.forms.request(S, C, true);
       await G.talk([['todo', 'カジノか。……賭博で引っ張れるな。'], ['todo', '形式は整う。あとは取調室で、本命を聞けばいい。'], ['', '（賭博の逮捕状は翌日発付される。）']]);
       S.c.warrantPending = { kind: 'bekken', day: S.day };
     } });

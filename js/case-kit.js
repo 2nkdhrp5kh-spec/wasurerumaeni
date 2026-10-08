@@ -39,9 +39,9 @@
   kit.custodyMorning = function (S, o) {
     const L = [], c = S.c, d = kit.custodyDay(S), sc = kit.sc;
     if (d === 2) L.push(['', '（48時間。' + o.name + 'は検察官に送致された。）'], ['kenji', '担当の検事です。勾留を請求します。' + (o.kenji2 || ''), { scene: sc('kenji', 'pros') }]);
-    if (d === 3) L.push(['', '（裁判官は勾留を認めた。10日間。）']);
+    if (d === 3) { L.push(['', '（裁判官は勾留を認めた。10日間。勾留状が届いた。）']); if (G.keiji.C().suspect) kit.forms.koryu(S, G.keiji.C()); }
     if (d === 5 && !S.staffGone.noguchi) { K.loseStaff('noguchi'); L.push(['todo', '野口は別件の応援に回す。被疑者はもう押さえてるんだ。', { scene: sc('todo') }]); }
-    if (d === 13) { L.push(['', '（勾留延長。あと10日。）']); if (!S.staffGone.oka) { K.loseStaff('oka'); L.push(['todo', '岡も外す。残りは白井とお前でやれ。', { scene: sc('todo') }]); } }
+    if (d === 13) { L.push(['', '（勾留延長。あと10日。）']); if (G.keiji.C().suspect) kit.forms.ext(S, G.keiji.C()); if (!S.staffGone.oka) { K.loseStaff('oka'); L.push(['todo', '岡も外す。残りは白井とお前でやれ。', { scene: sc('todo') }]); } }
     if (d === 8 && !c.confession && o.wantConfession) L.push(['todo', '検事が電話してきた。' + o.wantConfession, { scene: sc('todo') }]);
     if (d === 20) L.push(['shirai', '主任、満期まであと3日です。', { scene: sc('shirai') }]);
     return L;
@@ -124,6 +124,34 @@
     const t = cfg.topics.find(x => x.k === k);
     await t.run(S);
     if (c.truth !== cfg.guiltyKey && !c.confession.voluntary && rnd() < .2) { c.retractCustody = true; await G.talk([[cfg.who, '……やっぱり、違います。やってません。'], ['', '（自白を撤回した。）']]); }
+  };
+
+  // 令状の書類（実際の様式で、捜査記録に綴る）
+  kit.forms = {
+    data(S, C, bekken) {
+      const K = G.keiji, ch = kit.charge(S), sp = C.suspect || {};
+      return Object.assign({}, sp, { charge: bekken ? '賭博' : ch ? ch.label : '（未定）', facts: C.factsOf ? C.factsOf(S, bekken) : '別紙のとおり', date: K.date(), valid: K.date(S.day + 7), judgeName: '浅倉　綾', sealed: true,
+        requester: '北見坂警察署　司法警察員　警部　東堂　剛' });
+    },
+    request(S, C, bekken) {
+      const d = kit.forms.data(S, C, bekken);
+      G.keiji.addDoc({ id: 'warrantReq' + (bekken ? 'B' : ''), title: '逮捕状請求書（控）' + (bekken ? '：賭博' : ''), kind: 'memo', body: G.forms.request('逮捕状請求書', [
+        ['被疑者', d.name + '（' + d.kana + '）　' + d.age + '　' + d.job], ['住居', d.addr], ['罪名', d.charge], ['被疑事実の要旨', d.facts],
+        ['逮捕の必要', C.arrestNeed || '被疑者は、罪証を隠滅し、又は逃亡するおそれがある。'], ['引致すべき場所', '北見坂警察署']], { date: d.date, who: '東堂　剛' }) });
+    },
+    issued(S, C, bekken) {
+      const d = kit.forms.data(S, C, bekken);
+      G.keiji.addDoc({ id: 'warrant' + (bekken ? 'B' : ''), title: '逮捕状（通常逮捕）' + (bekken ? '：賭博' : ''), kind: 'neu', body: G.forms.arrest(d) });
+    },
+    koryu(S, C) {
+      const d = kit.forms.data(S, C, S.c.arrest_kind === 'bekken' && !S.c.honkenArrested);
+      G.keiji.addDoc({ id: 'koryuJo', title: '勾留状', kind: 'neu', body: G.forms.koryu(Object.assign(d, { reqDate: G.keiji.date(S.day - 1), valid: G.keiji.date(S.day + 7), grounds: C.koryuGrounds || [2, 3], judgeName: '浅倉　綾' })) });
+    },
+    ext(S, C) {
+      const d = kit.forms.data(S, C, S.c.arrest_kind === 'bekken' && !S.c.honkenArrested), K = G.keiji;
+      K.addDoc({ id: 'koryuJo', title: '勾留状（延長の記載あり）', kind: 'neu', body: G.forms.koryu(Object.assign(d, { reqDate: K.date(S.day - 11), valid: K.date(S.day - 3), grounds: C.koryuGrounds || [2, 3],
+        ext: { days: 10, to: K.date(S.day + 9), why: '関係者の取調べ未了、鑑定結果未着のため。', date: K.date() } })) });
+    }
   };
 
   // 罪名を選ぶ（逮捕状の請求、または送致のとき）

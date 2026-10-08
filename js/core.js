@@ -99,12 +99,17 @@ G.layout = function (o) {
   app.innerHTML =
     '<header class="bar"><span class="role">' + o.role + '</span><span class="date">' + (o.date || '') + '</span>'
     + '<span class="info">' + (o.info || '') + '</span>'
-    + '<button class="bbtn" id="b-law">条文帳</button><button class="bbtn" id="b-snd">' + (G.meta.muted ? '音：切' : '音：入') + '</button>'
+    + '<button class="bbtn" id="b-law">条文帳</button><button class="bbtn" id="b-quit">中断</button><button class="bbtn" id="b-snd">' + (G.meta.muted ? '音：切' : '音：入') + '</button>'
     + (o.clock ? '<div class="clock">' + o.clock + '</div>' : '') + '</header>'
     + '<section class="scene"><canvas id="cv" width="480" height="210"></canvas><div class="dlg" id="dlg"><div class="who"></div><div class="say nar">' + (o.hint || '') + '</div></div></section>'
-    + (o.body || '')
-    + '<div id="acts-wrap"></div>';
+    + '<div class="tabletop">' + (o.body || '')
+    + '<div id="acts-wrap"></div></div>';
   $('#b-law').onclick = () => G.openLaw();
+  $('#b-quit').onclick = async () => {
+    const ok = await G.openPaper({ title: '中断する', body: G.P('この事件をここでやめて、タイトルに戻る。途中の記録は残らない。', 'つらいと感じたら、いつでもやめてかまわない。'), noClose: true,
+      buttons: [{ label: 'やめてタイトルに戻る', value: true, cls: 'red' }, { label: '続ける', value: false }] });
+    if (ok) location.reload();
+  };
   $('#b-snd').onclick = () => { G.meta.muted = !G.meta.muted; G.saveMeta(); G.audio.setMuted(G.meta.muted); $('#b-snd').textContent = G.meta.muted ? '音：切' : '音：入'; };
   G.drawScene(o.scene || { bg: 'dark' });
 };
@@ -121,9 +126,10 @@ G.talk = function (lines, opt) {
     const box = $('#dlg'); if (!box) { resolve(); return; }
     const aw = $('#acts-wrap');
     G.ui.talking = true; if (aw) aw.classList.add('wait');
-    let i = 0, typing = null, full = '';
+    let i = 0, typing = null, full = '', waitArrive = null, startType = null;
     const finishType = () => { if (typing) { clearInterval(typing); typing = null; box.querySelector('.say').textContent = full; G.anim.speaking = null; } };
     const next = () => {
+      if (waitArrive) { clearTimeout(waitArrive); waitArrive = null; G.portraits.skipArrival(); startType(); return; }
       if (typing) { finishType(); return; }
       if (i >= lines.length) {
         box.onclick = null; const m = box.querySelector('.more'); if (m) m.remove();
@@ -145,15 +151,23 @@ G.talk = function (lines, opt) {
       const name = c ? c.name : (who || '');
       const nar = !who;
       G.anim.speaking = (c && c.portrait) ? c.portrait : null;
-      box.innerHTML = '<div class="who">' + name + (c && c.kana ? '<span class="kana">' + c.kana + '</span>' : '') + '</div><div class="say' + (nar ? ' nar' : '') + '"></div><div class="more">▼</div>';
-      const say = box.querySelector('.say');
-      full = text; let k = 0;
-      const step = nar ? 18 : Math.round(34 / ((c && c.voice && c.voice.rate) || 1));
-      typing = setInterval(() => {
-        k++; say.textContent = full.slice(0, k);
-        if (!nar && c && c.voice && who !== 'you' && k % 2 === 1) G.audio.voice(c.voice, full[k - 1]);
-        if (k >= full.length) { clearInterval(typing); typing = null; G.anim.speaking = null; }
-      }, step);
+      startType = () => {
+        waitArrive = null;
+        G.anim.speaking = (c && c.portrait) ? c.portrait : null;
+        box.innerHTML = '<div class="who">' + name + (c && c.kana ? '<span class="kana">' + c.kana + '</span>' : '') + '</div><div class="say' + (nar ? ' nar' : '') + '"></div><div class="more">▼</div>';
+        const say = box.querySelector('.say');
+        full = text; let k = 0;
+        const step = nar ? 18 : Math.round(34 / ((c && c.voice && c.voice.rate) || 1));
+        typing = setInterval(() => {
+          k++; say.textContent = full.slice(0, k);
+          if (!nar && c && c.voice && who !== 'you' && k % 2 === 1) G.audio.voice(c.voice, full[k - 1]);
+          if (k >= full.length) { clearInterval(typing); typing = null; G.anim.speaking = null; }
+        }, step);
+      };
+      // 人物が歩いて来ている間は、台詞を出さずに待つ（タップで飛ばせる）
+      const left = G.portraits && G.portraits.arrivalLeft ? G.portraits.arrivalLeft() : 0;
+      if (left > 0) { G.anim.speaking = null; box.innerHTML = '<div class="who"></div><div class="say nar"></div>'; full = ''; waitArrive = setTimeout(startType, left + 120); }
+      else startType();
     };
     box.onclick = () => { G.audio.unlock(); next(); };
     next();
@@ -195,6 +209,15 @@ G.toast = function (t) {
 };
 
 /* 違法・不適切な行動の確認（赤い付箋） */
+/* 注意書き（起動時・タイトル・性犯罪を扱う事件の前） */
+G.SUPPORT = '<div class="howto"><b>相談窓口（全国共通）</b>性犯罪被害相談電話　<b>#8103</b>（最寄りの警察の相談窓口につながる）<br>性犯罪・性暴力被害者のためのワンストップ支援センター　<b>#8891</b></div>';
+G.WARNING = G.P('<b>本作はフィクションです。</b>登場する人物・団体・地名・条例は架空のものです。',
+  '刑事事件を題材にしています。<b>暴力、人の死、火災、取調べでの威圧的な言動</b>の描写があります。',
+  '<b>性犯罪（電車内での痴漢）の被害を扱う事件があります。</b>被害の具体的な描写は避けていますが、被害を訴える人への聴取や、その人の供述の信用性が疑われる場面があります。性暴力の被害に遭ったことのある方にとっては、つらい記憶を呼び起こすおそれがあります。この事件は、選ぶ前にもう一度確認します。無理をせず、選ばない、途中でやめる（画面上の「中断」）といった選択をしてください。',
+  '手続は現行法に基づいていますが、日数や手順を簡略化しています。法律相談・法的な助言ではありません。') + G.SUPPORT;
+G.showWarning = (first) => G.openPaper({ title: '注意', sub: 'はじめに、お読みください', body: G.WARNING, noClose: !!first, red: true,
+  buttons: first ? [{ label: '読んだ。はじめる', value: true }] : [] });
+
 G.confirmRisk = function (risk) {
   const first = !G.meta['risk_' + risk.id];
   const body = (risk.lure ? '<p style="font-family:DotGothic16,sans-serif">' + risk.lure + '</p>' : '') + '<div class="riskbox"><b>' + risk.title + '</b><br>根拠：' + risk.law

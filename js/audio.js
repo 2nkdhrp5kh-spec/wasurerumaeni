@@ -39,7 +39,7 @@
       try {
         AC = new (window.AudioContext || window.webkitAudioContext)();
         master = AC.createGain(); master.gain.value = muted ? 0 : 1; master.connect(AC.destination);
-        bgmGain = AC.createGain(); bgmGain.gain.value = .55; bgmGain.connect(master);
+        bgmGain = AC.createGain(); bgmGain.gain.value = .33;   // 以前の .55 の約6割 bgmGain.connect(master);
         ambGain = AC.createGain(); ambGain.gain.value = .5; ambGain.connect(master);
         sfxGain = AC.createGain(); sfxGain.gain.value = .8; sfxGain.connect(master);
         voiceGain = AC.createGain(); voiceGain.gain.value = 1.6; voiceGain.connect(master);
@@ -92,13 +92,29 @@
     const nodes = []; let timer = null;
     const hum = (f, v) => { const o = AC.createOscillator(); o.frequency.value = f; const og = AC.createGain(); og.gain.value = v; o.connect(og); og.connect(g); o.start(); nodes.push(o); };
     const room = (f, v) => { const s = AC.createBufferSource(); s.buffer = noiseBuffer(2); s.loop = true; const lp = AC.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = f; const sg = AC.createGain(); sg.gain.value = v; s.connect(lp); lp.connect(sg); sg.connect(g); s.start(); nodes.push(s); };
+    // まれに混じる遠くの音（場所ごと。頻度は低く、音量は小さく）
+    const far = (fn, v) => { const og = AC.createGain(); og.gain.value = v; og.connect(g); fn(AC.currentTime + .05, og); };
+    const caw = (t, d) => { for (let i = 0; i < 2 + (Math.random() * 2 | 0); i++) { const o = AC.createOscillator(); o.type = 'sawtooth'; const t0 = t + i * .42; o.frequency.setValueAtTime(720, t0); o.frequency.linearRampToValueAtTime(560, t0 + .28); const bp = AC.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1400; bp.Q.value = 2.5; const eg = AC.createGain(); env(eg, t0, .03, .26, .5); o.connect(bp); bp.connect(eg); eg.connect(d); o.start(t0); o.stop(t0 + .35); } };
+    const siren = (t, d) => { const o = AC.createOscillator(); o.type = 'sine'; for (let i = 0; i < 6; i++) { o.frequency.setValueAtTime(i % 2 ? 960 : 770, t + i * .65); } const eg = AC.createGain(); eg.gain.setValueAtTime(0, t); eg.gain.linearRampToValueAtTime(.25, t + 1.5); eg.gain.linearRampToValueAtTime(0, t + 3.9); o.connect(eg); eg.connect(d); o.start(t); o.stop(t + 4); };
+    const rumble = (t, d) => { const s = AC.createBufferSource(); s.buffer = noiseBuffer(6); const lp = AC.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 180; const eg = AC.createGain(); eg.gain.setValueAtTime(0, t); eg.gain.linearRampToValueAtTime(.9, t + 2.5); eg.gain.linearRampToValueAtTime(0, t + 5.8); s.connect(lp); lp.connect(eg); eg.connect(d); s.start(t); };
+    const thump = (t, d, n, gap) => { for (let i = 0; i < n; i++) { const s = AC.createBufferSource(); s.buffer = noiseBuffer(.12); const lp = AC.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 420; const eg = AC.createGain(); env(eg, t + i * gap, .004, .08, .6); s.connect(lp); lp.connect(eg); eg.connect(d); s.start(t + i * gap); } };
+    const cough = (t, d) => { for (let i = 0; i < 2; i++) { const s = AC.createBufferSource(); s.buffer = noiseBuffer(.25); const bp = AC.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 700; const eg = AC.createGain(); env(eg, t + i * .3, .01, .16, .5); s.connect(bp); bp.connect(eg); eg.connect(d); s.start(t + i * .3); } };
+    const RARE = {
+      office: [() => far(caw, .05), () => far(siren, .05), () => far((t, d) => thump(t, d, 6, .38), .12)],
+      interro: [() => far((t, d) => thump(t, d, 8, .45), .1), () => far((t, d) => thump(t, d, 1, 0), .25)],
+      court: [() => far(cough, .12), () => far((t, d) => thump(t, d, 1, 0), .15)],
+      night: [() => far(rumble, .07), () => far(caw, .03), () => far(siren, .03)]
+    }[kind];
+    let rareT = null;
+    const nextRare = () => { rareT = setTimeout(() => { if (amb && amb.g === g && RARE) { G.pick(RARE)(); nextRare(); } }, 50000 + Math.random() * 90000); };
+    if (RARE) nextRare();
     if (kind === 'interro') { hum(100, .02); hum(200, .006); room(400, .05); timer = setInterval(() => sfx('tick'), 1000); }
     if (kind === 'office') { room(600, .06); hum(60, .01); }
     if (kind === 'court') { room(300, .07); }
     if (kind === 'rain') { room(1800, .12); room(500, .08); }
     if (kind === 'night') { room(250, .04); }
     fadeTo(g, 1, 2);
-    amb = { g, stop: () => { nodes.forEach(n => { try { n.stop(); } catch (e) {} }); if (timer) clearInterval(timer); } };
+    amb = { g, stop: () => { nodes.forEach(n => { try { n.stop(); } catch (e) {} }); if (timer) clearInterval(timer); if (rareT) clearTimeout(rareT); } };
   }
 
   // ---- 効果音（合成） ----
@@ -130,6 +146,8 @@
       case 'phone': for (let r = 0; r < 2; r++) for (let i = 0; i < 10; i++) { tone(t + r * .5 + i * .04, 1300, .02, 'square', .04); tone(t + r * .5 + i * .04 + .02, 1650, .02, 'square', .03); } break;
       case 'door': burst(t, .25, 300, 'lowpass', .5); tone(t + .02, 90, .2, 'sine', .3, 60); break;
       case 'metal': tone(t, 220, .6, 'triangle', .15, 200); tone(t, 330, .5, 'triangle', .1); burst(t, .08, 3000, 'highpass', .3); burst(t + .2, .3, 400, 'lowpass', .4); break;
+      case 'step': burst(t, .05, 380, 'lowpass', .32); burst(t + .012, .02, 2600, 'bandpass', .07, 4); break;   // 一歩（かかと）
+      case 'select': tone(t, 98, .35, 'sine', .45, 55); burst(t, .07, 600, 'lowpass', .5); burst(t + .08, .22, 3200, 'bandpass', .09, 1.5); break;   // 選んだときの、重い判の音と紙
       case 'steps': for (let i = 0; i < 4; i++) burst(t + i * .42, .06, 500, 'lowpass', .25); break;
       case 'crowd': { const s = AC.createBufferSource(); s.buffer = noiseBuffer(2.2); const fl = AC.createBiquadFilter(); fl.type = 'bandpass'; fl.frequency.value = 700; fl.Q.value = .5; const g = AC.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.18, t + .6); g.gain.linearRampToValueAtTime(0, t + 2); s.connect(fl); fl.connect(g); g.connect(sfxGain); s.start(t); break; }
       case 'bell': [55, 82.5, 110].forEach((f, i) => tone(t, f, 2.8, 'sine', .16 / (i + 1))); break;
