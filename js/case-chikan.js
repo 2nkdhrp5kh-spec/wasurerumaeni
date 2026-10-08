@@ -116,7 +116,7 @@
     K.addDoc({ id: 'claim', title: '佐伯の弁解', kind: 'neu', evid: true, body: P('「右手で吊り革、左手で鞄を胸の前に持っていた。触っていない」') });
   } });
   A.push({ id: 'reenact', who: 'staff', days: 2, label: '車内の位置を再現して確かめる', short: '再現見分', cond: S => S.fin.claimTalk,
-    done: S => { K.addDoc({ id: 'reenact', title: '再現見分調書', kind: 'neu', evid: true, body: P('同型車両で、被害者（158cm）と佐伯（168cm）の位置を再現した。', '佐伯の弁解する姿勢（右手で吊り革、左手で鞄を胸の前）のまま左手を下ろすと、被害者の臀部に届く。ただし鞄を持ったままでは不自然な姿勢となる。', '被害者の斜め後ろ（灰色のコートの男がいた位置）からも、手は届く。') });
+    done: S => { K.addDoc({ id: 'reenact', title: '再現見分調書', kind: 'neu', evid: true, body: P('同型車両で、被害者（158cm）と佐伯（168cm）の位置を再現した。', '佐伯の弁解する姿勢（右手で吊り革、左手で鞄を胸の前）のまま左手を下ろすと、被害者の臀部に届く。ただし鞄を持ったままでは不自然な姿勢となる。', (S.fin.passenger || S.fin.stationCam ? '被害者の斜め後ろ（灰色のコートの男がいた位置）からも、手は届く。' : '被害者の斜め後ろの位置からも、手は届く。')) });
       return [['oka', '佐伯の位置からも、斜め後ろからも、届くことは届きます。', { scene: sc('oka') }]]; } });
   A.push({ id: 'trainCam', who: 'staff', days: 2, label: '車内の防犯カメラを確かめる', short: '車内カメラ', cond: S => true,
     done: S => { K.addDoc({ id: 'trainCam', title: '鉄道会社の回答（車内カメラ）', kind: 'neu', body: P('当該車両（旧型）には車内防犯カメラが設置されていない。') });

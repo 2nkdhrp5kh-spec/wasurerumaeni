@@ -40,11 +40,24 @@
     const mir = pts => pts.map(([x, y]) => [M(x), y]);
     const R0 = (o.wide || 10.6) * 4 / 3 - (fem ? 1 : 0), jaw = (o.jaw || 6.8) * 4 / 3 + (fem ? .8 : 0);
 
-    // 体
-    for (let y = 48; y < N; y++) { const half = Math.min(31.5, (fem ? 9.5 : 11) + (y - 48) * 2.6); for (let x = 0; x < N; x++) if (Math.abs(x - cx) <= half) put(x, y, 'cloth'); }
-    for (let x = 0; x < N; x++) for (let y = 48; y < N; y++) if (at(x, y) === 'cloth' && x > cx + 15) put(x, y, 'clothSh');
-    for (let y = 52; y < N; y++) { put(Math.round(cx - 13 - (y - 52) * .4), y, 'clothSh'); }
-    for (let x = 4; x < 18; x++) for (let y = 54; y < N; y++) if (at(x, y) === 'cloth' && hash(x, y, 3) < .18) put(x, y, 'clothHi');
+    // 体：首の付け根から僧帽筋がなだらかに下り、肩で丸くなり、腕が下りる。肩幅は頭の大きさに合わせる
+    const SH = o.shoulder || (R0 * (fem ? 1.35 : 1.6)), NB = fem ? 5 : 6;
+    const bodyHalf = y => {
+      if (y < 46) return -1;
+      const t = Math.min(1, (y - 46) / 7);
+      let h = NB + (SH - NB) * (1 - Math.pow(1 - t, 2.2));
+      if (y >= 52 && y <= 54) h -= [1, .4, 0][y - 52] * (y === 52 ? 1 : 1);
+      return y > 54 ? SH + (y - 54) * .25 : h;
+    };
+    for (let y = 46; y < N; y++) { const h = bodyHalf(y); for (let x = 0; x < N; x++) if (Math.abs(x - cx) <= h) put(x, y, 'cloth'); }
+    // 光は左上から：右側を暗く、肩の上を明るく
+    for (let y = 46; y < N; y++) for (let x = 0; x < N; x++) if (at(x, y) === 'cloth') {
+      if (x > cx + SH * .55) put(x, y, 'clothSh');
+      else if (y <= 52 && x < cx - 6 && at(x, y - 1) == null) put(x, y + 1, 'clothHi');
+    }
+    // 腕と胴の境（袖の付け根の線）
+    for (let y = 55; y < N; y++) { const k = (y - 55) * .15; put(Math.round(cx - SH + 4 + k), y, 'clothSh'); put(Math.round(cx + SH - 4 - k), y, 'clothSh'); }
+    for (let x = 4; x < 26; x++) for (let y = 54; y < N; y++) if (at(x, y) === 'cloth' && hash(x, y, 3) < .12) put(x, y, 'clothHi');
     // 首
     for (let y = 39; y <= 51; y++) for (let x = fem ? 27 : 26; x <= (fem ? 36 : 37); x++) put(x, y, x > 34 ? 'shade' : 'skin');
     for (let x = 26; x <= 37; x++) { if (at(x, 42)) put(x, 42, 'deep'); if (at(x, 43)) put(x, 43, 'shade'); if (at(x, 44) && x > 31) put(x, 44, 'shade'); }
@@ -274,7 +287,7 @@
     // 輪郭線
     const out = [];
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-      if (!g[y][x] || y >= 53) continue;
+      if (!g[y][x]) continue;
       if (!at(x - 1, y) || !at(x + 1, y) || !at(x, y - 1)) out.push([x, y]);
     }
     out.forEach(([x, y]) => { const c = at(x, y) || ''; if (c.startsWith('cloth') || c === 'shirt' || c === 'tie') put(x, y, 'clothSh'); else put(x, y, 'line'); });
