@@ -60,17 +60,24 @@
       if (o.cloth === 'jacket') for (let y = 52; y < N; y++) { put(Math.round(cx - 3 - (y - 52) * .6), y, 'clothSh'); put(Math.round(cx + 3 + (y - 52) * .6), y, 'clothSh'); }
     }
 
-    // 頭
+    // 頭（各行の半幅 hw(y) を先に決め、耳も髪もこの輪郭から作る）
+    const hw = y => y < 7 || y > 44 ? -1 : y <= 27 ? R0 * Math.sqrt(Math.max(0, 1 - Math.pow((y - 24) / 17.5, 2))) : R0 - Math.pow((y - 27) / 17, 1.7) * jaw;
     for (let y = 7; y <= 44; y++) {
-      const rx = y <= 27 ? R0 * Math.sqrt(Math.max(0, 1 - Math.pow((y - 24) / 17.5, 2))) : R0 - Math.pow((y - 27) / 17, 1.7) * jaw;
       if (y === 44 && fem) continue;
-      for (let x = 0; x < N; x++) if (Math.abs(x - cx) <= rx) put(x, y, 'skin');
+      for (let x = 0; x < N; x++) if (Math.abs(x - cx) <= hw(y)) put(x, y, 'skin');
     }
-    // 耳
-    if (o.hair !== 'long') {
-      const ear = [[24, [16, 17]], [25, [15, 16, 17]], [26, [15, 16, 17]], [27, [15, 16, 17]], [28, [15, 16, 17]], [29, [15, 16, 17]], [30, [15, 16, 17]], [31, [16, 17]], [32, [17]]];
-      ear.forEach(([y, xs]) => xs.forEach(x => { const inner = x === 16 && y >= 26 && y <= 29; put(x, y, inner ? 'shade' : 'skin'); put(M(x), y, inner ? 'deep' : 'shade'); }));
-    }
+    const edgeL = y => { for (let x = 0; x < N; x++) if (at(x, y) === 'skin') return x; return -1; };
+    const edgeR = y => { for (let x = N - 1; x >= 0; x--) if (at(x, y) === 'skin') return x; return -1; };
+    // 耳（その行の顔の端に付ける）
+    const hs = o.hair || 'short';
+    const earRows = [[24, 2], [25, 3], [26, 3], [27, 3], [28, 3], [29, 3], [30, 3], [31, 2], [32, 1]];
+    if (!['long', 'wavy'].includes(hs)) earRows.forEach(([y, w]) => {
+      const l = edgeL(y), r = edgeR(y);
+      for (let k = 1; k <= w; k++) {
+        const inner = k === 2 && y >= 26 && y <= 29;
+        put(l - k, y, inner ? 'shade' : 'skin'); put(r + k, y, inner ? 'deep' : 'shade');
+      }
+    });
     // 陰影（光は左上から）
     for (let y = 7; y <= 44; y++) for (let x = 0; x < N; x++) {
       if (at(x, y) !== 'skin') continue;
@@ -81,48 +88,67 @@
     for (let x = 22; x <= 41; x++) { if (at(x, 44) === 'skin') put(x, 44, 'shade'); if (at(x, 43) === 'skin' && x > 35) put(x, 43, 'shade'); }
     for (let x = 29; x <= 34; x++) if (at(x, 41) === 'skin') put(x, 41, 'hi');
 
-    // 髪
-    const hs = o.hair || 'short';
-    for (let y = 1; y <= 48; y++) for (let x = 0; x < N; x++) {
-      const dx = (x - cx) / 16.3, dy = (y - 17) / 14, inside = dx * dx + dy * dy <= 1;
-      const side = (x <= 18 || x >= 45);
-      let fr;
-      if (hs === 'short') fr = 15 + Math.round(Math.sin(x * .9) * 1.6 + (x > 35 ? 1 : 0));
-      else if (hs === 'crop') fr = 11 + (hash(x, 1, 2) < .3 ? 1 : 0);
-      else if (hs === 'parted') fr = x < 27 ? 12 + Math.round((27 - x) * .3) : 12 + Math.round((x - 27) * .1);
-      else if (hs === 'thin') fr = Math.abs(x - cx) < 4.5 ? 11 : Math.abs(x - cx) < 10 ? 8 : 12;
-      else if (hs === 'bun') fr = 13 + (x < 24 || x > 39 ? 1 : 0);
-      else if (hs === 'long') fr = 13 + (x > 32 ? 1 : 0);
-      else if (hs === 'buzz') fr = 11;
-      else if (hs === 'slick') fr = 10;
-      else if (hs === 'shaggy') fr = 17 + (hash(x, 2, 5) < .4 ? 1 : 0);
-      else if (hs === 'spiky') fr = 13 + (x % 3 === 0 ? -1 : 0);
-      else if (hs === 'bald') fr = -1;
-      else if (hs === 'curly') fr = 13 + Math.round(Math.sin(x * 1.7) * 1.5);
-      else if (hs === 'bob') fr = 16;
-      else if (hs === 'wavy') fr = 13 + (x > 30 ? 2 : 0);
-      else if (hs === 'partedR') fr = x > 36 ? 12 + Math.round((x - 36) * .3) : 12 + Math.round((36 - x) * .1);
-      const sideLim = hs === 'bun' ? 22 : hs === 'bald' ? 23 : 23, sideTop = hs === 'bald' ? 14 : 0;
-      if (inside && (y <= fr || (side && y <= sideLim && y >= sideTop))) {
-        let hi = (y < 10 && x < 30 && hash(x, y, 1) < .4) || (x + Math.floor(y / 3)) % 5 === 0;
-        if (hs === 'buzz') hi = hash(x, y, 3) < .35;
-        if (hs === 'slick') hi = (x + y) % 6 === 0;
-        if (hs === 'curly') hi = (x + y) % 2 === 0 && hash(x, y, 4) < .6;
-        put(x, y, hi ? 'hairHi' : 'hair');
+    // 髪：頭の輪郭に沿って生やす（t＝外側へのボリューム、fr(x)＝前髪の生え際、sideLim＝もみあげの下端）
+    const HS = {
+      short:  { t: 2, side: 3, lim: 23, fr: x => 15 + Math.round(Math.sin(x * .9) * 1.6 + (x > 35 ? 1 : 0)) },
+      crop:   { t: 1, side: 2, lim: 22, fr: x => 11 + (hash(x, 1, 2) < .3 ? 1 : 0) },
+      parted: { t: 2, side: 3, lim: 23, fr: x => x < 27 ? 12 + Math.round((27 - x) * .3) : 12 + Math.round((x - 27) * .1) },
+      partedR:{ t: 2, side: 3, lim: 23, fr: x => x > 36 ? 12 + Math.round((x - 36) * .3) : 12 + Math.round((36 - x) * .1) },
+      thin:   { t: 1, side: 2, lim: 22, fr: x => Math.abs(x - cx) > 8 ? 12 : 9 },
+      bun:    { t: 1, side: 2, lim: 21, fr: x => 13 + (x < 24 || x > 39 ? 1 : 0) },
+      long:   { t: 2, side: 3, lim: 24, fr: x => 13 + (x > 32 ? 1 : 0), hang: 47 },
+      wavy:   { t: 3, side: 3, lim: 24, fr: x => 13 + (x > 30 ? 2 : 0), hang: 47, wave: true },
+      bob:    { t: 3, side: 3, lim: 24, fr: x => 16, hang: 36 },
+      buzz:   { t: 1, side: 2, lim: 22, fr: x => 11 },
+      slick:  { t: 1, side: 2, lim: 22, fr: x => 10 },
+      shaggy: { t: 3, side: 3, lim: 24, fr: x => 17 + (hash(x, 2, 5) < .4 ? 1 : 0) },
+      spiky:  { t: 2, side: 3, lim: 23, fr: x => 13 + (x % 3 === 0 ? -1 : 0) },
+      curly:  { t: 3, side: 3, lim: 23, fr: x => 13 + Math.round(Math.sin(x * 1.7) * 1.5) },
+      bald:   { t: 1, side: 2, lim: 23, top: 14, fr: x => -1 }
+    }[hs] || { t: 2, side: 3, lim: 23, fr: x => 15 };
+    const hairPx = (x, y) => {
+      let hi = (y < 10 && x < 30 && hash(x, y, 1) < .4) || (x + Math.floor(y / 3)) % 5 === 0;
+      if (hs === 'buzz') hi = hash(x, y, 3) < .35;
+      if (hs === 'slick') hi = (x + y) % 6 === 0;
+      if (hs === 'curly') hi = (x + y) % 2 === 0 && hash(x, y, 4) < .6;
+      put(x, y, hi ? 'hairHi' : 'hair');
+    };
+    const T = HS.t, top = 7 - T;
+    // 外側の輪郭：頭の楕円を T だけ膨らませ、もみあげの下端に向かって頭の輪郭へ戻す
+    const ho = y => {
+      if (y < top) return -1;
+      if (y <= 24) return (R0 + T) * Math.sqrt(Math.max(0, 1 - Math.pow((y - 24) / (17.5 + T), 2)));
+      return hw(y) + Math.max(0, T * (HS.lim - y) / Math.max(1, HS.lim - 24));
+    };
+    for (let y = top; y <= HS.lim; y++) for (let x = 0; x < N; x++) {
+      const d = Math.abs(x - cx), o2 = ho(y); if (d > o2) continue;
+      const cap = y <= HS.fr(x);
+      const band = y >= (HS.top || 0) && d >= Math.max(0, hw(y)) - HS.side + (y > 20 ? Math.min(2, y - 20) : 0);
+      if (cap || band) hairPx(x, y);
+    }
+    // 垂れる髪（顔の端から外側へ、すき間なく）
+    if (HS.hang) {
+      const outer = R0 + T;
+      for (let y = HS.lim; y <= HS.hang; y++) {
+        const off = HS.wave ? Math.round(Math.sin(y / 3) * 1.2) : 0;
+        const ow = outer - (y > HS.hang - 3 ? (y - (HS.hang - 3)) : 0);
+        const inner = y <= 44 ? Math.max(0, hw(y) - 1) : (fem ? 4.5 : 5.5);
+        for (let x = 0; x < N; x++) {
+          const dx = x - cx, d = Math.abs(dx + (dx < 0 ? off : -off) * 0);
+          const dd = Math.abs(x + (dx < 0 ? -off : off) - cx);
+          if (dd <= ow && d >= inner) { if (y > 44 && at(x, y) && !String(at(x, y)).startsWith('cloth') ) continue; hairPx(x, y); }
+        }
       }
-      if ((hs === 'bob') && (x <= 19 || x >= 44) && y >= 12 && y <= 36 && Math.abs(x - cx) <= 15) put(x, y, (x + y) % 5 === 0 ? 'hairHi' : 'hair');
-      if (hs === 'wavy' && y >= 13 && y <= 47) { const off = Math.round(Math.sin(y / 3) * 1.2); for (const bx of [13 + off, 14 + off, 15 + off, 16 + off, 17 + off, 18 + off, 45 + off, 46 + off, 47 + off, 48 + off, 49 + off, 50 + off]) put(bx, y, (bx + y) % 4 === 0 ? 'hairHi' : 'hair'); }
-      if (hs === 'long' && ((x >= 13 && x <= 19) || (x >= 44 && x <= 50)) && y >= 13 && y <= 47 && !(y > 41 && (x === 13 || x === 50))) put(x, y, (x + y) % 6 === 0 ? 'hairHi' : 'hair');
     }
     if (hs === 'bun') {
-      for (let y = 0; y <= 10; y++) for (let x = 23; x <= 40; x++) { const d = Math.hypot(x - cx, (y - 4.3) * 1.15); if (d <= 5.6 && !at(x, y)) put(x, y, (d < 3 && x < cx) ? 'hairHi' : 'hair'); }
-      for (let y = 12; y <= 22; y++) { put(16, y, 'hair'); put(47, y, 'hair'); put(17, y, 'hair'); put(46, y, 'hair'); }
-      for (let x = 21; x <= 42; x += 3) put(x, 9, 'hairHi');
+      for (let y = 0; y <= 10; y++) for (let x = 23; x <= 40; x++) { const d = Math.hypot(x - cx, (y - 4.3) * 1.15); if (d <= 5.6 && (!at(x, y) || y < 7)) put(x, y, (d < 3 && x < cx) ? 'hairHi' : 'hair'); }
+      for (let x = 21; x <= 42; x += 3) if (at(x, 9) === 'hair') put(x, 9, 'hairHi');
     }
-    if (hs === 'parted') for (let y = 5; y <= 12; y++) put(27, y, 'hairHi');
-    if (hs === 'partedR') for (let y = 5; y <= 12; y++) put(36, y, 'hairHi');
-    if (hs === 'spiky') for (let x = 20; x <= 43; x += 3) { let top = 0; while (top < N && at(x, top) !== 'hair' && at(x, top) !== 'hairHi') top++; if (top < N) { put(x, top - 1, 'hair'); put(x, top - 2, 'hair'); } }
-    if (!['long', 'bun', 'bald', 'bob', 'wavy'].includes(hs)) for (let y = 20; y <= 23; y++) { put(18, y, 'hair'); put(45, y, 'hair'); }
+    if (hs === 'parted') for (let y = 5; y <= 12; y++) if (at(27, y)) put(27, y, 'hairHi');
+    if (hs === 'partedR') for (let y = 5; y <= 12; y++) if (at(36, y)) put(36, y, 'hairHi');
+    if (hs === 'spiky') for (let x = 20; x <= 43; x += 3) { let tp = 0; while (tp < N && at(x, tp) !== 'hair' && at(x, tp) !== 'hairHi') tp++; if (tp < N) { put(x, tp - 1, 'hair'); put(x, tp - 2, 'hair'); } }
+    // もみあげ（顔の端に沿って）
+    if (!HS.hang && hs !== 'bald') for (let y = HS.lim; y <= HS.lim + 2; y++) { const l = edgeL(y), r = edgeR(y); if (l >= 0) { put(l, y, 'hair'); put(r, y, 'hair'); } }
 
     // しわ
     const wr = o.wrinkles || 0;
@@ -179,7 +205,7 @@
       const fr = 'frame';
       for (let x = 20; x <= 30; x++) { put(x, 22, fr); put(x, 29, fr); put(M(x), 22, fr); put(M(x), 29, fr); }
       for (let y = 22; y <= 29; y++) { put(20, y, fr); put(30, y, fr); put(M(20), y, fr); put(M(30), y, fr); }
-      put(31, 24, fr); put(32, 24, fr); [17, 18, 19].forEach(x => { put(x, 24, fr); put(M(x), 24, fr); });
+      put(31, 24, fr); put(32, 24, fr); for (let x = edgeL(24) - 1; x <= 19; x++) { put(x, 24, fr); put(M(x), 24, fr); }
       put(21, 23, 'glint'); put(M(29), 23, 'glint');
     }
 
@@ -218,12 +244,32 @@
         if (jw && hash(x >> 1, y, st + 7) < dens) put(x, y, 'stub');
       }
     }
+    const hairTop = []; for (let x = 0; x < N; x++) { let tp = 0; while (tp < N && at(x, tp) !== 'hair' && at(x, tp) !== 'hairHi') tp++; hairTop[x] = tp; }
+    const used = {};
     if (o.messy) for (let i = 0; i < o.messy; i++) {
-      const x = 18 + Math.floor(hash(i, 7, o.messy) * 28);
-      let top = 0; while (top < N && at(x, top) !== 'hair' && at(x, top) !== 'hairHi') top++;
-      if (top < N) { put(x, top - 1, 'hair'); if (hash(i, 11, o.messy) < .45) put(x + (hash(i, 5, 1) < .5 ? -1 : 1), top - 2, 'hair'); }
+      // 寝ぐせ：髪の外周から、2画素幅の短い房を外へはねさせる（必ず髪につながる）
+      const x = 20 + Math.floor(hash(i, 7, o.messy) * 24);
+      const tp = hairTop[x];
+      if (tp >= N || tp > 12 || used[x] || used[x - 1] || used[x + 1] || used[x - 2] || used[x + 2]) continue;
+      used[x] = true;
+      const lean = x < cx ? -1 : 1;
+      put(x - 1, tp - 1, 'hair'); put(x, tp - 1, 'hair'); put(x + lean, tp - 1, 'hair');
+      if (hash(i, 11, o.messy) < .4) { put(x, tp - 2, 'hair'); put(x + lean, tp - 2, 'hair'); }
     }
+
     if (o.gaunt) for (let y = 31; y <= 37; y++) { if (at(21, y) && at(21, y) !== 'stub') put(21, y, 'shade'); if (at(22, y) === 'skin' && y > 32 && y < 36) put(22, y, 'shade'); if (at(42, y) && at(42, y) !== 'stub') put(42, y, 'deep'); }
+
+    // すき間の検査：上半身より上で、左右を塗られた画素にはさまれた空白は、透けて見える
+    let holes = 0;
+    for (let y = 0; y < 48; y++) {
+      let l = -1, r = -1; for (let x = 0; x < N; x++) if (g[y][x]) { if (l < 0) l = x; r = x; }
+      for (let x = l + 1; x < r; x++) if (!g[y][x]) {
+        // 縦にも上下がふさがっているもの（本当の穴）だけを埋める
+        let up = false, dn = false; for (let k = y - 1; k >= 0; k--) if (g[k][x]) { up = true; break; } for (let k = y + 1; k < N; k++) if (g[k][x]) { dn = true; break; }
+        if (up && dn) { holes++; const nb = [g[y][x - 1], g[y][x + 1], at(x, y - 1), at(x, y + 1)].find(c => c && /hair/.test(c)); g[y][x] = nb || 'skin'; }
+      }
+    }
+    face.holes = (face.holes || 0) + holes;
 
     // 輪郭線
     const out = [];
@@ -439,5 +485,5 @@
     A.cv = cv; A.sc = sc; draw();
     if (!A.timer) A.timer = setInterval(draw, 60);
   }
-  G.portraits = { scene, sprite, PEOPLE };
+  G.portraits = { scene, sprite, PEOPLE, face };
 })();

@@ -80,14 +80,42 @@
     const [a, b] = sel; G.ui.compare = null; K.render();
     S.compared = S.compared || {};
     const key = [a, b].sort().join('|');
-    const r = C.compare(S, a, b);
-    if (!r) { await G.talk([['', '（二つの記録を並べて読んだ。特に食い違いや、つながりは見つからない。）']]); return; }
-    if (S.compared[key]) { await G.talk([['', '（この二つは、もう照らし合わせた。）']]); return; }
+    const r = await compareView(a, b);
+    if (!r) { K.render(); return; }
     S.compared[key] = true;
     await G.talk(r.lines);
     if (r.memo) K.addDoc({ id: 'memo_' + key, title: '捜査メモ：' + r.memo.title, kind: 'memo', body: G.P(r.memo.text) });
     if (r.then) r.then(S);
     K.render();
+  }
+  /* 二枚の記録を並べ、それぞれから一か所ずつ選んで照らし合わせる */
+  function compareView(a, b) {
+    const da = K.doc(a), db = K.doc(b), ov = G.$('#overlay');
+    const body = d => typeof d.body === 'function' ? d.body(S) : d.body;
+    const key = [a, b].sort().join('|');
+    ov.innerHTML = '<div class="cmpv"><div class="cmpp">' + [da, db].map((d, i) => '<div class="paper" data-i="' + i + '"><div class="paper-h">' + d.title + '</div><div class="paper-b">' + body(d) + '</div></div>').join('') + '</div>'
+      + '<div class="cmpbar"><div class="cmpmsg" id="cmpmsg">それぞれの記録から、照らし合わせたい記載を一か所ずつ選ぶ。</div><div class="paper-f"><button class="pbtn green" id="cmpgo" disabled>この二か所を照らし合わせる</button><button class="pbtn" id="cmpx">閉じる</button></div></div></div>';
+    const picks = [null, null];
+    ov.querySelectorAll('.cmpp .paper').forEach(pp => {
+      const i = +pp.dataset.i;
+      pp.querySelectorAll('.paper-b p, .paper-b td, .paper-b li').forEach(u => {
+        if (u.querySelector('p, td, li')) return;
+        u.classList.add('u');
+        u.onclick = () => { pp.querySelectorAll('.u.pick').forEach(x => x.classList.remove('pick')); u.classList.add('pick'); picks[i] = u.textContent; G.audio.sfx('click'); G.$('#cmpgo').disabled = !(picks[0] && picks[1]); };
+      });
+    });
+    ov.onclick = null; ov.hidden = false; ov.scrollTop = 0; G.audio.sfx('paper');
+    return new Promise(done => {
+      G.$('#cmpx').onclick = () => { G.closePaper(); done(null); };
+      G.$('#cmpgo').onclick = () => {
+        const r = C.compare(S, a, b), msg = G.$('#cmpmsg');
+        const pk = r && (r.pick || (C.pick || {})[key]);
+        const hit = r && (!pk || (pk[0].test(picks[0]) && pk[1].test(picks[1])) || (pk[0].test(picks[1]) && pk[1].test(picks[0])));
+        if (hit && S.compared[key]) { msg.textContent = '（この二つは、もう照らし合わせた。捜査メモに残っている。）'; return; }
+        if (!hit) { G.audio.sfx('paper'); ov.querySelectorAll('.u.pick').forEach(x => x.classList.remove('pick')); picks[0] = picks[1] = null; G.$('#cmpgo').disabled = true; msg.textContent = 'それぞれの記録から、照らし合わせたい記載を一か所ずつ選ぶ。'; return; }
+        G.audio.sfx('stamp'); G.closePaper(); done(r);
+      };
+    });
   }
   function renderActs() {
     const wrap = G.$('#acts-wrap'); if (!wrap) return;
