@@ -168,3 +168,10 @@ button{font:inherit;color:inherit}
 .gauge .gb span{flex:1;height:8px;background:#2a2824;border:1px solid #000}
 .gauge .gb span.on{background:var(--amber)}
 .gauge .gw{font-size:13px}
+#curtain.instant{transition:none}
+
+.srow{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:4px 0;border-bottom:1px dotted #3a372f;font-size:13px}
+.srow.off span{color:#6a6458;text-decoration:line-through}
+.srow .bbtn{min-width:3.5em}
+.srow.off .bbtn{color:#b23a2e;border-color:#b23a2e}
+.lawuse{display:block;margin-top:6px;font-size:13px}

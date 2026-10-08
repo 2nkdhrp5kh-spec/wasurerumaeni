@@ -64,7 +64,12 @@
       for (let x = 0; x < N; x++) if (Math.abs(x - cx) <= rx) put(x, y, 'skin');
     }
     // 耳
-    if (o.hair !== 'long') for (let y = 24; y <= 32; y++) { const e = y > 24 && y < 32; put(16, y, 'shade'); put(47, y, 'deep'); if (e) { put(15, y, 'shade'); put(48, y, 'deep'); } if (y > 26 && y < 30) { put(16, y, 'deep'); put(47, y, 'line'); } }
+    if (o.hair !== 'long') for (let y = 24; y <= 32; y++) {
+      const top = y === 24, bot = y === 32;
+      put(17, y, 'skin'); put(46, y, 'shade');
+      if (!top && !bot) { put(16, y, y > 26 && y < 30 ? 'shade' : 'skin'); put(47, y, y > 26 && y < 30 ? 'deep' : 'shade'); }
+      if (y > 25 && y < 31) { put(15, y, 'skin'); put(48, y, 'shade'); }
+    }
     // 陰影（光は左上から）
     for (let y = 7; y <= 44; y++) for (let x = 0; x < N; x++) {
       if (at(x, y) !== 'skin') continue;
@@ -99,7 +104,7 @@
       for (let x = 21; x <= 42; x += 3) put(x, 9, 'hairHi');
     }
     if (hs === 'parted') for (let y = 5; y <= 12; y++) put(27, y, 'hairHi');
-    if (hs !== 'long' && hs !== 'bun') for (let y = 23; y <= 28; y++) { put(18, y, 'hair'); put(45, y, 'hair'); }
+    if (hs !== 'long' && hs !== 'bun') for (let y = 21; y <= 25; y++) { put(18, y, 'hair'); put(45, y, 'hair'); }
 
     // しわ
     const wr = o.wrinkles || 0;
@@ -146,6 +151,11 @@
       }
     }
     eye(false); eye(true);
+    if (o.blink) for (const mr of [false, true]) for (let i = 0; i < 7; i++) {
+      const x = mr ? M(22 + i) : 22 + i, low = (eyes >= 2) ? 26 : 25;
+      for (let y = 24; y <= low; y++) put(x, y, y === 24 && eyes > 0 ? 'shade' : 'skin');
+      put(x, low + 1, 'line');
+    }
     if (o.glasses) {
       const fr = 'frame';
       for (let x = 20; x <= 30; x++) { put(x, 22, fr); put(x, 29, fr); put(M(x), 22, fr); put(M(x), 29, fr); }
@@ -175,6 +185,7 @@
       for (let x = 29; x <= 34; x++) put(x, 39, 'lipLo');
     }
     for (let x = 30; x <= 33; x++) if (at(x, 40) === 'skin') put(x, 40, 'shade');
+    if (o.mouthOpen) { for (let x = 28; x <= 35; x++) put(x, 38, 'lip'); for (let x = 29; x <= 34; x++) put(x, 39, 'mouthIn'); for (let x = 30; x <= 33; x++) { put(x, 40, 'lipLo'); put(x, 39, x === 30 || x === 33 ? 'mouthIn' : 'teeth'); } }
     if (o.mustache) for (let x = 26; x <= 37; x++) { put(x, 36, 'hair'); if (x > 26 && x < 37) put(x, 37, (x % 3) ? 'hair' : 'hairHi'); }
 
     // ひげ・乱れ・頬
@@ -206,7 +217,7 @@
   }
 
   // ---- 人物の設定 ----
-  const BASE = { glint: '#f2ede2', line: '#1c1511', white: '#dcd4c4', iris: '#3b2a20', pupil: '#140f0c', lip: '#9a6352', lipLo: '#b27a66', bag: '#a98069', stub: '#8f7b69', frame: '#2a2622', shirt: '#d8d4c8', tie: '#6b2a26', brow: '#5a5550' };
+  const BASE = { mouthIn: '#3a1f1a', teeth: '#cfc6b6', glint: '#f2ede2', line: '#1c1511', white: '#dcd4c4', iris: '#3b2a20', pupil: '#140f0c', lip: '#9a6352', lipLo: '#b27a66', bag: '#a98069', stub: '#8f7b69', frame: '#2a2622', shirt: '#d8d4c8', tie: '#6b2a26', brow: '#5a5550' };
   const PEOPLE = {
     kuzumi: st => ({ o: { hair: 'short', eyes: [0, 1, 2, 3][st], stubble: [0, 0, 1, 2][st], messy: [0, 0, 5, 10][st], brows: st === 3 ? 'sad' : 'n', mouth: st === 3 ? 'frown' : 'flat', gaunt: st === 3, cloth: 'sweat' },
                     p: Object.assign({}, KUZUMI_SKIN[st], CLOTH.sweat, { hair: '#2a221d', hairHi: '#3d332b' }) }),
@@ -221,10 +232,11 @@
     kenji:    () => ({ o: { hair: 'parted', brows: 'n', cloth: 'suitBrown', tie: true, mouth: 'tight', glasses: true, wrinkles: 1 }, p: Object.assign({}, SKIN.a, CLOTH.suitBrown, { hair: '#1c1714', hairHi: '#332a24', tie: '#2a3a2a' }) })
   };
   const cache = {};
-  function sprite(id, stage) {
-    const key = id + ':' + (stage || 0);
+  function sprite(id, stage, v) {
+    v = v || {};
+    const key = id + ':' + (stage || 0) + ':' + (v.blink ? 1 : 0) + (v.mouth ? 1 : 0);
     if (cache[key]) return cache[key];
-    const def = PEOPLE[id](stage || 0), grid = face(def.o), pal = Object.assign({}, BASE, def.p);
+    const def = PEOPLE[id](stage || 0), grid = face(Object.assign({}, def.o, { blink: v.blink, mouthOpen: v.mouth })), pal = Object.assign({}, BASE, def.p);
     const c = document.createElement('canvas'); c.width = N; c.height = N; const x = c.getContext('2d');
     for (let yy = 0; yy < N; yy++) for (let xx = 0; xx < N; xx++) { const k = grid[yy][xx]; if (!k) continue; x.fillStyle = pal[k] || '#f0f'; x.fillRect(xx, yy, 1, 1); }
     cache[key] = c; return c;
@@ -308,17 +320,81 @@
     phone: x => { R(x, '#1d1c19', 0, 0, W, H); R(x, '#111', 100, 40, 40, 20); R(x, '#222', 104, 34, 32, 6); }
   };
 
-  function scene(cv, sc) {
+  // ---- 描き込みの追加 ----
+  const more = (k, f) => { const o = BG[k]; BG[k] = x => { o(x); f(x); }; };
+  more('office', x => {
+    R(x, '#1d1c19', 104, 10, 28, 36); R(x, '#cdbf9a', 106, 12, 24, 32); R(x, '#a3342b', 106, 12, 24, 5); R(x, '#5a5040', 110, 20, 16, 12); R(x, '#5a5040', 109, 35, 18, 1); R(x, '#5a5040', 109, 38, 14, 1);
+    R(x, '#f1ece0', 64, 6, 12, 12); R(x, '#222', 69, 8, 1, 5); R(x, '#222', 69, 12, 4, 1);
+    R(x, '#3a3428', 232, 14, 3, 62); R(x, '#4a4a52', 226, 18, 12, 24); R(x, '#3a3a44', 228, 20, 8, 20);
+    R(x, '#e8e4d8', 120, 68, 7, 8); R(x, '#8a5a3a', 121, 69, 5, 2); R(x, '#e8e4d8', 127, 70, 2, 3);
+    for (let i = 0; i < 5; i++) R(x, ['#3d5a6a', '#6a3a2a', '#5a5a3a', '#3d5a6a', '#4a3a4a'][i], 56 + i * 5, 62, 4, 14);
+    R(x, '#2a2420', 140, 86, 30, 19); R(x, '#3a3028', 142, 84, 26, 4);
+    R(x, '#3e6a3a', 98, 64, 10, 8); R(x, '#5a3a24', 100, 72, 6, 4); R(x, '#4f7a46', 101, 60, 4, 5);
+  });
+  more('interro', x => {
+    R(x, '#1b1a17', 70, 8, 30, 66); R(x, '#2b2924', 72, 10, 26, 62); R(x, '#141311', 78, 16, 14, 10); R(x, '#888', 94, 40, 3, 2);
+    tex(x, 0, 60, 30, 14, '#2f2c26', .3, 21); R(x, '#36332c', 0, 72, W, 1);
+    R(x, '#111', 4, 70, 26, 35); R(x, '#191816', 6, 66, 22, 8);
+    R(x, '#c9bfa6', 150, 78, 8, 6); R(x, '#5a4f3f', 152, 80, 4, 1);
+  });
+  more('shop', x => {
+    R(x, '#222', 60, 0, 1, 10); R(x, '#d8c37a', 55, 10, 11, 3); R(x, '#222', 180, 0, 1, 8); R(x, '#d8c37a', 175, 8, 11, 3);
+    for (let i = 0; i < 6; i++) { R(x, '#e8e0c8', 8 + i * 40, 75, 10, 4); R(x, '#a3342b', 10 + i * 40, 76, 6, 1); }
+    for (let k = 0; k < 3; k++) books(x, 10 + k * 18, 92 - k * 2, 14, 10 + k * 2, 90 + k);
+    R(x, '#2a2a2a', 150, 64, 14, 8); R(x, '#4a4a4a', 151, 62, 12, 3); R(x, '#8a8a7a', 153, 65, 8, 2);
+  });
+  more('street', x => {
+    R(x, '#3a3a3a', 120, 4, 2, 60); R(x, '#2a2a2a', 0, 12, W, 1); R(x, '#2a2a2a', 0, 15, W, 1);
+    R(x, '#2a3c4a', 196, 66, 20, 26); R(x, '#a8d0e0', 198, 68, 16, 12); R(x, '#d8e8f0', 199, 70, 14, 2); for (let i = 0; i < 4; i++) R(x, ['#c33', '#3a6', '#36c', '#cc3'][i], 199 + i * 4, 82, 3, 4);
+    x.fillStyle = 'rgba(168,208,224,.06)'; x.fillRect(176, 60, 60, 40);
+    R(x, '#26282c', 70, 96, 18, 3); R(x, '#303236', 72, 97, 14, 1);
+  });
+  more('home', x => {
+    R(x, '#f0ecdc', 190, 28, 10, 12); for (let i = 0; i < 4; i++) R(x, ['#e06a5a', '#5aa0e0', '#e0c05a', '#6ac06a'][i], 191 + (i % 2) * 4, 30 + Math.floor(i / 2) * 5, 3, 3);
+    R(x, '#222', 60, 30, 40, 26); R(x, '#2c3e4a', 62, 32, 36, 22); x.fillStyle = 'rgba(120,180,220,.08)'; x.fillRect(56, 56, 52, 20);
+    R(x, '#ddd5c5', 150, 60, 14, 10); R(x, '#888', 153, 58, 8, 2);
+    R(x, '#7a6a5a', 0, 40, 18, 28); R(x, '#5a4a3a', 2, 42, 14, 24);
+  });
+  more('pros', x => {
+    R(x, '#ddd6c2', 70, 14, 30, 22); R(x, '#a3342b', 82, 18, 6, 6); for (let j = 27; j < 34; j += 2) R(x, '#666', 74, j, 22, 1);
+    R(x, '#555', 200, 60, 2, 16); R(x, '#d8c37a', 194, 56, 14, 4);
+    R(x, '#4a463c', 4, 52, 40, 24); for (let j = 54; j < 74; j += 6) { R(x, '#3a362e', 6, j, 36, 5); for (let i = 8; i < 40; i += 4) R(x, '#d9cfb4', i, j + 1, 3, 3); }
+  });
+  more('court', x => {
+    for (let j = 0; j < 3; j++) R(x, '#3a2e22', 0, 92 + j * 5, 90, 3);
+    for (let j = 0; j < 3; j++) R(x, '#3a2e22', 150, 92 + j * 5, 90, 3);
+    R(x, '#222', 60, 40, 1, 6); R(x, '#222', 120, 40, 1, 6); R(x, '#222', 180, 40, 1, 6);
+    R(x, '#4f3d2a', 70, 66, 100, 10); R(x, '#d9cfb4', 80, 63, 20, 3); R(x, '#d9cfb4', 140, 63, 16, 3);
+  });
+  const bgCache = {};
+  function bgCanvas(k) {
+    if (bgCache[k]) return bgCache[k];
+    const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.imageSmoothingEnabled = false;
+    (BG[k] || BG.dark)(x); bgCache[k] = c; return c;
+  }
+  const A = { cv: null, sc: null, t0: performance.now(), blinkUntil: 0, nextBlink: 0, mouth: false, lastMouth: 0, timer: null };
+  function draw() {
+    const cv = A.cv, sc = A.sc; if (!cv || !sc || !cv.isConnected) return;
     const x = cv.getContext('2d'); x.imageSmoothingEnabled = false;
     x.setTransform(cv.width / W, 0, 0, cv.height / H, 0, 0);
-    (BG[sc.bg] || BG.dark)(x);
+    x.drawImage(bgCanvas(sc.bg), 0, 0);
     if (sc.who && PEOPLE[sc.who]) {
-      const s = sprite(sc.who, sc.stage);
+      const now = performance.now();
+      if (now > A.nextBlink) { A.blinkUntil = now + 130; A.nextBlink = now + 2400 + Math.random() * 3200; }
+      const speaking = G.anim && G.anim.speaking === sc.who;
+      if (speaking && now - A.lastMouth > 110) { A.mouth = !A.mouth; A.lastMouth = now; } if (!speaking) A.mouth = false;
+      const breath = Math.sin((now - A.t0) / 1700 * Math.PI * 2) > .35 ? 1 : 0;
+      const s = sprite(sc.who, sc.stage, { blink: now < A.blinkUntil, mouth: A.mouth });
       const px = sc.x === 'l' ? 40 : sc.x === 'r' ? 136 : 88;
-      x.drawImage(s, px, H - N);
+      x.drawImage(s, px, H - N + breath);
     }
     if (sc.dim) { x.fillStyle = 'rgba(0,0,0,' + sc.dim + ')'; x.fillRect(0, 0, W, H); }
     x.setTransform(1, 0, 0, 1, 0, 0);
+  }
+  function scene(cv, sc) {
+    if (!A.sc || A.sc.who !== sc.who) { A.nextBlink = performance.now() + 1500 + Math.random() * 2000; A.blinkUntil = 0; }
+    A.cv = cv; A.sc = sc; draw();
+    if (!A.timer) A.timer = setInterval(draw, 60);
   }
   G.portraits = { scene, sprite, PEOPLE };
 })();

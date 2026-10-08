@@ -23,14 +23,18 @@ G.saveMeta = () => G.save(META_KEY, G.meta);
 G.curtain = function (pages, opt) {
   opt = opt || {};
   const cur = $('#curtain'), box = $('#cbox'), tap = $('#ctap');
+  const token = G._ctok = (G._ctok || 0) + 1;
   return new Promise(resolve => {
-    cur.classList.add('on');
+    // 暗転は一瞬で。直前の部屋や人物が透けて見えないようにする
+    cur.classList.add('instant'); cur.classList.add('on'); void cur.offsetWidth; cur.classList.remove('instant');
     let i = 0, ready = false;
     const show = () => {
       if (i >= pages.length) {
         cur.onclick = null; tap.classList.remove('show');
         if (opt.keep) { resolve(); return; }
-        box.innerHTML = ''; cur.classList.remove('on'); setTimeout(resolve, 500); return;
+        box.innerHTML = ''; resolve();
+        // 呼び出し側が次の画面を描いてから、明ける
+        setTimeout(() => { if (G._ctok === token) cur.classList.remove('on'); }, 80); return;
       }
       const pg = pages[i++];
       const html = typeof pg === 'string' ? pg : pg.html;
@@ -56,24 +60,25 @@ G.CHAR = {
   oka:      { name: '岡', portrait: 'oka', voice: { f: 135, w: 'triangle', rate: 1.05 } },
   noguchi:  { name: '野口', portrait: 'noguchi', voice: { f: 150, w: 'triangle', rate: 1.15 } },
   kuzumi:   { name: '久住', portrait: 'kuzumi', voice: { f: 125, w: 'triangle', rate: .95 } },
-  aoyagi:   { name: '青柳', portrait: 'aoyagi', voice: { f: 230, w: 'triangle', rate: .85 } },
-  murai:    { name: '村井', portrait: 'murai', voice: { f: 250, w: 'triangle', rate: 1.1 } },
+  aoyagi:   { name: '青柳', portrait: 'aoyagi', voice: { f: 340, w: 'triangle', rate: .85 } },
+  murai:    { name: '村井', portrait: 'murai', voice: { f: 370, w: 'triangle', rate: 1.1 } },
   miyashita:{ name: '宮下', portrait: 'miyashita', voice: { f: 100, w: 'square', rate: .9 } },
   sakai:    { name: '坂井', portrait: 'sakai', voice: { f: 115, w: 'square', rate: 1.05 } },
   regular:  { name: '常連客', voice: { f: 110, w: 'sawtooth', rate: .9 } },
-  mother:   { name: '久住和子', voice: { f: 220, w: 'triangle', rate: 1 } },
+  mother:   { name: '久住和子', voice: { f: 320, w: 'triangle', rate: 1 } },
   kenji:    { name: '担当検事', portrait: 'kenji', voice: { f: 115, w: 'triangle', rate: 1 } },
-  wife:     { name: '妻', voice: { f: 240, w: 'triangle', rate: 1 } },
-  daughter: { name: '娘', voice: { f: 320, w: 'triangle', rate: 1.2 } },
+  wife:     { name: '妻', voice: { f: 350, w: 'triangle', rate: 1 } },
+  daughter: { name: '娘', voice: { f: 480, w: 'triangle', rate: 1.2 } },
   kanri:    { name: '管理人', voice: { f: 130, w: 'square', rate: 1.1 } },
-  clerk:    { name: '店員', voice: { f: 170, w: 'triangle', rate: 1.1 } },
-  morimoto: { name: '森本', voice: { f: 210, w: 'triangle', rate: 1 } },
+  clerk:    { name: '店員', voice: { f: 300, w: 'triangle', rate: 1.1 } },
+  morimoto: { name: '森本', voice: { f: 330, w: 'triangle', rate: 1 } },
   judge:    { name: '裁判長', voice: { f: 105, w: 'sawtooth', rate: .9 } },
   bengo:    { name: '弁護人', voice: { f: 140, w: 'triangle', rate: 1 } }
 };
 
 /* ---------- 画面の骨組み ---------- */
 G.ui = { talking: false, tab: 'staff' };
+G.anim = { speaking: null };
 G.layout = function (o) {
   const app = $('#app');
   app.innerHTML =
@@ -98,12 +103,12 @@ G.talk = function (lines, opt) {
     const aw = $('#acts-wrap');
     G.ui.talking = true; if (aw) aw.classList.add('wait');
     let i = 0, typing = null, full = '';
-    const finishType = () => { if (typing) { clearInterval(typing); typing = null; box.querySelector('.say').textContent = full; G.audio.voiceStop(); } };
+    const finishType = () => { if (typing) { clearInterval(typing); typing = null; box.querySelector('.say').textContent = full; G.anim.speaking = null; } };
     const next = () => {
       if (typing) { finishType(); return; }
       if (i >= lines.length) {
         box.onclick = null; const m = box.querySelector('.more'); if (m) m.remove();
-        G.ui.talking = false; if (aw) aw.classList.remove('wait'); resolve(); return;
+        G.ui.talking = false; G.anim.speaking = null; if (aw) aw.classList.remove('wait'); resolve(); return;
       }
       const L = lines[i++];
       if (typeof L === 'function') { L(); next(); return; }
@@ -113,14 +118,15 @@ G.talk = function (lines, opt) {
       const c = G.CHAR[who];
       const name = c ? c.name : (who || '');
       const nar = !who;
+      G.anim.speaking = (c && c.portrait) ? c.portrait : null;
       box.innerHTML = '<div class="who">' + name + '</div><div class="say' + (nar ? ' nar' : '') + '"></div><div class="more">▼</div>';
       const say = box.querySelector('.say');
       full = text; let k = 0;
       const step = nar ? 18 : Math.round(34 / ((c && c.voice && c.voice.rate) || 1));
       typing = setInterval(() => {
         k++; say.textContent = full.slice(0, k);
-        if (!nar && c && c.voice && k % 2 === 1) G.audio.voice(c.voice, full[k - 1]);
-        if (k >= full.length) { clearInterval(typing); typing = null; }
+        if (!nar && c && c.voice && who !== 'you' && k % 2 === 1) G.audio.voice(c.voice, full[k - 1]);
+        if (k >= full.length) { clearInterval(typing); typing = null; G.anim.speaking = null; }
       }, step);
     };
     box.onclick = () => { G.audio.unlock(); next(); };

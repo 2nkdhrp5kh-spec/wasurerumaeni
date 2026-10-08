@@ -56,7 +56,7 @@
         + '<div class="desk"><div class="ph"><span>捜査記録　' + S.docs.length + '綴</span>' + (C.compare ? '<button class="bbtn" id="cmp">' + (G.ui.compare ? '照合をやめる' : '二つの記録を照らし合わせる') + '</button>' : '') + '</div>'
         + (G.ui.compare ? '<div class="cmphint">照らし合わせる記録を二つ選ぶ（' + G.ui.compare.length + '/2）</div>' : '') + '<div class="docs" id="docs"></div></div>' });
     const cb = G.$('#cmp'); if (cb) cb.onclick = () => { if (G.ui.talking || G.ui.busy) return; G.ui.compare = G.ui.compare ? null : []; G.audio.sfx('click'); K.render(); };
-    renderDocs(); renderActs();
+    renderDocs(); acts();
   };
   function renderDocs() {
     const el = G.$('#docs'); if (!el) return; el.innerHTML = '';
@@ -115,7 +115,8 @@
     G.$('#endday').onclick = () => K.endDay();
     if (G.$('#skip')) G.$('#skip').onclick = () => K.skip();
   }
-  K.refresh = () => { renderDocs(); renderActs(); const p = document.querySelectorAll('.panel'); if (p[0]) p[0].innerHTML = '<div class="ph"><span>捜査員</span></div>' + staffPanel(); if (p[1]) { p[1].innerHTML = '<div class="ph"><span>' + (C.elemTitle || '立証すべき事実') + '</span><span>■=証拠 <span style="color:#b23a2e">■</span>=自白</span></div>' + elemPanel(); } };
+  const acts = () => { if (C.actsOverride && C.actsOverride(S, G.$('#acts-wrap'))) return; renderActs(); };
+  K.refresh = () => { renderDocs(); acts(); const p = document.querySelectorAll('.panel'); if (p[0]) p[0].innerHTML = '<div class="ph"><span>捜査員</span></div>' + staffPanel(); if (p[1]) { p[1].innerHTML = '<div class="ph"><span>' + (C.elemTitle || '立証すべき事実') + '</span><span>■=証拠 <span style="color:#b23a2e">■</span>=自白</span></div>' + elemPanel(); } };
 
   K.doAction = async function (a) {
     if (G.ui.talking || G.ui.busy) return;

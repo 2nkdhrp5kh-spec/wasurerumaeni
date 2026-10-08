@@ -9,12 +9,14 @@
   // 証拠ごとの重み（NPCの裁判所の見方）。admit=false のものは数えない
   function weigh(S, ids, trial) {
     const c = S.c, has = id => ids.includes(id), notes = [];
-    let w = 0;
-    const add = (v, why) => { w += v; if (why) notes.push(why); };
+    let w = 0, pos = 0, neg = 0;
+    const pros = [], cons = [];
+    const add = (v, why) => { w += v; if (v > 0) { pos += v; if (why) pros.push(why); } else if (v < 0) { neg -= v; if (why) cons.push(why); } if (why) notes.push(why); };
     if (has('confession') && c.confession) {
       const cf = c.confession;
-      if (cf.form === 'qa' && c.leaks.length) add(1.5, '自白調書には、取調官の問いの中に現場の事実が含まれており、信用性は限定的である');
-      else add(3.5, '捜査段階の自白は、具体的で、客観的状況とよく符合する');
+      const rt = trial && c.retract ? .7 : 1;
+      if (cf.form === 'qa' && c.leaks.length) add(1.5 * rt, '自白調書には、取調官の問いの中に現場の事実が含まれており、信用性は限定的である');
+      else add(3.5 * rt, c.retract && trial ? '捜査段階の自白は具体的である。被告人は公判でこれを撤回しているが、撤回の理由は直ちには採用できない' : '捜査段階の自白は、具体的で、客観的状況とよく符合する');
       const d = cf.det; if (!d.tape || !d.safe || !d.light) add(-1.5, '自白には、現場の客観的状況と食い違う部分がある');
     }
     if (has('routeCam') && c.qRoute === 'main') add(-.7, '自白で述べられた帰り道の防犯カメラに、被告人は映っていない');
@@ -42,10 +44,17 @@
     if (has('miyashita')) add(-.5, '同種前歴を有する別人の存在が示されている');
     if (has('miyaAlibi')) add(-.3, '');
     if (has('video') && c.video && c.video.exists) add(c.truth === 'I' ? -8 : .3, c.truth === 'I' ? '犯行時刻、被告人の自宅の固定回線で動画が再生され続けていた' : '');
-    return { w, notes: notes.filter(Boolean) };
+    return { w, pos, neg, pros, cons, notes: notes.filter(Boolean) };
   }
 
-  E.estimate = S => weigh(S, S.docs.filter(d => d.evid).map(d => d.id), false).w;
+  // 有罪の判断：犯人性を示す事情が十分で、合理的な疑いを生む事情が小さいこと
+  function convict(S, r, admit) {
+    const c = S.c;
+    if (c.safeFound && admit.includes('safe') && admit.includes('confession') && r.neg <= 2.5) return true;
+    return r.pos - r.neg >= 4 && r.neg <= 1.2;
+  }
+  E.estimate = S => { const ids = S.docs.filter(d => d.evid).map(d => d.id); const r = weigh(S, ids, false); return { w: r.pos - r.neg, neg: r.neg, ok: convict(S, r, ids) }; };
+  const list = a => a.map(x => '<p class="qa">・' + x + '。</p>').join('');
   E.run = async function (S) {
     const c = S.c;
     let verdict = null, errors = [], excluded = [];
@@ -85,14 +94,19 @@
             if (c.stance === 'honken') drop('confession', '賭博による逮捕・勾留は、実質的には本件の取調べのための身柄拘束であり、令状主義を潜脱する違法なものである（いわゆる本件基準説の立場）。この間に得た自白の証拠能力を否定する');
           }
         }
-        const { w, notes } = weigh(S, admit, true);
-        const guilty = w >= 4 && (admit.includes('confession') ? admit.some(x => x !== 'confession' && ['safe', 'lineup', 'printK', 'loan', 'bank', 'camera', 'fiber', 'kandori'].includes(x)) : true);
+        const r = weigh(S, admit, true);
+        const corro = admit.includes('confession') ? admit.some(x => x !== 'confession' && ['safe', 'lineup', 'printK', 'loan', 'bank', 'camera', 'fiber', 'kandori'].includes(x)) : true;
+        const guilty = convict(S, r, admit) && corro;
         verdict = guilty ? '有罪' : '無罪';
         await G.curtain([{ html: '<div class="big">公判</div><div class="small">北見坂地方裁判所</div>', sfx: 'crowd' }]);
         const body = '<p><b>主文</b>　' + (guilty ? '被告人を拘禁刑6年に処する。' : '被告人は無罪。') + '</p><h4>理由の要旨</h4>'
           + (excluded.length ? '<p>（証拠の採否）</p>' + excluded.map(x => '<p class="qa">・' + x + '。</p>').join('') : '')
-          + '<p>（事実認定）</p>' + (notes.length ? notes.map(x => '<p class="qa">・' + x + '。</p>').join('') : '<p class="qa">・被告人と犯行を結びつける証拠は乏しい。</p>')
-          + '<p>' + (guilty ? '以上を総合すれば、被告人が本件の犯人であることは、合理的な疑いを差し挟む余地なく認められる。' : '以上によれば、被告人が本件の犯人であることについては、合理的な疑いが残る。刑訴法336条により、被告人に対し無罪の言渡しをする。') + '</p>'
+          + (guilty
+            ? '<p>（被告人が犯人であることを示す事情）</p>' + list(r.pros) + (r.cons.length ? '<p>（弁護人の指摘する疑問について）</p>' + list(r.cons) + '<p class="qa">　これらは、いずれも上記の認定を左右するものではない。</p>' : '')
+              + '<p>以上を総合すれば、被告人が本件の犯人であることは、合理的な疑いを差し挟む余地なく認められる。</p>'
+            : '<p>（検察官の主張する事情）</p>' + (r.pros.length ? list(r.pros) : '<p class="qa">・被告人と犯行を結びつける証拠は乏しい。</p>')
+              + (r.cons.length ? '<p>（しかし、次の事情がある）</p>' + list(r.cons) : '')
+              + '<p>' + (r.pos - r.neg >= 4 ? '検察官の主張する事情は、被告人が犯人であることを疑わせるものではあるが、上記の事情に照らせば、' : '以上によれば、') + '被告人が本件の犯人であることについては、合理的な疑いが残る。刑訴法336条により、被告人に対し無罪の言渡しをする。</p>')
           + (c.withheld && c.withheld.length ? G.note('送致されなかった記録（' + c.withheld.map(id => (G.keiji.doc(id) || {}).title).join('、') + '）は、この法廷には現れていない。') : '');
         G.audio.cue('verdict');
         await G.openPaper({ title: '判決', sub: '北見坂地方裁判所 刑事部（裁判官3人の合議）', body, closeLabel: '閉じる' });

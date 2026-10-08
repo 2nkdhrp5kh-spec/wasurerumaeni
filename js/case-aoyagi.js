@@ -9,6 +9,19 @@
   const K = G.keiji, P = G.P, kv = G.kv, note = G.note;
   const rnd = G.rnd;
   const sc = (who, bg, stage) => ({ bg: bg || 'office', who, stage });
+  // 条文帳から使う手段
+  function setLawTools(S) {
+    const c = S.c;
+    const wrap = fn => async () => { if (G.ui.talking || G.ui.busy) return; G.ui.busy = true; try { await fn(); } finally { G.ui.busy = false; } K.render(); };
+    G.lawTools = {
+      k197: { label: '通信履歴を消さないよう求める', avail: () => !S._ended && c.claim && c.preserveDay == null,
+        run: wrap(async () => { c.preserveDay = S.day; await G.talk([['', '（刑訴法197条3項。動画配信事業者と携帯電話会社に、通信履歴を消去しないよう書面で求めた。最大60日。）', { sfx: 'type' }], ['oka', '……そんな手がありましたか。動画の会社の記録、普通は30日で消えるそうですから。', { scene: sc('oka') }]]); }) },
+      k220: { label: '逮捕のとき、その現場を捜索する', avail: () => !S._ended && S.fin.kandori && c.arrest == null && !c.use220,
+        run: wrap(async () => { c.use220 = true; await G.talk([['', '（逮捕状を執行するとき、久住の部屋で逮捕すれば、その現場は令状なしで捜索できる（刑訴法220条1項2号・3項）。）'], ['shirai', '朝、部屋で押さえましょう。それなら捜索も一緒にできる。', { scene: sc('shirai') }]]); }) },
+      k226: { label: '宮下の証人尋問を検事に頼む', avail: () => !S._ended && S.fin.miyaTalk && !c.asked226,
+        run: wrap(async () => { c.asked226 = true; await G.talk([['kenji', '226条ですか。……宮下が、事件について「欠くことのできない知識」を持っていると、明らかに言えますか。', { scene: sc('kenji', 'pros') }], ['kenji', '前歴があって、アリバイがない。それは「知識」ではなく「疑い」です。疑いのある人間を証人として呼べば、黙秘権の問題にもなる。'], ['kenji', '請求はできません。'], ['', '（宮下は、被疑者として扱うだけの理由もなく、証人として呼ぶ理由もない。）']]); }) }
+    };
+  }
   const ks = S => { // 久住の顔の段階
     const c = S.c; if (c.arrest == null) return 0;
     const d = S.day - c.arrest; return d < 4 ? 0 : d < 9 ? 1 : d < 16 ? 2 : 3;
@@ -43,10 +56,11 @@
     endHint: S => inCustody(S) ? '満期までに記録を固める' : (S.tasks.length ? '部下の報告は日をまたいで届く' : ''),
     gauge: S => {
       if (!G.ending || !G.ending.estimate) return '';
-      const w = G.ending.estimate(S), c = S.c;
-      const lv = w < 1 ? 1 : w < 3 ? 2 : w < 4 ? 3 : w < 6 ? 4 : 5;
+      const e = G.ending.estimate(S), w = e.w, c = S.c;
+      let lv = w < 1 ? 1 : w < 3 ? 2 : w < 4 ? 3 : w < 6 ? 4 : 5;
+      if (!e.ok && lv > 3) lv = 3;
       const who = inCustody(S) && custodyDay(S) >= 2 ? '担当検事の見立て' : '東堂課長の見立て';
-      const words = ['', 'これでは起訴できない', '起訴は難しい。もっと固めろ', '起訴はできる。だが公判は危うい', '公判でも有罪を取れるだろう', '固い'];
+      const words = ['', 'これでは起訴できない', '起訴は難しい。もっと固めろ', e.neg > 1.2 && w >= 4 ? '起訴はできる。だが、弁護人に突かれる穴が多い' : '起訴はできる。だが公判は危うい', '公判でも有罪を取れるだろう', '固い'];
       return '<div class="gauge"><div class="gt">' + who + '（集めた記録を、すべて証拠にできると仮定した場合）</div><div class="gb">' + [1, 2, 3, 4, 5].map(i => '<span class="' + (i <= lv ? 'on' : '') + '"></span>').join('') + '</div><div class="gw">「' + words[lv] + '」</div></div>';
     },
     elements: S => {
@@ -87,6 +101,7 @@
           '・通信事業者には、通信履歴を消さないよう求めることができる（197条3項）。最大60日。',
           '・取調べの前に、黙秘権を告げる（198条2項）。本件は録音録画義務の対象外（301条の2）。',
           '・住居の捜索には令状が要る（憲法35条、刑訴法218条）。',
+          '・条文帳には、ここに並んでいない手段が書かれていることがある。使える規定には「この規定を使う」が現れる。',
           '・捜査記録の「二つの記録を照らし合わせる」で、記録どうしの食い違いやつながりを探せる。見つかれば、新しい捜査の糸口になる。',
           '・記録が有利か不利かは、誰も教えてくれない。読んで判断する。') });
         return L;
@@ -310,7 +325,7 @@
     S.c.claim = true; S.c.consentPrints = true;
     K.addDoc({ id: 'claim', title: '久住の弁解', kind: 'memo', body: P('「10月2日の夜は自宅で一人、スマートフォンで動画を見ていた」', '「10月4日の返済30万円は、母に借りた」', '指紋の任意提出に応じた。') });
   } });
-  A.push({ id: 'preserve', who: 'self', free: true, label: '通信履歴の保全を求める', sub: '197条3項。動画配信事業者・携帯会社に（時間を使わない）', cond: S => S.c.claim, run: async S => {
+  A.push({ id: 'preserve', who: 'self', free: true, label: '通信履歴の保全を求める', sub: '197条3項', cond: S => false, run: async S => {
     S.c.preserveDay = S.day;
     await G.talk([['', '（動画配信事業者と携帯電話会社に、通信履歴を消去しないよう書面で求めた。最大60日。）', { sfx: 'type' }]]);
   } });
@@ -416,6 +431,10 @@
     const c = S.c, kind = c.warrantReady; c.warrantReady = null;
     G.audio.sfx('door'); G.drawScene(sc('kuzumi', 'street', 0));
     await G.talk([['you', '久住透さん。' + (kind === 'bekken' ? '賭博' : '強盗') + 'の容疑で、逮捕状が出ています。'], ['kuzumi', '……え。'], ['kuzumi', 'やってません。僕は、やってません。'], ['', '（午前7時03分、通常逮捕。）', { sfx: 'metal' }]]);
+    if (c.use220 && !c.search) {
+      c.search = 'legal';
+      await G.talk([['', '（逮捕の現場で、そのまま部屋を捜索した。刑訴法220条。令状は要らない。）', { scene: { bg: 'office' } }]].concat(searchDone(S, '220')));
+    }
     if (kind === 'honken' && c.arrest != null && !c.released) { c.honkenArrested = true; c.rearrest = true; }
     if (kind === 'honken') c.honkenArrested = true;
     c.arrest = S.day; c.arrest_kind = kind; c.released = false;
@@ -436,8 +455,8 @@
     risk: { id: 'illegal', lure: '白井「令状を待ってる間に、母親が部屋を片づけに来たら終わりですよ。管理人は開けてくれます」', title: '令状なしで住居に立ち入る', law: '憲法35条、刑訴法218条1項', effects: ['見つけた物が、裁判で証拠として使えなくなる（違法収集証拠の排除）', '公判で、立ち入った捜査員が証人として追及される', '監察（内部調査）の対象になりうる', '誰かが、やっていない罪で裁かれる原因になりうる'] },
     start: S => { S.c.search = 'illegal'; }, done: S => searchDone(S, 'illegal') });
   function searchDone(S, kind) {
-    K.addDoc({ id: 'jacket', title: kind === 'legal' ? '捜索差押調書' : '捜査報告書（居室の確認）', kind: 'inc', evid: true, illegal: kind === 'illegal', body:
-      (kind === 'legal' ? P('捜索差押許可状に基づき、被疑者方居室を捜索した。') : P('管理人の承諾を得て、被疑者方居室に立ち入り、室内を確認した。<b>令状はない。本人の承諾もない。</b>'))
+    K.addDoc({ id: 'jacket', title: kind !== 'illegal' ? '捜索差押調書' : '捜査報告書（居室の確認）', kind: 'inc', evid: true, illegal: kind === 'illegal', body:
+      (kind === 'legal' ? P('捜索差押許可状に基づき、被疑者方居室を捜索した。') : kind === '220' ? P('被疑者方居室で被疑者を通常逮捕し、逮捕の現場において捜索差押えを行った（刑訴法220条1項2号）。スマートフォン1台も差し押さえた。') : P('管理人の承諾を得て、被疑者方居室に立ち入り、室内を確認した。<b>令状はない。本人の承諾もない。</b>'))
       + kv([['発見したもの', '灰色のナイロンジャケット1着（量販店の製品）'], ['発見されなかったもの', '刃物（台所の包丁を除く）、粘着テープ、多額の現金、手提げ金庫']]) });
     return [['shirai', '押入れに灰色のジャケットがありました。金も、金庫も、テープもなし。', { scene: sc('shirai') }]];
   }
@@ -622,13 +641,20 @@
       await G.curtain([{ html: '<div class="big">勾留満期</div>', wait: 1000 }]);
       K.render('（送致記録をまとめる。）');
       const ev = S.docs.filter(d => d.evid && !(d.id === 'video' && d.late));
-      const tags = { inc: '被疑者に不利', exc: '被疑者に有利', neu: '中立' };
-      const res = await G.openPaper({ title: '送致書（証拠品・書類目録）', sub: '検察官に送る記録を確かめる。チェックを外したものは送られない。', noClose: true,
-        body: ev.map(d => '<label class="check"><input type="checkbox" data-id="' + d.id + '" checked><span>' + d.title + '</span></label>').join('')
-          + note('司法警察員は、捜査をしたときは、書類及び証拠物とともに事件を検察官に送致しなければならない（刑訴法246条）。'),
-        buttons: [{ label: 'この内容で送致する', cls: 'green', value: 'ok', keep: true }] });
-      const sent = {}; document.querySelectorAll('#overlay input[type=checkbox]').forEach(i => { sent[i.dataset.id] = i.checked; });
-      G.closePaper();
+      const sent = {}; ev.forEach(d => sent[d.id] = true);
+      await new Promise(done => {
+        C.actsOverride = (S2, wrap) => {
+          if (!wrap) return true;
+          wrap.innerHTML = '<div class="panel" style="margin-top:10px"><div class="ph"><span>送致書（証拠品・書類目録）</span><span>' + Object.values(sent).filter(Boolean).length + '/' + ev.length + '件を送る</span></div>'
+            + '<div style="font-size:12px;color:#8c8578;margin-bottom:6px">上の捜査記録は、読むことも照らし合わせることもできる。送らない記録は「外す」。司法警察員は、書類及び証拠物とともに事件を送致しなければならない（刑訴法246条）。</div>'
+            + ev.map(d => '<div class="srow' + (sent[d.id] ? '' : ' off') + '"><span>' + d.title + '</span><button class="bbtn" data-id="' + d.id + '">' + (sent[d.id] ? '送る' : '外す') + '</button></div>').join('')
+            + '</div><button class="endday" id="send">この内容で送致する</button>';
+          wrap.querySelectorAll('.srow .bbtn').forEach(b => b.onclick = () => { sent[b.dataset.id] = !sent[b.dataset.id]; G.audio.sfx('click'); C.actsOverride(S2, wrap); });
+          G.$('#send').onclick = () => { if (G.ui.talking) return; C.actsOverride = null; G.audio.sfx('stamp'); done(); };
+          return true;
+        };
+        K.render('（送致記録をまとめる。送る前に、もう一度読み返すこともできる。）');
+      });
       c.sent = sent; c.withheld = Object.keys(sent).filter(k => !sent[k]);
       await G.talk([['todo', 'ご苦労だった。あとは検察の仕事だ。', { scene: sc('todo') }]]);
     }
@@ -641,7 +667,9 @@
       const S = { c: { truth: rnd() < .5 ? 'G' : 'I', leaks: [], sess: { A: 0, B: 0, C: 0, D: 0, E: 0 } } };
       G.audio.cue('main'); G.audio.ambient('office');
       await G.curtain(['<div class="big">本章</div><div class="small">青柳書房事件</div>']);
+      setLawTools(S);
       const how = await K.start(C, S);
+      G.lawTools = null;
       G.audio.ambient(null);
       return S;
     },
