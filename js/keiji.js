@@ -108,7 +108,7 @@
       if (days === 0) { await finishTask(t, a); K.render(); return; }
       S.tasks.push(t);
       K.refresh();
-      await G.talk([['', s.name + 'に「' + (a.short || a.label) + '」を指示した。' + (days ? '（' + days + '日）' : '')]]);
+      G.toast(s.name + 'に「' + (a.short || a.label) + '」を指示した（' + days + '日）');
     } else {
       const r = a.run ? await a.run(S) : null;
       if (r === false) { K.render(); return; }   // 取りやめ
