@@ -468,6 +468,99 @@
     R(x, '#222', 60, 40, 1, 6); R(x, '#222', 120, 40, 1, 6); R(x, '#222', 180, 40, 1, 6);
     R(x, '#4f3d2a', 70, 66, 100, 10); R(x, '#d9cfb4', 80, 63, 20, 3); R(x, '#d9cfb4', 140, 63, 16, 3);
   });
+  // ---- 一人称の手前の層（自分の机・手・持ち物）。人物はこの層の奥に描く ----
+  function hand(x, X, Y, w, sleeve, right) {
+    // 机に置いた手（甲を上に、指を軽く曲げる）。袖口は画面の下へ続く。光は左上から
+    const H2 = 10, line = '#1c1511';
+    R(x, line, X - 2, Y + H2 - 1, w + 6, H - Y); R(x, sleeve, X - 1, Y + H2, w + 4, H - Y); R(x, 'rgba(255,255,255,.08)', X, Y + H2, 2, H - Y); R(x, 'rgba(0,0,0,.3)', X + w, Y + H2, 3, H - Y);
+    R(x, line, X, Y - 1, w, 1); R(x, line, X - 1, Y, 1, H2); R(x, line, X + w, Y, 1, H2);
+    R(x, '#c99f7b', X, Y, w, H2); R(x, '#dcb592', X + 1, Y + 1, w - 4, 3); R(x, '#a67d5e', X, Y + H2 - 3, w, 3);
+    for (let k = 0; k < 4; k++) { const fx = X + 1 + Math.round(k * (w - 3) / 4); R(x, '#86624b', fx, Y - 0, 1, 4); R(x, '#e2c0a0', fx + 1, Y, 1, 1); }
+    const tx = right ? X - 4 : X + w; R(x, line, tx - (right ? 1 : 0), Y + 3, 5, 6); R(x, '#c99f7b', tx + (right ? 0 : 0), Y + 4, 4, 4); R(x, '#a67d5e', tx, Y + 7, 4, 1);
+  }
+  function deskTop(x, y0, c1, c2, edge) {
+    // 手前ほど広く見える机の天板
+    R(x, c1, 0, y0, W, H - y0); tex(x, 0, y0 + 2, W, H - y0, c2, .18, y0 + 50);
+    R(x, edge, 0, y0, W, 1); R(x, 'rgba(255,255,255,.06)', 0, y0 + 1, W, 1);
+    for (let i = 0; i < W; i += 37) R(x, 'rgba(0,0,0,.08)', i + Math.floor(hash(i, y0, 3) * 20), y0 + 4, 1, H - y0);
+  }
+  function sheet(x, X, Y, w, h, lines) {
+    R(x, 'rgba(0,0,0,.35)', X + 2, Y + 2, w, h); R(x, '#e4dbc2', X, Y, w, h); R(x, '#cfc5aa', X, Y + h - 1, w, 1);
+    for (let j = Y + 3; j < Y + h - 2; j += 3) R(x, '#9a917c', X + 3, j, Math.max(2, w - 6 - (lines && j % 6 ? 6 : 0)), 1);
+  }
+  const SLEEVE = '#2f3a4e';
+  const FG = {
+    interro: x => {
+      deskTop(x, 80, '#3b3227', '#2f281f', '#1c1712');
+      sheet(x, 84, 86, 52, 22, true); R(x, '#b23a2e', 124, 88, 8, 2);           // 調書
+      R(x, '#151515', 140, 92, 22, 1); R(x, '#2a2a2a', 140, 93, 22, 1); R(x, '#c9b46a', 160, 92, 3, 2); // ペン
+      R(x, '#e8e4d8', 176, 81, 8, 6); R(x, '#8a7a5a', 177, 82, 6, 1);           // 向こう側の湯のみ
+      hand(x, 44, 90, 22, SLEEVE, false); hand(x, 172, 92, 22, SLEEVE, true);
+    },
+    office: x => {
+      deskTop(x, 86, '#4a3a29', '#3e3021', '#2b2118');
+      for (let k = 0; k < 4; k++) sheet(x, 14 + k, 90 - k * 2, 46, 16, false);   // 書類の山
+      R(x, '#151515', 196, 90, 26, 12); R(x, '#26282b', 198, 92, 22, 8); R(x, '#151515', 192, 88, 34, 4); // 電話
+      R(x, '#e8e4d8', 160, 90, 9, 10); R(x, '#8a5a3a', 161, 91, 7, 2); R(x, '#e8e4d8', 169, 93, 3, 4); // 湯のみ
+      hand(x, 100, 94, 20, SLEEVE, false);
+    },
+    pros: x => {
+      deskTop(x, 82, '#3e3022', '#33281c', '#211a12');
+      sheet(x, 70, 84, 60, 10, false); sheet(x, 74, 80, 52, 6, false); R(x, '#b23a2e', 76, 81, 8, 2); // 一件記録
+      R(x, '#2a2a2a', 170, 86, 20, 6); R(x, '#4a4a4a', 172, 84, 16, 3);         // 卓上の名札
+      hand(x, 28, 94, 20, SLEEVE, false);
+    },
+    shop: x => {
+      deskTop(x, 86, '#5a4733', '#4a3a29', '#2b2118');
+      R(x, '#2a2a2a', 178, 80, 36, 18); R(x, '#3a3a3a', 180, 82, 32, 14);        // 自分の手帳（開いている）
+      R(x, '#e4dbc2', 182, 83, 13, 12); R(x, '#e4dbc2', 197, 83, 13, 12); for (let j = 86; j < 94; j += 2) { R(x, '#8a8270', 184, j, 9, 1); R(x, '#8a8270', 199, j, 7, 1); }
+      hand(x, 152, 90, 18, SLEEVE, false);
+    },
+    street: x => {
+      // 手に持った手帳とペン
+      R(x, '#1c1511', 177, 75, 46, 26); R(x, '#2a2a2a', 178, 76, 44, 24);
+      R(x, '#e4dbc2', 181, 78, 18, 20); R(x, '#e4dbc2', 201, 78, 18, 20); for (let j = 81; j < 96; j += 3) { R(x, '#8a8270', 183, j, 13, 1); R(x, '#8a8270', 203, j, 10, 1); }
+      hand(x, 156, 90, 18, SLEEVE, false); R(x, '#151515', 214, 70, 2, 16); R(x, '#c9b46a', 214, 70, 2, 2);
+    },
+    home: x => {
+      deskTop(x, 88, '#5a4430', '#4a3826', '#2e2216');
+      R(x, '#1c1511', 104, 89, 22, 12); R(x, '#e8e0d0', 105, 89, 20, 10); R(x, '#f4f0e4', 107, 89, 16, 3);   // 茶碗
+      R(x, '#7a4a2a', 130, 96, 26, 1); R(x, '#7a4a2a', 130, 98, 26, 1);           // 箸
+      R(x, '#3a5a6a', 60, 92, 24, 8); R(x, '#4a6a7a', 61, 93, 22, 2);            // 皿
+    },
+    court: x => {
+      // 傍聴席の柵越しに見る
+      R(x, '#3f3123', 0, 86, W, 4); R(x, '#5a4630', 0, 86, W, 1); R(x, '#2a2016', 0, 89, W, 1);
+      for (let i = 6; i < W; i += 14) { R(x, '#3a2e22', i, 90, 3, 15); R(x, '#4a3a29', i, 90, 1, 15); }
+    },
+    chambers: x => {
+      deskTop(x, 80, '#3a2f24', '#2f261d', '#1a140e');
+      x.fillStyle = 'rgba(232,210,140,.10)'; x.beginPath(); x.moveTo(150, 80); x.lineTo(230, 80); x.lineTo(240, 105); x.lineTo(120, 105); x.fill();
+      for (let k = 0; k < 6; k++) sheet(x, 20 + (k % 2), 96 - k * 3, 54, 12, false);   // 請求書の山
+      sheet(x, 92, 84, 60, 20, true);                                                  // 読んでいる請求書
+      R(x, '#7a1e1a', 168, 92, 14, 8); R(x, '#a3342b', 169, 93, 12, 3);                // 朱肉
+      R(x, '#2a2420', 188, 86, 5, 14); R(x, '#c9b46a', 188, 86, 5, 2);                 // 職印
+      hand(x, 70, 92, 20, '#2a2622', false);
+    }
+  };
+  // ---- 令状当番の部屋（夜） ----
+  BG.chambers = x => {
+    R(x, '#1f1c18', 0, 0, W, H); tex(x, 0, 0, W, 80, '#24211c', .18, 41);
+    R(x, '#0c0e14', 160, 10, 64, 46); R(x, '#141826', 162, 12, 60, 42); R(x, '#2a2e36', 191, 10, 2, 46);
+    for (let i = 0; i < 18; i++) R(x, hash(i, 1, 42) < .5 ? '#c9b46a' : '#6a7a9a', 164 + Math.floor(hash(i, 2, 42) * 56), 34 + Math.floor(hash(i, 3, 42) * 18), 1, 1);
+    R(x, '#3a3224', 8, 6, 70, 74); for (let j = 0; j < 4; j++) { R(x, '#2a2218', 8, 6 + j * 18 + 16, 70, 2); books(x, 10, 6 + j * 18, 66, 16, 60 + j); }
+    R(x, '#f1ece0', 100, 8, 12, 12); R(x, '#222', 105, 10, 1, 5); R(x, '#222', 105, 14, 4, 1);
+    R(x, '#555', 212, 58, 2, 22); R(x, '#d8c37a', 204, 54, 18, 5); x.fillStyle = 'rgba(232,210,140,.06)'; x.fillRect(150, 59, 90, 21);
+  };
+  // 人物の立ち位置：机の向こうに座る／立つ高さ（スプライト上端の y）
+  const PLACE = { interro: 24, office: 30, pros: 26, shop: 28, home: 30, chambers: 28, street: 41, court: 41, phone: 41, dark: 41 };
+  const fgCache = {};
+  function fgCanvas(k) {
+    if (!FG[k]) return null;
+    if (fgCache[k]) return fgCache[k];
+    const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.imageSmoothingEnabled = false;
+    FG[k](x); fgCache[k] = c; return c;
+  }
   const bgCache = {};
   function bgCanvas(k) {
     if (bgCache[k]) return bgCache[k];
@@ -488,8 +581,9 @@
       const breath = Math.sin((now - A.t0) / 1700 * Math.PI * 2) > .35 ? 1 : 0;
       const s = sprite(sc.who, sc.stage, { blink: now < A.blinkUntil, mouth: A.mouth });
       const px = sc.x === 'l' ? 40 : sc.x === 'r' ? 136 : 88;
-      x.drawImage(s, px, H - N + breath);
+      x.drawImage(s, px, (PLACE[sc.bg] ?? H - N) + breath);
     }
+    const fg = fgCanvas(sc.bg); if (fg) x.drawImage(fg, 0, 0);
     if (sc.dim) { x.fillStyle = 'rgba(0,0,0,' + sc.dim + ')'; x.fillRect(0, 0, W, H); }
     x.setTransform(1, 0, 0, 1, 0, 0);
   }

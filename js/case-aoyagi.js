@@ -41,15 +41,20 @@
   const C = {
     id: 'aoyagi', role: '捜査官', base: { m: 10, d: 3 }, dayCard: true,
     staff: [{ id: 'shirai', name: '白井' }, { id: 'oka', name: '岡' }, { id: 'noguchi', name: '野口' }],
+    charges: [
+      { id: 'goto', label: '住居侵入・強盗', law: '刑法130条前段・236条1項', fit: true },
+      { id: 'setto', label: '住居侵入・窃盗', law: '刑法130条前段・235条', els: (S, e) => e.filter(x => !/暴行|脅迫/.test(x.k)) },
+      { id: 'chisho', label: '住居侵入・強盗致傷', law: '刑法130条前段・240条（裁判員裁判の対象）', els: (S, e) => e.concat([{ k: '被害者のけが', v: 0 }]) }
+    ],
     info: S => {
       const c = S.c;
       if (inCustody(S)) {
         const d = custodyDay(S), left = LIMIT - d;
         const stage = d < 2 ? '送致前（48時間）' : d < 3 ? '勾留請求' : d < 13 ? '勾留' : '勾留延長';
-        return { text: '青柳書房事件　' + (c.arrest_kind === 'bekken' ? '［別件（賭博）で拘束中］' : '') + stage,
+        return { text: G.kit.title(S, '青柳書房事件') + '　' + (c.arrest_kind === 'bekken' ? '［別件（賭博）で拘束中］' : '') + stage,
           clock: limitBar(d, left) };
       }
-      return { text: '青柳書房事件　事件発生から' + (S.day + 1) + '日' };
+      return { text: G.kit.title(S, '青柳書房事件') + '　事件発生から' + (S.day + 1) + '日' };
     },
     scene: S => sc(null, 'office'),
     nextMilestone: S => G.kit.nextMilestone(S),
@@ -103,7 +108,7 @@
           '・取調べの前に、黙秘権を告げる（198条2項）。本件は録音録画義務の対象外（301条の2）。',
           '・住居の捜索には令状が要る（憲法35条、刑訴法218条）。',
           '・条文帳には、ここに並んでいない手段が書かれていることがある。使える規定には「この規定を使う」が現れる。',
-          '・捜査記録の「二つの記録を照らし合わせる」で、二枚の記録を並べて読める。それぞれから気になる記載を一か所ずつ選び、食い違いやつながりを探す。見つかれば、新しい捜査の糸口になる。',
+          '・記録を開いて「横に並べる」と、二枚を見比べられる。それぞれから気になる記載を一か所ずつ選んで記録する。食い違いやつながりに気づけば、新しい捜査の糸口になる。書き込みは捜査メモとして残り、課長も検事も目を通す。',
           '・記録が有利か不利かは、誰も教えてくれない。読んで判断する。') });
         return L;
       }
@@ -439,11 +444,13 @@
     if (d('hearsay')) { p += .5; }
     return { p, why };
   }
-  A.push({ id: 'warrant', who: 'self', once: false, label: '逮捕状の請求を課長に上げる（強盗）', sub: '疎明資料をそろえて', primary: true,
+  A.push({ id: 'warrant', who: 'self', once: false, label: '逮捕状の請求を課長に上げる', sub: '罪名を決め、疎明資料をそろえて', primary: true,
     cond: S => S.fin.kandori && !S.c.warrantPending && S.c.warrantReady !== 'honken' && (S.c.arrest == null || S.c.arrest_kind === 'bekken' || S.c.released) && !S.c.honkenArrested, run: async S => {
       G.drawScene(sc('todo'));
       const s = soumei(S);
       if (s.p < 3) { await G.talk([['todo', '……これで裁判官を説得できると思うか。'], ['todo', s.why.length ? s.why.join('、') + '。それだけじゃ弱い。' : '何もないじゃないか。'], ['todo', 'もう少し固めてこい。']]); return false; }
+      const ch = await G.kit.chooseCharge(S, C, 'warrant'); if (!ch) return false;
+      if (ch.id === 'chisho') await G.talk([['todo', '致傷？ 青柳さんにけがの診断書はないぞ。……まあいい、請求書はお前の名前だ。']]);
       await G.talk([['todo', s.why.join('、') + '。'], ['todo', '十分だ。請求する。'], ['', '（逮捕状は翌日発付される。）']]);
       S.c.warrantPending = { kind: 'honken', day: S.day };
     } });
@@ -458,7 +465,7 @@
   A.push({ id: 'arrestAct', who: 'self', once: false, label: '久住を逮捕する', sub: '逮捕状を執行する', primary: true, cond: S => !!S.c.warrantReady, run: async S => {
     const c = S.c, kind = c.warrantReady; c.warrantReady = null;
     G.audio.sfx('door'); G.drawScene(sc('kuzumi', 'street', 0));
-    await G.talk([['you', '久住透さん。' + (kind === 'bekken' ? '賭博' : '強盗') + 'の容疑で、逮捕状が出ています。'], ['kuzumi', '……え。'], ['kuzumi', 'やってません。僕は、やってません。'], ['', '（午前7時03分、通常逮捕。）', { sfx: 'metal' }]]);
+    await G.talk([['you', '久住透さん。' + (kind === 'bekken' ? '賭博' : (G.kit.charge(S) || { label: '強盗' }).label) + 'の容疑で、逮捕状が出ています。'], ['kuzumi', '……え。'], ['kuzumi', 'やってません。僕は、やってません。'], ['', '（午前7時03分、通常逮捕。）', { sfx: 'metal' }]]);
     if (c.use220 && !c.search) {
       c.search = 'legal';
       await G.talk([['', '（逮捕の現場で、そのまま部屋を捜索した。刑訴法220条。令状は要らない。）', { scene: { bg: 'office' } }]].concat(searchDone(S, '220')));
@@ -681,6 +688,7 @@
     const c = S.c; S._ended = true;
     c.how = how;
     if (how === 'soutchi' || how === 'release') {
+      await G.kit.chooseCharge(S, C, 'soutchi', true);
       G.audio.cue('soutchi');
       await G.curtain([{ html: '<div class="big">' + (how === 'release' ? '釈放' : '勾留満期') + '</div>', wait: 1000 }]);
       K.render('（送致記録をまとめる。）');

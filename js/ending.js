@@ -77,9 +77,9 @@
       G.audio.ambient(null);
       const charge = c.how === 'release' ? false : (c.confession && !c.retract) || est >= 3;
       if (c.how === 'release') await G.talk([['kenji', '主任の意見は読みました。……この記録では、起訴できるだけのものはない。'], ['kenji', '釈放します。嫌疑不十分で、不起訴とします。'], ['', '（久住透は釈放された。）']]);
-      else await G.talk([['kenji', c.confession ? (c.retract ? '検事調べで、久住は自白を撤回しました。「警察で言わされた」と。' : '久住は、私の前でも自白を維持しました。') : '久住は、一貫して否認しています。'],
+      else await G.talk(G.kit.mismatchLines(S, G.keiji.C()).concat([['kenji', c.confession ? (c.retract ? '検事調べで、久住は自白を撤回しました。「警察で言わされた」と。' : '久住は、私の前でも自白を維持しました。') : '久住は、一貫して否認しています。'],
         ['kenji', charge ? '起訴します。' : '……これでは公判を維持できません。嫌疑不十分で、不起訴とします。'],
-        ['', charge ? '（久住透は、建造物侵入・強盗で起訴された。）' : '（久住透は釈放された。）']]);
+        ['', charge ? '（久住透は、建造物侵入・強盗で起訴された。）' : '（久住透は釈放された。）']]));
       if (!charge) verdict = c.how === 'release' ? '釈放（不起訴）' : '不起訴';
       else {
         // 公判

@@ -15,6 +15,8 @@
   K.state = () => S;
 
   K.start = function (caseDef, state) {
+    if (caseDef.charges && !caseDef.actions.some(a => a && a.id === 'chargeSel')) caseDef.actions.unshift({ id: 'chargeSel', who: 'self', once: false, label: '罪名を決める', sub: '一日は使わない。決めると「立証すべき事実」が出る', cond: S2 => !S2.c.charge,
+      run: async S2 => { await G.kit.chooseCharge(S2, caseDef, 'memo'); K.render(); return false; } });
     C = caseDef; S = state;
     S.day = S.day || 0; S.tasks = S.tasks || []; S.docs = S.docs || []; S.done = S.done || {}; S.selfUsed = false;
     S.staffGone = S.staffGone || {}; S.flags = S.flags || {}; S.fin = S.fin || {};
@@ -40,8 +42,11 @@
       return '<div class="staff' + (gone ? ' gone' : t ? '' : ' free') + '"><span class="nm">' + s.name + '</span><span class="st">' + st + '</span></div>';
     }).join('') + '<div class="staff' + (S.selfUsed ? '' : ' free') + '"><span class="nm">あなた</span><span class="st">' + (S.selfUsed ? '今日の行動は済んだ' : '動ける') + '</span></div>';
   }
+  K.C = () => C;
   function elemPanel() {
-    const els = C.elements(S);
+    if (C.charges && !S.c.charge) return (C.gauge ? C.gauge(S) : '') + '<div class="elem" style="color:#8c8578;font-size:12px;line-height:1.6">（罪名がまだ決まっていない。逮捕状を請求するとき、または送致するときに、罪名を決める。立証すべき事実は、罪名によって変わる。）</div>';
+    const chs = C.charges && C.charges.find(x => x.id === S.c.charge);
+    const els = chs && chs.els ? chs.els(S, C.elements(S)) : C.elements(S);
     const gz = C.gauge ? C.gauge(S) : '';
     return gz + els.map(e => '<div class="elem"><span class="k">' + e.k + '</span><span class="boxes">'
       + [1, 2, 3].map(i => '<span class="bx' + (e.v >= i ? (e.conf ? ' conf' : ' on') : '') + '"></span>').join('')
@@ -53,9 +58,7 @@
     G.layout({ role: C.role, date: K.date(), info: info.text, clock: info.clock, scene: C.scene(S), hint: hint || '（今日の指示を出す。）',
       body: '<div class="row2"><div class="panel"><div class="ph"><span>捜査員</span></div>' + staffPanel() + '</div>'
         + '<div class="panel"><div class="ph"><span>' + (C.elemTitle || '立証すべき事実') + '</span><span>■=証拠 <span style="color:#b23a2e">■</span>=自白</span></div>' + elemPanel() + '</div></div>'
-        + '<div class="desk"><div class="ph"><span>捜査記録　' + S.docs.length + '綴</span>' + (C.compare ? '<button class="bbtn" id="cmp">' + (G.ui.compare ? '照合をやめる' : '二つの記録を照らし合わせる') + '</button>' : '') + '</div>'
-        + (G.ui.compare ? '<div class="cmphint">照らし合わせる記録を二つ選ぶ（' + G.ui.compare.length + '/2）</div>' : '') + '<div class="docs" id="docs"></div></div>' });
-    const cb = G.$('#cmp'); if (cb) cb.onclick = () => { if (G.ui.talking || G.ui.busy) return; G.ui.compare = G.ui.compare ? null : []; G.audio.sfx('click'); K.render(); };
+        + '<div class="desk"><div class="ph"><span>捜査記録　' + S.docs.length + '綴</span></div><div class="docs" id="docs"></div></div>' });
     renderDocs(); acts();
   };
   function renderDocs() {
@@ -64,24 +67,30 @@
       const b = document.createElement('button');
       b.className = 'doc' + (d.isNew ? ' new' : '') + (d.kind === 'memo' ? ' memo' : '') ;
       b.textContent = d.title;
-      if (G.ui.compare && G.ui.compare.includes(d.id)) b.classList.add('sel');
-      b.onclick = () => {
+      b.onclick = async () => {
         if (G.ui.talking) return;
-        if (G.ui.compare) { compareClick(d); return; }
-        d.isNew = false; b.classList.remove('new'); G.openPaper({ title: d.title, sub: d.sub, body: typeof d.body === 'function' ? d.body(S) : d.body, stamps: d.stamps }); };
+        d.isNew = false; b.classList.remove('new');
+        const others = S.docs.filter(x => x.id !== d.id);
+        const v = await G.openPaper({ title: d.title, sub: d.sub, body: typeof d.body === 'function' ? d.body(S) : d.body, stamps: d.stamps,
+          buttons: C.compare && others.length ? [{ label: '横に並べる', value: 'cmp', small: '別の記録と見比べる' }] : [] });
+        if (v !== 'cmp') return;
+        const o = await G.openPaper({ title: '並べる記録を選ぶ', sub: '「' + d.title + '」の横に置く', body: '', buttons: others.map(x => ({ label: x.title, value: x.id })) });
+        if (o) compareWith(d.id, o);
+      };
       el.appendChild(b);
     });
   }
-  async function compareClick(d) {
-    const sel = G.ui.compare;
-    if (sel.includes(d.id)) { sel.splice(sel.indexOf(d.id), 1); K.render(); return; }
-    sel.push(d.id); G.audio.sfx('paper');
-    if (sel.length < 2) { K.render(); return; }
-    const [a, b] = sel; G.ui.compare = null; K.render();
+  async function compareWith(a, b) {
     S.compared = S.compared || {};
     const key = [a, b].sort().join('|');
     const r = await compareView(a, b);
     if (!r) { K.render(); return; }
+    if (r.miss) {
+      // 外れた指摘も、捜査メモとして残る（課長や検事も目を通す）
+      S.c.missPoints = (S.c.missPoints || 0) + 1;
+      K.addDoc({ id: 'miss_' + S.c.missPoints, title: '捜査メモ：照合' + S.c.missPoints, kind: 'memo', body: G.P('「' + K.doc(a).title + '」の「' + r.miss[0].slice(0, 60) + '」と、「' + K.doc(b).title + '」の「' + r.miss[1].slice(0, 60) + '」を照らし合わせた。') });
+      K.render(); return;
+    }
     S.compared[key] = true;
     await G.talk(r.lines);
     if (r.memo) K.addDoc({ id: 'memo_' + key, title: '捜査メモ：' + r.memo.title, kind: 'memo', body: G.P(r.memo.text) });
@@ -94,7 +103,7 @@
     const body = d => typeof d.body === 'function' ? d.body(S) : d.body;
     const key = [a, b].sort().join('|');
     ov.innerHTML = '<div class="cmpv"><div class="cmpp">' + [da, db].map((d, i) => '<div class="paper" data-i="' + i + '"><div class="paper-h">' + d.title + '</div><div class="paper-b">' + body(d) + '</div></div>').join('') + '</div>'
-      + '<div class="cmpbar"><div class="cmpmsg" id="cmpmsg">それぞれの記録から、照らし合わせたい記載を一か所ずつ選ぶ。</div><div class="paper-f"><button class="pbtn green" id="cmpgo" disabled>この二か所を照らし合わせる</button><button class="pbtn" id="cmpx">閉じる</button></div></div></div>';
+      + '<div class="cmpbar"><div class="cmpmsg" id="cmpmsg">それぞれの記録から、照らし合わせたい記載を一か所ずつ選ぶ。</div><div class="paper-f"><button class="pbtn green" id="cmpgo" disabled>食い違い・つながりとして記録する</button><button class="pbtn" id="cmpx">閉じる</button></div></div></div>';
     const picks = [null, null];
     ov.querySelectorAll('.cmpp .paper').forEach(pp => {
       const i = +pp.dataset.i;
@@ -112,7 +121,7 @@
         const pk = r && (r.pick || (C.pick || {})[key]);
         const hit = r && (!pk || (pk[0].test(picks[0]) && pk[1].test(picks[1])) || (pk[0].test(picks[1]) && pk[1].test(picks[0])));
         if (hit && S.compared[key]) { msg.textContent = '（この二つは、もう照らし合わせた。捜査メモに残っている。）'; return; }
-        if (!hit) { G.audio.sfx('paper'); ov.querySelectorAll('.u.pick').forEach(x => x.classList.remove('pick')); picks[0] = picks[1] = null; G.$('#cmpgo').disabled = true; msg.textContent = 'それぞれの記録から、照らし合わせたい記載を一か所ずつ選ぶ。'; return; }
+        if (!hit) { G.audio.sfx('type'); G.closePaper(); done({ miss: picks.slice() }); return; }
         G.audio.sfx('stamp'); G.closePaper(); done(r);
       };
     });

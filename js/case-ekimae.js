@@ -12,7 +12,16 @@
     id: 'ekimae', role: '捜査官', base: { m: 11, d: 15 }, dayCard: true,
     staff: [{ id: 'shirai', name: '白井' }, { id: 'oka', name: '岡' }, { id: 'noguchi', name: '野口' }],
     elemTitle: '立証すべき事実',
-    info: S => kit.info(S, '北見坂駅前事件（傷害致死）'),
+    info: S => kit.info(S, '北見坂駅前事件'),
+    charges: [
+      { id: 'shogaichishi', label: '傷害致死', law: '刑法205条（裁判員裁判の対象）', fit: true, saibanin: true },
+      { id: 'satsujin', label: '殺人', law: '刑法199条（裁判員裁判の対象）', saibanin: true,
+        els: (S, e) => [e[0], { k: '殺意', v: S.c.confession ? 1 : 0 }, e[1], e[2]] },
+      { id: 'jukashitsu', label: '重過失致死', law: '刑法211条後段', saibanin: false,
+        els: (S, e) => [e[0], { k: '重大な過失', v: 1 }, e[1]] },
+      { id: 'shogai', label: '傷害', law: '刑法204条', saibanin: false,
+        els: (S, e) => [{ k: '暴行と傷害', v: e[0].v }, e[1], e[2], e[3]] }
+    ],
     scene: S => sc(null, 'office'),
     endHint: S => inC(S) ? '満期までに記録を固める' : '',
     stopSkip: S => (inC(S) && (cday(S) >= kit.LIMIT || (cday(S) >= 16 && !S.c.confession && !S.c.takeoverAsked))) || (S.c.arrest == null && S.day >= 21),
@@ -41,10 +50,10 @@
         K.addDoc({ id: 'manual', title: '捜査の要点', kind: 'memo', body: P('・争点は「誰が」ではなく「何が起きたか」。正当防衛（刑法36条1項）は、急迫不正の侵害に対し、自己の権利を防衛するため、やむを得ずにした行為を罰しない。',
           '・防衛の程度を超えた場合は過剰防衛（同条2項）。刑を減軽・免除できる。',
           '・被害者が死亡すれば、傷害致死（刑法205条）。裁判員裁判の対象で、逮捕・勾留中の取調べは録音録画される（刑訴法301条の2）。',
-          '・二つの記録を照らし合わせると、食い違いやつながりが見つかることがある。') });
+          '・記録を開いて「横に並べる」と、二枚を見比べられる。食い違いやつながりに気づけば、捜査の糸口になる。') });
         return L;
       }
-      if (S.day === 1) { c.dead = true; L.push(['', '（午前10時12分。樋口和也が、搬送先の病院で死亡した。急性硬膜下血腫。）', { sfx: 'bell' }], ['todo', '傷害致死だ。……逮捕状を取るなら、今日明日だぞ。', { scene: sc('todo') }]); }
+      if (S.day === 1) { c.dead = true; L.push(['', '（午前10時12分。樋口和也が、搬送先の病院で死亡した。急性硬膜下血腫。）', { sfx: 'bell' }], ['todo', '……人が死んだ。何の罪で、どう扱うか。逮捕状を取るなら、今日明日だぞ。', { scene: sc('todo') }]); }
       if (c.warrantPending && S.day > c.warrantPending) { c.warrantPending = null; c.warrantReady = true; L.push(['todo', '逮捕状が出た。', { scene: sc('todo') }]); }
       if (inC(S)) {
         L.push(...kit.custodyMorning(S, { name: '戸田', kenji2: '……正当防衛の主張は、崩せそうですか。', wantConfession: '「先に手を出した」と認めたか、とな。' }));
@@ -164,17 +173,20 @@
     await G.talk([['witnessA', '順番、ですか。……大声がして、振り向いたら、もう殴ってたような。'], ['witnessA', 'バス？ ああ、バスは通ったかもしれない。……その前に何があったかは、正直、分からないです。']]);
     K.addDoc({ id: 'witA2', title: '目撃者・畑中の供述（2回目）', kind: 'neu', evid: true, body: P('振り向いたときには、もう背の高い男が手を出していた。それより前に何があったかは見ていない。バスが通ったかもしれない。') });
   } });
-  A.push({ id: 'warrant', who: 'self', label: '逮捕状の請求を課長に上げる', sub: '傷害致死', primary: true, cond: S => S.c.arrest == null && !S.c.warrantPending && !S.c.warrantReady && S.c.dead, run: async S => {
+  A.push({ id: 'warrant', who: 'self', label: '逮捕状の請求を課長に上げる', sub: '罪名を決めて請求する', primary: true, cond: S => S.c.arrest == null && !S.c.warrantPending && !S.c.warrantReady && S.c.dead, run: async S => {
+    const ch = await kit.chooseCharge(S, C, 'warrant'); if (!ch) return false;
+    if (ch.id === 'satsujin') await G.talk([['todo', '殺人？ ……殺す気があったと、何で言える。', { scene: sc('todo') }], ['todo', 'まあいい。請求書はお前の名前だ。']]);
     await G.talk([['todo', '死んでるんだ。相手は「押した」と認めてる。令状は出るさ。', { scene: sc('todo') }], ['', '（逮捕状は翌日発付される。）']]);
     S.c.warrantPending = S.day;
   } });
   A.push({ id: 'arrest', who: 'self', label: '戸田を逮捕する', primary: true, cond: S => S.c.warrantReady && S.c.arrest == null, run: async S => {
     G.drawScene(sc('toda', 'street', 0));
-    await G.talk([['you', '戸田誠さん。傷害致死の容疑で逮捕します。'], ['toda', '……向こうから来たんですよ。俺は、振り払っただけだ。'], ['', '（逮捕。ここから先の取調べは、録音・録画される。）', { sfx: 'metal' }]]);
-    S.c.arrest = S.day; S.c.recorded = true; S.c.warrantReady = false;
+    S.c.recorded = !!kit.charge(S).saibanin;
+    await G.talk([['you', '戸田誠さん。' + kit.charge(S).label + 'の容疑で逮捕します。'], ['toda', '……向こうから来たんですよ。俺は、振り払っただけだ。'], ['', '（逮捕。' + (S.c.recorded ? 'この罪名は裁判員裁判の対象。ここから先の取調べは、録音・録画される。' : 'この罪名では、取調べの録音・録画の義務はない。') + '）', { sfx: 'metal' }]]);
+    S.c.arrest = S.day; S.c.warrantReady = false;
   } });
   A.push(kit.releaseAction(S => G.trial.estimate(S, TRIAL), (S, how) => finish(S, how)));
-  A.push({ id: 'interro', who: 'self', once: false, label: '戸田を取り調べる', sub: '録画されている', primary: true, cond: S => inC(S), run: async S => kit.interro(S, ICFG) });
+  A.push({ id: 'interro', who: 'self', once: false, label: '戸田を取り調べる', sub: S => S.c.recorded ? '録画されている' : '録画の義務はない', primary: true, cond: S => inC(S), run: async S => kit.interro(S, ICFG) });
   A.push({ id: 'zaitakuSend', who: 'self', label: '逮捕せず、在宅のまま送致する', sub: '身柄は拘束しない', cond: S => S.c.arrest == null && S.c.dead && S.day >= 3, run: async S => {
     const ok = await G.openPaper({ title: '在宅送致', body: P('逮捕・勾留をせず、書類と証拠だけを検察官に送る（刑訴法246条）。', '身柄の拘束は、逃亡や罪証隠滅のおそれがあるときに限って認められる。戸田は自ら119番通報し、住所も勤め先もはっきりしている。', '在宅のまま送れば、戸田は普段どおり暮らしながら検察官の判断を待つ。証人に接触するおそれは残る。'), noClose: true,
       buttons: [{ label: '在宅で送致する', value: true }, { label: 'やめる', value: false }] });
@@ -301,7 +313,7 @@
     run: async function () {
       const S = { c: { truth: rnd() < .5 ? 'D' : 'A', sess: { A: 0, B: 0, C: 0, D: 0, E: 0 } } };
       G.audio.cue('main'); G.audio.ambient('office');
-      await G.curtain(['<div class="big">北見坂駅前事件</div><div class="small">傷害致死</div>']);
+      await G.curtain(['<div class="big">北見坂駅前事件</div><div class="small">駅前の路上で、男性が倒れた</div>']);
       G.auditCtx = { suspect: 'toda', inCustody: () => inC(S) };
       await K.start(C, S);
       G.audio.ambient(null);

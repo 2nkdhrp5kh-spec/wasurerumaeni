@@ -10,7 +10,11 @@
   const C = {
     id: 'chikan', role: '捜査官', base: { m: 6, d: 10 }, dayCard: true,
     staff: [{ id: 'shirai', name: '白井' }, { id: 'oka', name: '岡' }, { id: 'noguchi', name: '野口' }],
-    info: S => kit.info(S, '8時12分発（迷惑行為防止条例違反）'),
+    info: S => kit.info(S, '8時12分発'),
+    charges: [
+      { id: 'jorei', label: '迷惑行為防止条例違反', law: '北見坂県迷惑行為防止条例（衣服の上から触る行為）', fit: true },
+      { id: 'fudoi', label: '不同意わいせつ', law: '刑法176条', els: (S, e) => [e[0], e[1], { k: 'わいせつな行為（程度）', v: 1 }, e[2]] }
+    ],
     scene: S => sc(null, 'office'),
     endHint: S => inC(S) ? '満期までに記録を固める' : '',
     stopSkip: S => inC(S) && (cday(S) >= kit.LIMIT || (cday(S) >= 16 && !S.c.confession && !S.c.takeoverAsked)),
@@ -36,7 +40,7 @@
         K.addDoc({ id: 'handover', title: '現行犯人引渡書', kind: 'neu', evid: true, body: kv([['逮捕者', '森川美咲（もりかわ みさき・20歳、大学生）'], ['逮捕の日時・場所', '6月10日 午前8時18分ころ、北見坂中央駅 2番線ホーム'], ['被疑事実', '快速電車内で、逮捕者の臀部を着衣の上から触った'], ['引渡し', '同日午前8時35分、駅員を通じて司法警察員に引き渡し（刑訴法214条）']]) });
         K.addDoc({ id: 'manual', title: '捜査の要点', kind: 'memo', body: P('・満員電車の痴漢は、客観的な証拠が残りにくい。被害者の供述が唯一の証拠であることも多い。',
           '・判例（最判平成21年4月14日・要旨）：このような事件では、被害者の供述の信用性を特に慎重に判断する必要がある。',
-          '・本件は北見坂県迷惑行為防止条例違反（架空の条例。法定刑：6月以下の拘禁刑又は50万円以下の罰金）。被疑者が認めれば、略式手続（罰金）で終わることが多い（刑訴法461条）。',
+          '・衣服の上から触る行為は、多くは迷惑行為防止条例違反（北見坂県の条例は架空。法定刑：6月以下の拘禁刑又は50万円以下の罰金）。行為の態様によっては、不同意わいせつ（刑法176条）にあたる。条例違反なら、被疑者が認めれば略式手続（罰金）で終わることが多い（刑訴法461条）。',
           '・確定した略式命令は、確定判決と同一の効力を持つ（刑訴法470条）。') });
         c.arrest = 0; c.recorded = false;
         return L;
@@ -211,7 +215,7 @@
     run: async function () {
       const S = { c: { truth: rnd() < .5 ? 'G' : 'I', sess: { A: 0, B: 0, C: 0, D: 0, E: 0 } } };
       G.audio.cue('main'); G.audio.ambient('office');
-      await G.curtain(['<div class="big">8時12分発</div><div class="small">迷惑行為防止条例違反</div>']);
+      await G.curtain(['<div class="big">8時12分発</div><div class="small">朝の電車。女性が「痴漢です」と男の手をつかんだ</div>']);
       G.auditCtx = { suspect: 'saeki', inCustody: () => inC(S) };
       await K.start(C, S);
       G.audio.ambient(null);

@@ -27,6 +27,7 @@
       + '<div style="margin-top:2px">逮捕から48時間で送致、24時間以内に勾留請求、勾留10日、延長は最大10日（刑訴法203・205・208条）</div></div>';
   };
   kit.info = (S, title) => {
+    title = kit.title(S, title.replace(/（.*）$/, ''));
     if (kit.inCustody(S)) {
       const d = kit.custodyDay(S), stage = d < 2 ? '送致前（48時間）' : d < 3 ? '勾留請求' : d < 13 ? '勾留' : '勾留延長';
       return { text: title + '　' + stage, clock: kit.limitBar(d, LIMIT - d) };
@@ -66,7 +67,8 @@
     const c = S.c; c.sess = c.sess || { A: 0, B: 0, C: 0, D: 0, E: 0 };
     G.audio.ambient('interro'); G.drawScene(kit.sc(cfg.who, 'interro', kit.stage(S)));
     if (c.confession) { const r = cfg.afterConfession ? await cfg.afterConfession(S) : (await G.talk([[cfg.who, '……書いてあるとおりです。']]), false); G.audio.ambient(null); return r; }
-    if (cfg.recorded) await G.talk([['', '（録画装置の赤いランプが点いている。この取調べは、最初から最後まで記録される。）']]);
+    const rec = c.recorded != null ? c.recorded : cfg.recorded;
+    if (rec) await G.talk([['', '（録画装置の赤いランプが点いている。この取調べは、最初から最後まで記録される。）']]);
     const total = c.sess.A + c.sess.B + c.sess.C + c.sess.D + c.sess.E;
     if (total === 0 && cfg.first) await G.talk(cfg.first);
     const L = cfg.labels;
@@ -76,9 +78,9 @@
         { label: '怒鳴りつけ、追い詰める', value: 'E', cls: 'red', small: L.E || '机を叩く。家族のことを持ち出す' },
         { label: L.D[0], value: 'D', cls: 'red', small: L.D[1] }, { label: 'やめておく', value: null, small: '時間は使わない' }] });
     if (!k) { G.audio.ambient(null); return false; }
-    const R = kit.RISK(cfg.recorded, c.meter || 0);
+    const R = kit.RISK(rec, c.meter || 0);
     if (R[k] && !(await G.confirmRisk(R[k]))) { G.audio.ambient(null); return false; }
-    c.sess[k]++; if (cfg.recorded && 'CDE'.includes(k)) c.recordedAbuse = (c.recordedAbuse || 0) + 1;
+    c.sess[k]++; if (rec && 'CDE'.includes(k)) c.recordedAbuse = (c.recordedAbuse || 0) + 1;
     const lines = kit.poolLines(S, cfg.pools[k], k);
     const inc = cfg.inc[k][c.truth === cfg.guiltyKey ? 'G' : 'I'] + (c.fired ? 5 : 0);
     c.meter = (c.meter || 0) + inc;
@@ -124,6 +126,25 @@
     if (c.truth !== cfg.guiltyKey && !c.confession.voluntary && rnd() < .2) { c.retractCustody = true; await G.talk([[cfg.who, '……やっぱり、違います。やってません。'], ['', '（自白を撤回した。）']]); }
   };
 
+  // 罪名を選ぶ（逮捕状の請求、または送致のとき）
+  kit.charge = S => S.c.charge && (G.keiji.C().charges || []).find(x => x.id === S.c.charge);
+  kit.title = (S, name) => { const ch = kit.charge(S); return name + (ch ? '（' + ch.label + '）' : ''); };
+  kit.chooseCharge = async function (S, C, why, must) {
+    if (S.c.charge) return kit.charge(S);
+    const v = await G.openPaper({ title: '罪名を決める', sub: why === 'warrant' ? '逮捕状請求書の「罪名」「被疑事実の要旨」の欄' : why === 'soutchi' ? '送致書の「罪名」の欄' : '捜査の見立て。一度決めると、変えられない',
+      body: G.P('集めた記録から、何の罪にあたるかを決める。', '罪名によって、逮捕・勾留の判断、取調べの録音・録画の義務、裁判の形が変わる。起訴するかどうか、何の罪で起訴するかは、最終的には検察官が決める。'),
+      noClose: true, buttons: C.charges.map(ch => ({ label: ch.label, value: ch.id, small: ch.law })).concat(must ? [] : [{ label: 'まだ決めない', value: null }]) });
+    if (!v) return null;
+    S.c.charge = v; const ch = kit.charge(S);
+    if (C.charges.find(x => x.fit).id !== v) S.c.chargeMismatch = true;
+    G.audio.sfx('stamp'); return ch;
+  };
+  kit.mismatchLines = (S, C) => {
+    const ch = kit.charge(S), fit = C.charges.find(x => x.fit);
+    if (!ch || ch.fit) return [];
+    return [['kenji', '送致罪名は「' + ch.label + '」ですね。'], ['kenji', '……記録を読む限り、問題になるのは「' + fit.label + '」です。何の罪で起訴するかは、こちらで判断します。']];
+  };
+
   // 釈放を進言する（全事件共通）
   kit.releaseAction = (gaugeOf, finish) => ({ id: 'release', who: 'self', label: '釈放を進言する', sub: '嫌疑が足りない、または身柄を拘束する必要がない', cond: S => kit.inCustody(S) && kit.custodyDay(S) >= 2 && !S.c.releaseAsked,
     run: async S => {
@@ -144,21 +165,24 @@
   // 本部の評価（組織の帳簿）
   kit.honbu = function (S, verdict, revealed) {
     const c = S.c;
+    const mism = c.chargeMismatch ? 1 : 0;
     const base = { '有罪': 4, '有罪（減軽）': 3, '略式命令（罰金）': 3, '無罪': -2, '不起訴': 0, '釈放（不起訴）': -1, '未解決': -2 }[verdict] ?? 0;
-    let sc = base + (c.confession ? 1 : 0) - (c.excludedIllegal || 0) * 2 - (c.releaseRejected ? 1 : 0);
+    const miss = c.missPoints || 0;
+    let sc = base - (miss >= 4 ? 1 : 0) + (c.confession ? 1 : 0) - (c.excludedIllegal || 0) * 2 - (c.releaseRejected ? 1 : 0) - mism;
     const grade = sc >= 4 ? 'A' : sc >= 2 ? 'B' : sc >= 0 ? 'C' : 'D';
     const word = { A: '「よくやった。次の異動、悪いようにはせん」（東堂課長）', B: '「まあ、及第点だ」（東堂課長）', C: '「署長が渋い顔をしてたぞ」（東堂課長）', D: '「本部長賞は、別の係に行った」（東堂課長）' }[grade];
     const proc = (c.sess ? (c.sess.C ? 1 : 0) + (c.sess.D ? 1 : 0) + (c.sess.E ? 1 : 0) : 0) + (c.illegalCount || 0) + (c.search === 'illegal' ? 1 : 0) + (c.arrest_kind === 'bekken' ? 1 : 0);
     let after = '';
     if (revealed === 'wrong') after = '<br><br>数年後、再審無罪が報じられた日、県警本部は「当時の捜査は適正に行われた」とのコメントを出した。<br>あなたの人事記録の評価は、変わらなかった。';
     if (revealed === 'free') after = '<br><br>数年後、事件が報じられた日、県警本部は「当時の判断に問題はなかった」とのコメントを出した。';
-    return '<div class="doc-s"><h3>本部の評価　' + grade + '</h3>' + word + '<br><br>結果：' + verdict + (c.confession ? '　／　自白：あり' : '')
-      + '<br><br><span style="color:#aaa">手続の記録：注意の付いた行動 ' + proc + '件　／　送らなかった記録 ' + (c.withheld || []).length + '件</span>' + after + '</div>';
+    return '<div class="doc-s"><h3>本部の評価　' + grade + '</h3>' + word + '<br><br>結果：' + verdict + (c.confession ? '　／　自白：あり' : '') + (c.charge ? '<br>送致罪名：' + (kit.charge(S) || {}).label + (mism ? '（検察官が罪名を改めた）' : '') : '')
+      + (miss >= 4 ? '<br>「捜査メモに、思いつきの書き込みが多すぎる」（東堂課長）' : '') + '<br><br><span style="color:#aaa">手続の記録：注意の付いた行動 ' + proc + '件　／　送らなかった記録 ' + (c.withheld || []).length + '件</span>' + after + '</div>';
   };
 
   // 送致書（目録）の画面
   kit.soutchi = async function (C, S) {
     const c = S.c;
+    if (c.how !== 'unsolved' && C.charges) await kit.chooseCharge(S, C, 'soutchi', true);
     G.audio.cue('soutchi');
     await G.curtain([{ html: '<div class="big">' + (c.how === 'release' ? '釈放・送致' : '送致') + '</div>', wait: 900 }]);
     const ev = S.docs.filter(d => d.evid && !d.late);

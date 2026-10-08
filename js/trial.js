@@ -38,7 +38,7 @@
         G.layout({ role: '検察', date: '', info: '北見坂地方検察庁', scene: { bg: 'pros', who: 'kenji' } });
         G.audio.ambient(null);
         const charge = c.how === 'release' ? 'release' : T.charge ? T.charge(S, est) : ((c.confession && !c.retract) || est.pos - est.neg >= 3);
-        if (charge !== 'release') await G.talk(T.lines(S, charge));
+        if (charge !== 'release') await G.talk(G.kit.mismatchLines(S, G.keiji.C()).concat(T.lines(S, charge)));
         if (charge === 'release') verdict = '釈放（不起訴）';
         else if (charge === 'ryakushiki') verdict = '略式命令（罰金）';
         else if (!charge) verdict = '不起訴';

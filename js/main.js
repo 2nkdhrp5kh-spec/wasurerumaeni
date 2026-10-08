@@ -35,10 +35,10 @@
     }
     const id = await G.openPaper({ title: '事件を選ぶ', sub: '刑事課の机に、四つの事件記録がある。', noClose: true, body: G.P('どの事件の主任になるか。'),
       buttons: [
-        { label: '青柳書房事件', value: 'aoyagi', small: '強盗・誰がやったのか' },
-        { label: '北見坂駅前事件', value: 'ekimae', small: '傷害致死・正当防衛は成立するか（裁判員裁判）' },
-        { label: '8時12分発', value: 'chikan', small: '痴漢・証拠は被害者の供述' },
-        { label: '本町三丁目火災', value: 'kasai', small: '放火・火事か放火か（裁判員裁判）' }] });
+        { label: '青柳書房事件', value: 'aoyagi', small: '古書店で、店主が縛られ、金庫が奪われた' },
+        { label: '北見坂駅前事件', value: 'ekimae', small: '深夜の駅前で、男性が倒れて頭を打った。タクシー運転手が通報' },
+        { label: '8時12分発', value: 'chikan', small: '朝の電車で、女性が男の手をつかんだ。駅員が男を引き渡した' },
+        { label: '本町三丁目火災', value: 'kasai', small: '未明の住宅火災。住人の母と息子は避難した' }] });
     const S = await G.cases[id].run();
     if (id === 'aoyagi') await G.ending.run(S);
     else await G.trial.run(S, G.cases[id].trial);

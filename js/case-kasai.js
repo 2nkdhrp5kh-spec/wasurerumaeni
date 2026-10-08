@@ -11,7 +11,14 @@
   const C = {
     id: 'kasai', role: '捜査官', base: { m: 1, d: 18 }, dayCard: true,
     staff: [{ id: 'shirai', name: '白井' }, { id: 'oka', name: '岡' }, { id: 'noguchi', name: '野口' }],
-    info: S => kit.info(S, '本町三丁目火災（現住建造物等放火）'),
+    info: S => kit.info(S, '本町三丁目火災'),
+    charges: [
+      { id: 'hoka', label: '現住建造物等放火', law: '刑法108条（裁判員裁判の対象）', fit: true, saibanin: true },
+      { id: 'jushikka', label: '重過失失火', law: '刑法117条の2後段', saibanin: false, noArrest: true,
+        els: (S, e) => [e[0], { k: '大塚の重大な過失', v: G.keiji.doc('stove') ? 1 : 0 }, e[2]] },
+      { id: 'shikka', label: '失火', law: '刑法116条（罰金のみ）', saibanin: false, noArrest: true,
+        els: (S, e) => [e[0], { k: '大塚の過失', v: G.keiji.doc('stove') ? 1 : 0 }] }
+    ],
     scene: S => sc(null, 'office'),
     endHint: S => inC(S) ? '満期までに記録を固める' : '',
     stopSkip: S => (inC(S) && (cday(S) >= kit.LIMIT || (cday(S) >= 16 && !S.c.confession && !S.c.takeoverAsked))) || (S.c.arrest == null && S.day >= 35),
@@ -37,7 +44,7 @@
         K.addDoc({ id: 'scene', title: '実況見分調書（火災現場）', kind: 'neu', evid: true, body: P('木造2階建て住宅。1階居間を中心に、1階の約8割を焼損。2階は一部焼損。', '居間の床には、石油ストーブ（焼損）。その周辺の床面に、不規則な形の焼け跡が広がっている。', '出火当時、大塚茂は2階、キヨは1階奥の和室で就寝していたと述べている。') });
         K.addDoc({ id: 'manual', title: '捜査の要点', kind: 'memo', body: P('・現住建造物等放火（刑法108条）：放火して、現に人が住居に使用する建造物を焼損した者は、死刑又は無期若しくは5年以上の拘禁刑。裁判員裁判の対象で、逮捕後の取調べは録画される。',
           '・争点は「火事か、放火か」。火災の原因の鑑定は、専門家の間でも評価が分かれることがある。',
-          '・二つの記録を照らし合わせると、食い違いやつながりが見つかることがある。') });
+          '・記録を開いて「横に並べる」と、二枚を見比べられる。食い違いやつながりに気づけば、捜査の糸口になる。') });
         return L;
       }
       if (c.warrantPending && S.day > c.warrantPending) { c.warrantPending = null; c.warrantReady = true; L.push(['todo', '逮捕状が出た。', { scene: sc('todo') }]); }
@@ -139,14 +146,17 @@
       c.phone = c.truth === 'A' ? (r < .4 ? 'A' : 'none') : (r < .3 ? 'N' : 'none');
       K.addDoc({ id: 'phoneDoc', title: 'スマートフォン解析結果', kind: 'neu', evid: true, body: c.phone === 'A' ? P('1月5日の検索履歴：「灯油　火事　証拠」「火災保険　放火　調査」') : c.phone === 'N' ? P('12月20日の検索履歴：「石油ストーブ　倒れても消えない」「KT-2300　修理」') : P('事件に関係する検索履歴・通信は見当たらない。') });
       return [['oka', c.phone === 'A' ? '……検索履歴です。「灯油 火事 証拠」。' : c.phone === 'N' ? '12月に「ストーブ 倒れても消えない」と検索してます。' : 'スマホには、関係しそうなものは何も。', { scene: sc('oka') }]]; } });
-  A.push({ id: 'warrant', who: 'self', label: '逮捕状の請求を課長に上げる', sub: '現住建造物等放火', primary: true, cond: S => S.c.arrest == null && !S.c.warrantPending && !S.c.warrantReady, run: async S => {
+  A.push({ id: 'warrant', who: 'self', label: '逮捕状の請求を課長に上げる', sub: '罪名を決めて請求する', primary: true, cond: S => S.c.arrest == null && !S.c.warrantPending && !S.c.warrantReady && !(kit.charge(S) || {}).noArrest, run: async S => {
+    const ch = await kit.chooseCharge(S, C, 'warrant'); if (!ch) return false;
+    if (ch.noArrest) { await G.talk([['todo', ch.label + 'で、身柄を取る気か。', { scene: sc('todo') }], ['todo', '住居も分かってる、母親の世話もある男だ。逃げも隠れもせん。……逮捕の必要がないと、裁判官に突き返されるぞ。'], ['', '（逮捕状は請求しなかった。在宅のまま捜査を続け、送致することになる。）']]); return; }
     if (!K.doc('kanteiP') && !(K.doc('insurance') && K.doc('debt'))) { await G.talk([['todo', '放火だと言える材料がない。鑑定を待て。', { scene: sc('todo') }]]); return false; }
     await G.talk([['todo', '請求する。', { scene: sc('todo') }], ['', '（逮捕状は翌日発付される。）']]); S.c.warrantPending = S.day;
   } });
   A.push({ id: 'arrest', who: 'self', label: '大塚を逮捕する', primary: true, cond: S => S.c.warrantReady && S.c.arrest == null, run: async S => {
     G.drawScene(sc('otsuka', 'street', 0));
-    await G.talk([['you', '大塚茂さん。現住建造物等放火の容疑で逮捕します。'], ['otsuka', '……母は、どうなるんですか。'], ['', '（逮捕。ここから先の取調べは、録音・録画される。）', { sfx: 'metal' }]]);
-    S.c.arrest = S.day; S.c.recorded = true; S.c.warrantReady = false;
+    S.c.recorded = !!kit.charge(S).saibanin;
+    await G.talk([['you', '大塚茂さん。' + kit.charge(S).label + 'の容疑で逮捕します。'], ['otsuka', '……母は、どうなるんですか。'], ['', '（逮捕。' + (S.c.recorded ? 'この罪名は裁判員裁判の対象。ここから先の取調べは、録音・録画される。' : 'この罪名では、取調べの録音・録画の義務はない。') + '）', { sfx: 'metal' }]]);
+    S.c.arrest = S.day; S.c.warrantReady = false;
   } });
   A.push(kit.releaseAction(S => G.trial.estimate(S, TRIAL), (S, how) => finish(S, how)));
   A.push({ id: 'interro', who: 'self', once: false, label: '大塚を取り調べる', sub: '録画されている', primary: true, cond: S => inC(S), run: async S => kit.interro(S, ICFG) });
@@ -246,7 +256,7 @@
     run: async function () {
       const S = { c: { truth: rnd() < .5 ? 'A' : 'N', sess: { A: 0, B: 0, C: 0, D: 0, E: 0 } } };
       G.audio.cue('main'); G.audio.ambient('office');
-      await G.curtain(['<div class="big">本町三丁目火災</div><div class="small">現住建造物等放火</div>']);
+      await G.curtain(['<div class="big">本町三丁目火災</div><div class="small">未明の住宅火災。出火原因は分からない</div>']);
       G.auditCtx = { suspect: 'otsuka', inCustody: () => inC(S) };
       await K.start(C, S);
       G.audio.ambient(null);
