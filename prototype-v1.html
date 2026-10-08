@@ -1,0 +1,1104 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>疑わしきは</title>
+<meta name="description" content="刑事訴訟法を題材にしたゲーム。捜査官、検察官、裁判官として、ひとつの強盗事件に向き合う。">
+<meta name="theme-color" content="#0b0a09">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Noto+Serif+JP:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#141310; --win:#22211d; --dlg:#0e0d0b; --line:#000;
+  --text:#d8d2c2; --muted:#8f887a; --amber:#c9a24a;
+  --paper:#dcd2b6; --paper2:#cbbf9d; --ink:#2b241b; --ink2:#5b5040;
+  --red:#a3342b; --green:#4f6a3c; --wood:#4a3a29; --wood2:#3e3022;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#141310; } }
+:root[data-theme="dark"]{ --bg:#141310; }
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--text);font-family:'DotGothic16',system-ui,sans-serif;font-size:15px;line-height:1.75;-webkit-tap-highlight-color:transparent;overflow-x:hidden}
+button{font:inherit;color:inherit}
+#app{max-width:760px;margin:0 auto;padding:12px 16px 40px;min-height:100%}
+.serif{font-family:'Noto Serif JP',serif}
+
+/* bar */
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:8px 0 10px;border-bottom:2px solid #000;margin-bottom:10px}
+.role{border:2px solid var(--amber);color:var(--amber);padding:0 8px;letter-spacing:.1em}
+.when{color:var(--text)}
+.info{color:var(--muted);font-size:13px;flex:1;min-width:140px}
+.pips{display:flex;gap:4px}
+.pip{width:12px;height:12px;border:2px solid var(--amber)}
+.pip.used{background:var(--amber)}
+.barbtn{background:none;border:2px solid var(--muted);color:var(--muted);padding:0 8px;cursor:pointer;font-size:13px}
+.barbtn:hover{color:var(--text);border-color:var(--text)}
+
+/* window */
+.window{border:3px solid #000;background:var(--win);box-shadow:0 0 0 2px #2c2a25 inset}
+.scene svg{display:block;width:100%;height:auto;image-rendering:pixelated;shape-rendering:crispEdges}
+.dlg{background:var(--dlg);border-top:3px solid #000;min-height:104px;padding:10px 14px;cursor:pointer;position:relative;user-select:none}
+.who{color:var(--amber);font-size:13px}
+.say{white-space:pre-wrap}
+.say .thought{color:var(--muted)}
+.more{position:absolute;right:12px;bottom:6px;color:var(--amber);animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:0}}
+
+/* desk */
+.desk{margin-top:10px;background:repeating-linear-gradient(90deg,var(--wood) 0 22px,var(--wood2) 22px 24px);border:3px solid #000;padding:8px 10px 12px}
+.desk-h{font-size:12px;color:#c9b99a;margin-bottom:6px}
+.docs{display:flex;flex-wrap:wrap;gap:8px}
+.doc{background:var(--paper);color:var(--ink);border:2px solid #000;padding:4px 8px;font-size:13px;cursor:pointer;position:relative;box-shadow:2px 2px 0 #0006;max-width:100%}
+.doc:hover{transform:translateY(-2px)}
+.doc.new::after{content:'新';position:absolute;top:-8px;right:-8px;background:var(--red);color:#fff;font-size:10px;padding:0 3px;border:1px solid #000}
+.doc.out{opacity:.45;text-decoration:line-through}
+.doc.memo{background:#9c968a;color:#222}
+
+/* memory */
+.memory{margin-top:10px;border:3px dashed #555;padding:8px 10px;background:#1a1916}
+.memory .desk-h{color:var(--muted)}
+.mem{display:block;width:100%;text-align:left;background:none;border:none;border-bottom:1px dotted #444;color:#777;padding:4px 0;cursor:pointer;font-size:13px}
+.mem:hover{color:#aaa}
+.mem.touched{text-decoration:line-through;color:#5a5a5a}
+
+/* actions */
+.acts{margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.acts.wait{opacity:.25;pointer-events:none}
+@media (max-width:520px){.acts{grid-template-columns:1fr}}
+.act{background:#2d2b26;border:2px solid #000;box-shadow:0 0 0 1px #4a463d inset;text-align:left;padding:8px 10px;cursor:pointer}
+.act:hover:not(:disabled){background:#38352e}
+.act:disabled{opacity:.35;cursor:default}
+.act .l{display:block}
+.act .s{display:block;font-size:12px;color:var(--muted);line-height:1.5}
+.act.primary{border-color:var(--amber)}
+.act.ghost{background:transparent}
+
+/* overlay paper */
+#overlay{position:fixed;inset:0;background:#000b;display:flex;align-items:flex-start;justify-content:center;padding:24px 12px;overflow-y:auto;z-index:20}
+#overlay[hidden]{display:none}
+.paper{background:var(--paper);color:var(--ink);width:100%;max-width:620px;border:3px solid #000;box-shadow:6px 6px 0 #000a;position:relative;padding:18px 20px 14px;font-family:'Noto Serif JP',serif;font-size:15px;line-height:1.9}
+.paper-h{font-weight:700;font-size:17px;border-bottom:2px solid var(--ink);padding-bottom:4px;margin-bottom:10px;padding-right:90px}
+.paper-sub{font-size:12px;color:var(--ink2);margin-top:-6px;margin-bottom:10px}
+.paper p{margin:0 0 .7em}
+.paper .note{font-size:13px;color:var(--ink2);border-left:3px solid var(--ink2);padding-left:8px}
+.paper h4{margin:14px 0 4px;font-size:14px}
+.paper .art{margin:0 0 .9em;padding-left:8px;border-left:3px solid var(--paper2)}
+.paper .art b{display:block;font-size:13px}
+.kv{border-collapse:collapse;width:100%;font-size:14px;margin:6px 0 10px}
+.kv th,.kv td{border:1px solid var(--ink2);padding:3px 6px;text-align:left;vertical-align:top}
+.kv th{background:var(--paper2);white-space:nowrap;font-weight:400}
+.paper-f{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;margin-top:14px;font-family:'DotGothic16',sans-serif}
+.pbtn{background:var(--paper2);border:2px solid var(--ink);color:var(--ink);padding:4px 12px;cursor:pointer}
+.pbtn:hover{background:#bfb28c}
+.pbtn.red{background:var(--red);color:#fff}
+.pbtn.green{background:var(--green);color:#fff}
+.pbtn:disabled{opacity:.4;cursor:default}
+.stamps{position:absolute;top:10px;right:12px;display:flex;flex-direction:column;align-items:flex-end;gap:4px;pointer-events:none}
+.stamp{font-family:'DotGothic16',sans-serif;border:3px double currentColor;padding:0 6px;font-size:16px;letter-spacing:.15em;transform:rotate(-8deg);opacity:.85;background:transparent}
+.stamp.red{color:var(--red)} .stamp.green{color:var(--green)} .stamp.gray{color:#555}
+.stamp.hit{animation:stampin .22s ease-out}
+@keyframes stampin{0%{transform:scale(2.4) rotate(-8deg);opacity:0}70%{transform:scale(.92) rotate(-8deg);opacity:1}100%{transform:scale(1) rotate(-8deg)}}
+.check{display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px dotted var(--ink2);cursor:pointer}
+.check input{margin-top:6px;width:18px;height:18px;accent-color:var(--ink)}
+.check small{display:block;color:var(--ink2);font-size:12px;line-height:1.5}
+.tag{display:inline-block;font-family:'DotGothic16',sans-serif;font-size:11px;border:1px solid var(--ink2);padding:0 4px;margin-left:4px;color:var(--ink2)}
+
+/* curtain (black screens) */
+#curtain{position:fixed;inset:0;background:#000;color:#ddd;display:flex;align-items:center;justify-content:center;padding:32px 24px;z-index:30;opacity:0;pointer-events:none;transition:opacity .8s}
+#curtain.on{opacity:1;pointer-events:auto;cursor:pointer}
+.cpage{max-width:620px;text-align:center;opacity:0;transition:opacity 1.2s}
+.cpage.show{opacity:1}
+.cpage .big{font-size:22px;letter-spacing:.2em}
+.cpage .quote{font-family:'Noto Serif JP',serif;font-size:17px;line-height:2.1;text-align:left}
+.cpage .cite{font-family:'Noto Serif JP',serif;font-size:13px;color:#9a9a9a;margin-top:22px;text-align:right}
+.cpage .law{font-family:'Noto Serif JP',serif;font-size:16px;line-height:2;text-align:left}
+.cpage .small{font-size:13px;color:#888;margin-top:16px}
+.tap{position:fixed;bottom:22px;left:0;right:0;text-align:center;font-size:12px;color:#555;opacity:0;transition:opacity 1s}
+.tap.show{opacity:1}
+
+/* title */
+.title{min-height:88vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:6px}
+.title h1{font-size:44px;letter-spacing:.3em;margin:0 0 0 .3em;font-weight:400}
+.title .latin{color:var(--muted);letter-spacing:.3em;font-size:12px}
+.title .menu{display:flex;flex-direction:column;gap:10px;margin-top:36px;width:220px}
+.title .foot{margin-top:40px;font-size:12px;color:#5f5a50;max-width:420px}
+.record td,.record th{font-size:13px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="overlay" hidden></div>
+<div id="curtain"><div id="cbox"></div><div class="tap" id="ctap">画面をタップ</div></div>
+
+<script>
+'use strict';
+/* ============================================================
+   疑わしきは — 刑事訴訟法を題材にしたゲーム（試作版）
+   ============================================================ */
+const $ = s => document.querySelector(s);
+const app = $('#app'), ov = $('#overlay'), curtain = $('#curtain'), cbox = $('#cbox'), ctap = $('#ctap');
+const META_KEY = 'utagawashiki.meta.v1';
+function load(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } }
+function save(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+let meta = load(META_KEY, null) || { seenQuote:false, runs:[] };
+const rnd = () => Math.random();
+const P = (...ls) => ls.map(l => '<p>' + l + '</p>').join('');
+const kv = rows => '<table class="kv">' + rows.map(([k,v]) => '<tr><th>' + k + '</th><td>' + v + '</td></tr>').join('') + '</table>';
+const note = t => '<p class="note">' + t + '</p>';
+
+/* ---------- sound ---------- */
+let AC = null;
+function ac(){ if(!AC){ try{ AC = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } if(AC && AC.state==='suspended') AC.resume(); return AC; }
+function sfxStamp(){
+  const a = ac(); if(!a) return; const t = a.currentTime;
+  const len = Math.floor(a.sampleRate*.09), buf = a.createBuffer(1,len,a.sampleRate), d = buf.getChannelData(0);
+  for(let i=0;i<len;i++) d[i] = (Math.random()*2-1)*Math.pow(1-i/len,3);
+  const s = a.createBufferSource(); s.buffer = buf; const f = a.createBiquadFilter(); f.type='lowpass'; f.frequency.value=700;
+  const g = a.createGain(); g.gain.value=.8; s.connect(f); f.connect(g); g.connect(a.destination); s.start(t);
+  const o = a.createOscillator(), og = a.createGain(); o.frequency.setValueAtTime(130,t); o.frequency.exponentialRampToValueAtTime(40,t+.15);
+  og.gain.setValueAtTime(.5,t); og.gain.exponentialRampToValueAtTime(.001,t+.18); o.connect(og); og.connect(a.destination); o.start(t); o.stop(t+.2);
+}
+function sfxTick(){
+  const a = ac(); if(!a) return; const t = a.currentTime;
+  const o = a.createOscillator(), g = a.createGain(); o.type='square'; o.frequency.value=1800;
+  g.gain.setValueAtTime(.04,t); g.gain.exponentialRampToValueAtTime(.0001,t+.03); o.connect(g); g.connect(a.destination); o.start(t); o.stop(t+.04);
+}
+function sfxBell(){
+  const a = ac(); if(!a) return; const t = a.currentTime;
+  [55,82.5,110].forEach((fq,i) => { const o = a.createOscillator(), g = a.createGain(); o.type='sine'; o.frequency.value=fq;
+    g.gain.setValueAtTime(.18/(i+1),t); g.gain.exponentialRampToValueAtTime(.0001,t+2.8); o.connect(g); g.connect(a.destination); o.start(t); o.stop(t+3); });
+}
+
+/* ---------- scenes (pixel SVG) ---------- */
+const R = (x,y,w,h,c) => '<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" fill="'+c+'"/>';
+function person(x,y,c,face){ return R(x+3,y,6,6,face||c)+R(x,y+6,12,12,c)+R(x+1,y+18,10,6,c); }
+const SCENES = {
+  office: () => R(0,0,160,60,'#2a2823')+R(0,0,160,4,'#1c1b18')+R(10,8,36,22,'#3d4a52')+R(12,10,32,18,'#56656d')+R(27,10,2,18,'#3d4a52')
+    +R(60,8,40,24,'#3a352b')+R(62,10,12,8,'#d9cfb4')+R(76,12,10,6,'#d9cfb4')+R(88,10,10,10,'#a3342b')+R(64,20,22,1,'#888')+R(64,23,30,1,'#888')
+    +R(112,6,40,30,'#1f1e1a')+R(114,8,36,26,'#cfc6aa')+R(118,12,18,1,'#555')+R(118,16,26,1,'#555')+R(118,20,22,1,'#555')
+    +R(0,40,160,20,'#4a3a29')+R(0,40,160,2,'#2b2118')+R(30,32,20,8,'#d9cfb4')+R(32,30,18,8,'#e4dbc2')+R(110,34,8,6,'#111')+R(114,32,8,2,'#111')
+    +person(66,34,'#1b1a17','#c5ab8b'),
+  interro: () => R(0,0,160,60,'#1a1916')+R(0,0,160,60,'#1d1c19')+R(74,0,12,3,'#555')+R(70,3,20,3,'#d8c37a')
+    +'<polygon points="70,6 90,6 120,44 40,44" fill="#d8c37a" opacity=".07"/>'+R(118,8,26,18,'#141311')+R(120,10,22,14,'#25292b')
+    +R(30,40,100,4,'#3b3227')+R(34,44,4,16,'#2b241b')+R(122,44,4,16,'#2b241b')+R(70,36,16,4,'#dcd2b6')
+    +person(40,20,'#0f0e0c','#b89e7f')+person(108,20,'#3a3a3a','#c7ad8c'),
+  court: () => R(0,0,160,60,'#2b2620')+R(0,0,160,14,'#241f1a')+R(74,2,12,10,'#8a7a50')+R(77,4,6,6,'#2b2620')
+    +R(20,22,120,14,'#5a4630')+R(20,22,120,2,'#6e5a3f')+person(46,8,'#111','#c0a483')+person(74,6,'#111','#c7ad8c')+person(102,8,'#111','#bda080')
+    +R(66,44,28,10,'#4f3d2a')+person(74,36,'#5a5a55','#c4a888')+R(6,40,26,14,'#3f3123')+R(128,40,26,14,'#3f3123')+person(12,30,'#222','#b99c7c')+person(136,30,'#222','#c3a786'),
+  pros: () => R(0,0,160,60,'#27261f')+R(0,0,160,30,'#2f2d26')+R(12,6,30,20,'#46504a')+R(14,8,26,16,'#6d7a72')
+    +R(100,4,52,30,'#3a3224')+R(102,6,6,26,'#8a3a2c')+R(108,6,6,26,'#3d5a6a')+R(114,6,6,26,'#6a5a3a')+R(120,6,6,26,'#8a3a2c')+R(126,6,6,26,'#3d5a6a')+R(132,6,6,26,'#555')
+    +R(0,40,160,20,'#3e3022')+R(40,30,60,10,'#d9cfb4')+R(44,28,52,10,'#e5dcc4')+R(48,26,44,10,'#d4caae')
+    +person(108,30,'#141414','#c9ae8e'),
+  dark: () => R(0,0,160,60,'#0c0b0a')
+};
+const svg = k => '<svg viewBox="0 0 160 60" xmlns="http://www.w3.org/2000/svg">' + (SCENES[k]||SCENES.dark)() + '</svg>';
+
+/* ---------- curtain sequences ---------- */
+function curtainSeq(pages, done, opt){
+  opt = opt || {};
+  curtain.classList.add('on'); let i = 0, ready = false;
+  const show = () => {
+    if(i >= pages.length){ curtain.onclick = null; ctap.classList.remove('show');
+      if(opt.keep){ done && done(); return; }
+      cbox.innerHTML=''; curtain.classList.remove('on'); setTimeout(() => done && done(), 500); return; }
+    ready = false; ctap.classList.remove('show');
+    cbox.innerHTML = '<div class="cpage">' + pages[i++] + '</div>';
+    requestAnimationFrame(() => requestAnimationFrame(() => { const c = cbox.firstChild; if(c) c.classList.add('show'); }));
+    const wait = opt.wait || 1400;
+    setTimeout(() => { ready = true; ctap.classList.add('show'); }, wait);
+  };
+  curtain.onclick = () => { ac(); if(ready) show(); };
+  setTimeout(show, 600);
+}
+
+/* ---------- layout ---------- */
+let talking = false;
+function layout(o){
+  app.innerHTML =
+    '<header class="bar"><span class="role">' + o.role + '</span><span class="when">' + (o.date||'') + '</span>'
+    + (o.pips!=null ? '<span class="pips">' + [0,1,2].map(i => '<span class="pip' + (i<o.pips?' used':'') + '"></span>').join('') + '</span>' : '')
+    + '<span class="info">' + (o.info||'') + '</span><button class="barbtn" id="lawbtn">条文帳</button></header>'
+    + '<section class="window"><div class="scene">' + svg(o.scene) + '</div><div class="dlg" id="dlg"><div class="say"><span class="thought">' + (o.hint||'（次にすることを選ぶ。）') + '</span></div></div></section>'
+    + '<section class="desk"><div class="desk-h">' + (o.deskLabel||'机の上') + '</div><div class="docs" id="docs"></div></section>'
+    + (o.memory ? '<section class="memory"><div class="desk-h">あなたの記憶 —— 法廷には出ていない</div><div id="mems"></div></section>' : '')
+    + '<section class="acts" id="acts"></section>';
+  $('#lawbtn').onclick = openLaw;
+  renderDocs();
+  if(o.memory) renderMemory();
+}
+function talk(lines, done){
+  const box = $('#dlg'), acts = $('#acts');
+  talking = true; if(acts) acts.classList.add('wait');
+  let i = 0;
+  const show = () => {
+    if(i >= lines.length){ box.onclick = null; const m = box.querySelector('.more'); if(m) m.remove();
+      talking = false; if(acts) acts.classList.remove('wait'); done && done(); return; }
+    const [who, text] = lines[i++];
+    const isThought = !who;
+    box.innerHTML = (who ? '<div class="who">' + who + '</div>' : '') + '<div class="say">' + (isThought ? '<span class="thought">' + text + '</span>' : text) + '</div><div class="more">▼</div>';
+    sfxTick();
+  };
+  box.onclick = () => { ac(); show(); };
+  show();
+}
+function actions(list){
+  const el = $('#acts'); el.innerHTML = '';
+  list.forEach(a => {
+    const b = document.createElement('button');
+    b.className = 'act' + (a.cls ? ' ' + a.cls : '');
+    b.innerHTML = '<span class="l">' + a.label + '</span>' + (a.sub ? '<span class="s">' + a.sub + '</span>' : '');
+    if(a.disabled) b.disabled = true;
+    b.onclick = () => { if(talking) return; ac(); a.fn(); };
+    el.appendChild(b);
+  });
+}
+
+/* ---------- paper overlay ---------- */
+function openPaper(o){
+  // o: {title, sub, body, stamps:[{t,c}], buttons:[{label,cls,fn,keep}], noClose, onClose}
+  const stamps = (o.stamps||[]).map(s => '<span class="stamp ' + s.c + '">' + s.t + '</span>').join('');
+  ov.innerHTML = '<div class="paper"><div class="stamps" id="stamps">' + stamps + '</div><div class="paper-h">' + o.title + '</div>'
+    + (o.sub ? '<div class="paper-sub">' + o.sub + '</div>' : '') + '<div class="paper-b">' + o.body + '</div><div class="paper-f" id="pf"></div></div>';
+  const pf = $('#pf');
+  (o.buttons||[]).forEach(b => { const e = document.createElement('button'); e.className = 'pbtn ' + (b.cls||''); e.textContent = b.label; e.onclick = () => b.fn(e); pf.appendChild(e); });
+  if(!o.noClose){ const c = document.createElement('button'); c.className='pbtn'; c.textContent='閉じる'; c.onclick = () => { closePaper(); o.onClose && o.onClose(); }; pf.appendChild(c); }
+  ov.hidden = false; ov.scrollTop = 0;
+  ov.onclick = e => { if(e.target === ov && !o.noClose){ closePaper(); o.onClose && o.onClose(); } };
+}
+function closePaper(){ ov.hidden = true; ov.innerHTML = ''; }
+function stampOn(t, c){
+  const st = $('#stamps'); if(!st) return;
+  const s = document.createElement('span'); s.className = 'stamp hit ' + c; s.textContent = t;
+  s.style.transform = 'rotate(' + (-12 + rnd()*8).toFixed(1) + 'deg)'; st.appendChild(s); sfxStamp();
+}
+function lockButtons(){ document.querySelectorAll('#pf .pbtn').forEach(b => b.disabled = true); }
+
+/* ============================================================
+   法令（条文帳）
+   ============================================================ */
+const LAW = [
+ ['刑事訴訟法 第1条','この法律は、刑事事件につき、公共の福祉の維持と個人の基本的人権の保障とを全うしつつ、事案の真相を明らかにし、刑罰法令を適正且つ迅速に適用実現することを目的とする。'],
+ ['日本国憲法 第31条','何人も、法律の定める手続によらなければ、その生命若しくは自由を奪はれ、又はその他の刑罰を科せられない。'],
+ ['日本国憲法 第35条1項','何人も、その住居、書類及び所持品について、侵入、捜索及び押収を受けることのない権利は、第三十三条の場合を除いては、正当な理由に基いて発せられ、且つ捜索する場所及び押収する物を明示する令状がなければ、侵されない。'],
+ ['日本国憲法 第38条','①何人も、自己に不利益な供述を強要されない。<br>②強制、拷問若しくは脅迫による自白又は不当に長く抑留若しくは拘禁された後の自白は、これを証拠とすることができない。<br>③何人も、自己に不利益な唯一の証拠が本人の自白である場合には、有罪とされ、又は刑罰を科せられない。'],
+ ['日本国憲法 第39条','何人も、実行の時に適法であつた行為又は既に無罪とされた行為については、刑事上の責任を問はれない。又、同一の犯罪について、重ねて刑事上の責任を問はれない。'],
+ ['刑事訴訟法 第20条（抄）','裁判官は、次に掲げる場合には、職務の執行から除斥される。<br>六　裁判官が事件について検察官又は司法警察員の職務を行つたとき。'],
+ ['刑事訴訟法 第198条2項','前項の取調に際しては、被疑者に対し、あらかじめ、自己の意思に反して供述をする必要がない旨を告げなければならない。'],
+ ['身柄拘束の期間（要約）','司法警察員は逮捕から48時間以内に被疑者を検察官に送致する（203条）。検察官は24時間以内に勾留を請求する（205条）。勾留は10日、やむを得ない事由があれば更に最大10日延長できる（208条）。'],
+ ['刑事訴訟法 第218条1項（抄）','検察官、検察事務官又は司法警察職員は、犯罪の捜査をするについて必要があるときは、裁判官の発する令状により、差押え、捜索、電磁的記録提供命令又は検証をすることができる。'],
+ ['刑事訴訟法 第256条6項','起訴状には、裁判官に事件につき予断を生ぜしめる虞のある書類その他の物を添附し、又はその内容を引用してはならない。'],
+ ['刑事訴訟法 第317条','事実の認定は、証拠による。'],
+ ['刑事訴訟法 第318条','証拠の証明力は、裁判官の自由な判断に委ねる。'],
+ ['刑事訴訟法 第319条','①強制、拷問又は脅迫による自白、不当に長く抑留又は拘禁された後の自白その他任意にされたものでない疑のある自白は、これを証拠とすることができない。<br>②被告人は、公判廷における自白であると否とを問わず、その自白が自己に不利益な唯一の証拠である場合には、有罪とされない。'],
+ ['刑事訴訟法 第320条1項','第三百二十一条乃至第三百二十八条に規定する場合を除いては、公判期日における供述に代えて書面を証拠とし、又は公判期日外における他の者の供述を内容とする供述を証拠とすることはできない。'],
+ ['刑事訴訟法 第326条1項','検察官及び被告人が証拠とすることに同意した書面又は供述は、その書面が作成され又は供述のされたときの情況を考慮し相当と認めるときに限り、第三百二十一条乃至前条の規定にかかわらず、これを証拠とすることができる。'],
+ ['刑事訴訟法 第336条','被告事件が罪とならないとき、又は被告事件について犯罪の証明がないときは、判決で無罪の言渡をしなければならない。'],
+ ['判例　違法収集証拠（最判昭和53年9月7日・要旨）','証拠物の押収等の手続に、令状主義の精神を没却するような重大な違法があり、これを証拠として許容することが、将来における違法な捜査の抑制の見地からして相当でないと認められる場合には、その証拠能力は否定される。'],
+ ['判例　約束による自白（最判昭和41年7月1日・要旨）','起訴不起訴の決定権をもつ検察官の「自白をすれば起訴猶予にする」旨の言葉を信じ、それを期待してした自白は、任意性に疑いがあり、証拠能力を欠く。'],
+ ['判例　合理的な疑い（最決平成19年10月16日・要旨）','「合理的な疑いを差し挟む余地がない」とは、反対事実が存在する疑いを全く残さない場合をいうのではなく、抽象的な可能性としては反対事実の疑いをいれる余地があっても、健全な社会常識に照らしてその疑いに合理性がないと一般的に判断される場合をいう。'],
+ ['判例　白鳥決定（最決昭和50年5月20日・要旨）','「疑わしいときは被告人の利益に」という原則は、刑事裁判における鉄則であり、再審の判断においても適用される。']
+];
+function openLaw(){
+  openPaper({ title:'条文帳', sub:'この試作版で関係する条文と判例。判例は要旨。',
+    body: LAW.map(([h,t]) => '<div class="art"><b>' + h + '</b>' + t + '</div>').join('')
+      + note('条文は e-Gov法令検索の現行法（2026年10月確認）による。本作はフィクションです。手続は現行法に基づいていますが、ゲームとして日数や手順を簡略化しています。') });
+}
+
+/* ============================================================
+   状態
+   ============================================================ */
+let S = null;
+function newGame(){
+  S = {
+    truth: rnd() < .5 ? 'G' : 'I',   // 内部の「真相」。どこにも表示しない。
+    act: 1, day: 1, slot: 0,
+    meter: 0, sess: {A:0,B:0,C:0,D:0}, leaks: [], confession: null, retract: false,
+    ev: {}, pending: [], docs: [], memory: [], canvass: 0,
+    lineup: null, lineupRes: null, lineupTaint: false,
+    warrant: null, search: null,
+    req: {}, charged: null,
+    trial: { rulings:{}, bias:0, rely:{}, verdict:null, touched:{} }
+  };
+}
+function addDoc(d){
+  if(S.docs.find(x => x.id === d.id)) return;
+  d.isNew = true; S.docs.push(d);
+}
+function getDoc(id){ return S.docs.find(d => d.id === id); }
+function addMem(id, text, src){ if(!S.memory.find(m => m.id === id)) S.memory.push({id, text, src}); }
+
+function renderDocs(){
+  const el = $('#docs'); if(!el || !S) return;
+  el.innerHTML = '';
+  let list = S.docs;
+  if(S.act === 3) list = S.docs.filter(d => d.court);
+  if(S.act === 3 && !list.length){ el.innerHTML = '<span style="font-size:12px;color:#c9b99a">（まだ何もない）</span>'; }
+  list.forEach(d => {
+    const b = document.createElement('button');
+    b.className = 'doc' + (d.isNew ? ' new' : '') + (d.memo ? ' memo' : '');
+    b.textContent = d.title;
+    b.onclick = () => { if(talking) return; d.isNew = false; b.classList.remove('new'); openPaper({ title:d.title, sub:d.sub, body: typeof d.body === 'function' ? d.body() : d.body, stamps:d.stamps }); };
+    el.appendChild(b);
+  });
+}
+
+/* ============================================================
+   事件の基本資料
+   ============================================================ */
+function baseDocs(){
+  addDoc({ id:'brief', title:'事件概要', memo:true, body:
+    P('<b>建造物侵入・強盗被疑事件（青柳書房事件）</b>',
+      '10月2日午後9時40分ころ、北見坂市本町の古書店「青柳書房」（店舗兼住宅）に、閉店後、裏口から男が侵入。店主・青柳静江（68）に刃物を示して脅し、両手首を縛ったうえ、帳場の手提げ金庫（現金約38万円入り）を奪って逃走した。被害者にけがはない。',
+      '10月5日、元アルバイト店員の<b>久住 透（34）</b>を通常逮捕。')
+    + kv([['逮捕の根拠','①半年前まで同店に勤務。裏口の鍵の隠し場所（植木鉢の下）を知っていた<br>②消費者金融に約120万円の債務<br>③被害者が「背格好が久住くんに似ていた気がする」と供述'],
+          ['被疑者の弁解','「その時間は家で一人で動画を見ていた。やっていない」']])
+    + note('③の供述は、刑事が被害者に「以前働いていた久住さんはどうですか」と尋ねた後に出てきたものである。') });
+  addMem('m_prompt', '被害者に「久住さんはどうですか」と最初に尋ねたのは、警察だった。', 'victim');
+  addDoc({ id:'manual', title:'捜査の手引', memo:true, body:
+    P('・1日にできる行動は<b>3回</b>。',
+      '・令状の発付や鑑定の結果は、<b>次の日</b>に届く。',
+      '・取調べの前に、黙秘権を告げなければならない（刑訴法198条2項）。',
+      '・住居を捜索するには、裁判官の令状が必要（憲法35条、刑訴法218条）。',
+      '・勾留満期（第6日の終わり）に、記録は検察官のもとへ送られる。')
+    + note('ここで集めたものだけが、のちに検察官の机に載る。') });
+  addDoc({ id:'scene', title:'実況見分調書', evid:true, kind:'neu', body:
+    P('店舗奥の帳場付近。被害者は、両手首を<b>布製の粘着テープ</b>で巻かれた状態で、通報により駆けつけた警察官に発見された。',
+      '裏口は施錠されていなかった。帳場にあった<b>緑色の手提げ金庫</b>が持ち去られている。',
+      '事件当時、店内は<b>奥の照明1灯のみ</b>が点灯していた（被害者の指示説明による）。',
+      '店舗入口の玄関マットから、灰色の繊維片を採取した。刃物、犯人の遺留品は発見されていない。') });
+  addDoc({ id:'victim', title:'被害者の供述調書', evid:true, kind:'inc', body:
+    P('（青柳静江・68歳）',
+      '帳場で売上を数えていたら、裏から男の人が入ってきて、刃物のようなものを見せて「金を出せ」と言いました。刃物は、よく見ていません。',
+      '男は30代くらい。灰色っぽい上着に、白いマスクをしていました。背は高めに見えました。私は148センチなので、たいていの人は大きく見えますが。',
+      '店は奥の明かりだけで、暗かったです。顔は、ほとんど見ていません。',
+      'いま思うと、背格好が、前にうちで働いていた久住くんに似ていた気がします。') });
+}
+
+/* ============================================================
+   第一部　捜査
+   ============================================================ */
+const DAYS = [null,
+  { date:'10月5日', info:'逮捕当日 ― 送致まで48時間', rem:21 },
+  { date:'10月7日', info:'勾留決定 ― 満期まで19日', rem:19 },
+  { date:'10月10日', info:'勾留中 ― 満期まで16日', rem:16 },
+  { date:'10月14日', info:'勾留中 ― 満期まで12日', rem:12 },
+  { date:'10月18日', info:'勾留延長 ― 満期まで8日', rem:8 },
+  { date:'10月24日', info:'満期直前 ― 満期まで2日', rem:2 }
+];
+const TIMES = ['09:00','13:00','18:00'];
+
+function startAct1(){
+  newGame(); baseDocs();
+  curtainSeq([
+    '<div class="big">第一部　捜査</div>',
+    '<div class="law">北見坂警察署　刑事課<br>巡査部長。<br><br>それが、あなただ。</div>'
+  ], () => startDay(), {});
+}
+function act1Layout(){
+  const d = DAYS[S.day];
+  layout({ role:'捜査官', date:'第' + S.day + '日　' + d.date + '　' + (TIMES[S.slot]||'夜'), pips:S.slot, info:d.info, scene:'office' });
+}
+function startDay(){
+  S.slot = 0; act1Layout();
+  const lines = morningLines();
+  // 届いたもの
+  const due = S.pending.filter(p => p.day <= S.day); S.pending = S.pending.filter(p => p.day > S.day);
+  due.forEach(p => { p.fn(); lines.push(['', p.msg]); });
+  renderDocs();
+  talk(lines, act1Menu);
+}
+function morningLines(){
+  const c = !!S.confession, K = '東堂課長';
+  switch(S.day){
+    case 1: return [['', '（朝。机の上に、事件の資料が置かれている。）'],
+      [K,'被害者は「久住くんに似ていた」と言ってる。元店員、借金、裏口の鍵。揃ってるだろう。'],
+      [K,'送致まで48時間。勾留が付けば最大20日だ。それまでに固めろ。'],
+      [K,'自白があれば、検事も裁判所も話が早い。']];
+    case 2:
+      addDoc({ id:'hearsay', title:'捜査報告書（近隣の噂）', evid:true, kind:'inc', body:
+        P('本町商店街の飲食店主によれば、「事件の夜、久住らしい男が店の近くをうろついていた、と客の誰かが話していた」とのこと。',
+          '話をした客が誰であるかは、店主は覚えていない。') });
+      addMem('m_hearsay', '近所で「久住らしい男を見た」という噂があった。話の出どころは分からない。', 'hearsay');
+      return [[K,'勾留が付いた。10日だ。'], [K,'それと、これを読んでおけ。近所で久住を見たって話がある。'], ['', '（「捜査報告書」が机に置かれた。）']];
+    case 3:
+      addDoc({ id:'news', title:'新聞記事', memo:true, body:
+        P('<b>古書店強盗　元店員の男を逮捕</b>', '北見坂署は5日、北見坂市本町の古書店で現金約38万円入りの金庫が奪われた事件で、元店員の久住透容疑者（34）を逮捕した。同署によると、容疑者は「やっていない」と否認している。捜査関係者によると、容疑者は多額の借金を抱えていたという。') });
+      return [['', '（朝刊の地域面に、小さな記事が出ている。）'], [K,'記者に嗅ぎつけられた。「38万円」まで出てる。'], [K, c ? '検事も、自白が取れて安心してる。' : '検事から電話があった。自白はまだか、とな。']];
+    case 4: return c ? [[K,'裏付けを固めておけ。公判で崩されたら意味がない。']]
+      : [[K,'……進んでるのか。'], [K,'やり方は任せる。結果を出せ。']];
+    case 5: return c ? [[K,'勾留延長が付いた。供述と証拠の辻褄を合わせておけよ。']]
+      : [[K,'勾留延長が付いた。あと10日もない。'], [K,'このまま満期を迎えたら、俺もお前も無能ってことになる。']];
+    case 6: return [[K,'満期が近い。今日で記録をまとめる。']];
+  }
+  return [];
+}
+function act1Menu(){
+  act1Layout();
+  const A = [];
+  A.push({ label: S.confession ? '取調べ（供述の確認）' : '取調べ', sub: S.confession ? '自白の内容を確かめる' : '久住透を取り調べる', fn: interroMenu, cls:'primary' });
+  if(!S.lineup || (S.lineup === 'single' && !S.ev.array)){
+    A.push({ label:'被害者に写真を見せる', sub: S.lineup ? '8枚の写真から選んでもらう' : '面割り（犯人の識別）', fn: lineupMenu });
+  }
+  if(!S.search){
+    if(S.warrant === 'ready') A.push({ label:'久住の部屋を捜索する', sub:'捜索差押許可状あり', fn: () => doSearch('legal') });
+    else if(!S.warrant) A.push({ label:'久住の部屋を調べる', sub:'令状を請求するか、それとも', fn: searchMenu });
+  }
+  if(!S.ev.print) A.push({ label:'粘着テープの指紋鑑定', sub:'結果は翌日', fn: doPrint });
+  if(S.search && !S.ev.fiber) A.push({ label:'ジャケットの繊維鑑定', sub:'結果は翌日', fn: doFiber });
+  if(!S.ev.camera) A.push({ label:'防犯カメラの映像を集める', sub:'周辺の店舗を回る', fn: doCamera });
+  if(!S.ev.phone) A.push({ label:'携帯電話の通信記録', sub:'令状で照会。結果は翌日', fn: doPhone });
+  if(!S.ev.loan) A.push({ label:'消費者金融に照会する', sub:'事件後の返済状況', fn: doLoan });
+  if(S.ev.loan && !S.ev.mother) A.push({ label:'返済金の出どころを確かめる', sub:'久住の母に連絡する', fn: doMother });
+  if(S.canvass < 2) A.push({ label:'聞き込み', sub:'店の周辺で（あと' + (2 - S.canvass) + '回）', fn: doCanvass });
+  if(S.confession && S.confession.place !== 'none' && !S.ev.safe) A.push({ label:'金庫を捜す', sub:'自白で述べられた場所', fn: doSafe });
+  if(S.day === 6) A.push({ label:'記録をまとめて送る', sub:'残りの時間を使わずに終える', fn: () => endDay(true), cls:'ghost' });
+  actions(A);
+}
+function spend(){ S.slot++; if(S.slot >= 3) endDay(); else act1Menu(); }
+function endDay(force){
+  if(force || S.day >= 6){ endAct1(); return; }
+  S.day++;
+  curtainSeq(['<div class="big">' + DAYS[S.day].date + '</div><div class="small">' + DAYS[S.day].info + '</div>'], startDay, { wait:700 });
+}
+
+/* --- 取調べ --- */
+const LEAKS = {
+  tape: [['', '（現場写真を机に置く。被害者の手首に巻かれた、布の粘着テープ。）'], ['あなた','布のガムテープで、両手首をぐるぐる巻きにした。お前だろう。'], ['久住','……知りません。']],
+  safe: [['', '（緑色の手提げ金庫の写真を並べる。）'], ['あなた','この緑の金庫を抱えて、裏から出たんだろう。'], ['久住','知らないって……言ってるじゃないですか。']],
+  light:[['あなた','店は奥の明かりがひとつ点いてるだけだった。暗いのを知ってたから、閉店後を狙ったんだ。'], ['久住','……']]
+};
+function interroMenu(){
+  layout({ role:'捜査官', date:'第' + S.day + '日　' + DAYS[S.day].date + '　' + TIMES[S.slot], pips:S.slot, info:'取調室', scene:'interro' });
+  if(S.confession){
+    talk([['久住', S.confession.voluntary ? '……書いてあるとおりです。' : '……そう書いたんなら、そうなんでしょう。'], ['', '（それ以上、彼は何も言わなかった。）']], spend);
+    return;
+  }
+  const opening = S.sess.A + S.sess.B + S.sess.C + S.sess.D === 0
+    ? [['', '（久住透。34歳。痩せている。目の下に隈がある。）'], ['久住','……何回聞かれても、やってないです。']]
+    : [['久住','……またですか。']];
+  talk(opening, () => actions([
+    { label:'黙秘権を告げ、弁解を聴く', sub:'言い分をそのまま聴き取る', fn: () => interro('A') },
+    { label:'証拠写真を見せて追及する', sub: S.leaks.length < 3 ? '現場の様子を突きつける' : '同じ写真を、もう一度', fn: () => interro('B') },
+    { label:'夜まで取調べを続ける', sub:'朝9時から、話すまで', fn: () => interro('C') },
+    { label:'「認めれば、すぐ出られる」と言う', sub:'取引を持ちかける', fn: () => interro('D') },
+    { label:'やめておく', sub:'時間は使わない', fn: act1Menu, cls:'ghost' }
+  ]));
+}
+function interro(k){
+  S.sess[k]++;
+  const n = S.sess[k]; let lines = [];
+  if(k === 'A'){
+    lines = n === 1 ? [['あなた','あなたには、言いたくないことは言わなくていい権利がある。そのうえで聞く。'], ['久住','……やってません。あの夜は、家で動画を見てました。'], ['久住','青柳さんには、世話になったんです。辞めたのだって、僕が悪かったわけじゃ……'], ['', '（レジの金が合わない、と疑われて辞めた。彼はそう言った。）']]
+      : n === 2 ? [['久住','何度聞かれても、同じです。'], ['', '（彼は目を合わせない。それが何を意味するのかは、分からない。）']]
+      : [['久住','……弁護士さんは、話さなくていいって言ってました。'], ['久住','でも、やってないってことだけは言っておきます。']];
+  } else if(k === 'B'){
+    const next = ['tape','safe','light'].find(x => !S.leaks.includes(x));
+    if(next){ S.leaks.push(next); lines = LEAKS[next].slice(); }
+    else lines = [['', '（同じ写真を、もう一度並べる。）'], ['久住','もう、見たくないです。']];
+  } else if(k === 'C'){
+    lines = n === 1 ? [['', '（取調べは朝9時から、午後11時過ぎまで続いた。）'], ['久住','……眠らせてください。'], ['あなた','話せば終わる。']]
+      : [['', '（今日も、日付が変わる少し前まで。）'], ['久住','頭が、回らないんです。何を言ったか、もう分からない。']];
+    addMem('m_late', 'あなたは彼を、朝9時から午後11時過ぎまで取り調べた。', null);
+  } else {
+    lines = [['あなた','認めれば、執行猶予だってありうる。すぐ出られるんだ。お母さんも安心する。'], ['久住','……本当、ですか。']];
+    addMem('m_promise', 'あなたは取調室で「認めれば、すぐ出られる」と言った。', null);
+  }
+  const inc = { A:{G:8,I:4}, B:{G:18,I:14}, C:{G:32,I:30}, D:{G:30,I:30} }[k][S.truth];
+  S.meter += inc;
+  let confess = S.meter >= 100, voluntary = false;
+  if(!confess && k === 'A' && S.truth === 'G' && n >= 2 && rnd() < .2){ confess = true; voluntary = true; }
+  talk(lines, () => { if(confess) makeConfession(voluntary); else spend(); });
+}
+function makeConfession(voluntary){
+  const G = S.truth === 'G';
+  const det = {};
+  ['tape','safe','light'].forEach(x => { det[x] = S.leaks.includes(x) ? true : (G ? rnd() < .8 : false); });
+  let place;
+  const r = rnd();
+  if(G) place = r < .7 ? 'yosui' : r < .8 ? 'river' : 'none';
+  else place = r < .4 ? 'yosui' : r < .7 ? 'river' : 'none';
+  S.confession = { voluntary, det, place, day:S.day };
+  const lines = voluntary
+    ? [['久住','……もう、いいです。'], ['久住','僕が、やりました。青柳さんに、謝りたい。']]
+    : [['久住','……分かりました。'], ['久住','僕が、やりました。'], ['', '（あなたが調書を作り、読み聞かせる。彼は、言われた場所に署名した。）']];
+  addDoc({ id:'confession', title:'被疑者の供述調書（自白）', evid:true, kind:'inc', body: confessionBody });
+  addMem('m_conf', '久住は取調室で「僕がやりました」と言った。', 'confession');
+  if(S.leaks.length) addMem('m_leak', 'あなたは自白の前に、現場の様子（' + S.leaks.map(x => ({tape:'布の粘着テープ',safe:'緑の金庫',light:'奥の照明だけ'})[x]).join('、') + '）を彼に見せていた。', null);
+  talk(lines, spend);
+}
+function confessionBody(){
+  const c = S.confession, d = c.det;
+  return P('私は、10月2日の夜9時半すぎ、青柳書房の裏口から店に入りました。裏口の鍵が植木鉢の下にあることは、働いていたころから知っていました。',
+    '店の中は、' + (d.light ? '奥の明かりがひとつ点いているだけで、暗かったです。' : '電気がついていて、明るかったです。'),
+    '青柳さんに家から持ってきた包丁を見せて、「金を出せ」と言いました。' + (d.tape ? '持っていた布のガムテープで、青柳さんの両手首を巻きました。' : '持っていたビニールひもで、青柳さんの手を縛りました。'),
+    (d.safe ? '帳場にあった緑色の手提げ金庫' : '帳場にあった黒っぽい金庫') + 'を持って、裏口から出ました。中には38万円くらい入っていたと思います。',
+    { yosui:'金庫は、店の裏の用水路に投げ捨てました。', river:'金庫は、北見川の橋の上から投げ捨てました。', none:'金庫をどこに捨てたかは、よく覚えていません。' }[c.place],
+    'お金は、借金の返済に使いました。',
+    '<span style="font-size:13px">以上のとおり録取して読み聞かせたところ、誤りのないことを申し立て署名指印した。</span>')
+    + note('作成：第' + c.day + '日　' + DAYS[c.day].date);
+}
+
+/* --- 面割り --- */
+function lineupMenu(){
+  openPaper({ title:'面割りの方法', body:
+    P('被害者に、犯人の識別をしてもらう。') + (S.lineup === 'single' ? note('被害者はすでに久住の写真を1枚見ている。') : ''),
+    buttons: [
+      ...(S.lineup ? [] : [{ label:'久住の写真を1枚だけ見せる', fn: () => { closePaper(); doLineup('single'); } }]),
+      { label:'8枚の写真から選んでもらう（担当者は誰が被疑者か知らない）', fn: () => { closePaper(); doLineup('array'); } }
+    ] });
+}
+function doLineup(m){
+  const G = S.truth === 'G', V = '青柳';
+  let lines, res;
+  if(m === 'single'){
+    S.lineup = 'single'; res = 'single';
+    lines = [['', '（被害者の自宅。久住の写真を1枚、机に置く。）'], [V,'……ええ。'], [V,'この人、だと思います。……たぶん。']];
+    addMem('m_single', '被害者に見せた写真は、久住の1枚だけだった。', 'lineup');
+  } else {
+    S.ev.array = true;
+    if(S.lineup === 'single'){ res = 'K'; S.lineupTaint = true;
+      lines = [['', '（8枚の写真。3番が久住。）'], [V,'この人です。前にも見せてもらった人。']];
+    } else {
+      const r = rnd();
+      res = G ? (r < .45 ? 'K' : r < .8 ? 'unsure' : 'filler') : (r < .25 ? 'K' : r < .7 ? 'unsure' : 'filler');
+      lines = res === 'K' ? [['', '（8枚の写真。担当者は、どれが被疑者か知らない。）'], [V,'3番の人……だと思います。'], ['', '（3番は久住だった。）']]
+        : res === 'unsure' ? [['', '（8枚の写真。担当者は、どれが被疑者か知らない。）'], [V,'ごめんなさい。暗くて……どれも違うような、どれも似ているような。']]
+        : [['', '（8枚の写真。担当者は、どれが被疑者か知らない。）'], [V,'6番……の人かしら。'], ['', '（6番は、捜査とは無関係の人物だった。）']];
+    }
+    S.lineup = S.lineup === 'single' ? 'both' : 'array';
+  }
+  S.lineupRes = res;
+  addDoc({ id:'lineup', title:'写真面割り結果報告書', evid:true, kind: (res === 'K' || res === 'single') ? 'inc' : 'exc', body: lineupBody });
+  getDoc('lineup').isNew = true;
+  layout({ role:'捜査官', date:'第' + S.day + '日　' + DAYS[S.day].date + '　' + TIMES[S.slot], pips:S.slot, info:'被害者宅', scene:'office' });
+  talk(lines, spend);
+}
+function lineupBody(){
+  const rows = [];
+  if(S.lineup === 'single' || S.lineup === 'both') rows.push(['単独面割り','被疑者の写真1枚を示したところ、「この人だと思う。たぶん」と述べた。']);
+  if(S.lineup === 'array' || S.lineup === 'both'){
+    const t = { K:'3番（被疑者）を選んだ。', unsure:'「分からない」と述べ、選ばなかった。', filler:'6番（無関係の人物）を選んだ。' }[S.lineupRes];
+    rows.push(['写真8枚による面割り', t + (S.lineupTaint ? '<br>※事前に被疑者の写真1枚を見ている。' : '')]);
+  }
+  return kv(rows);
+}
+
+/* --- 捜索 --- */
+function searchMenu(){
+  openPaper({ title:'久住の部屋', body: P('久住のアパートは、書店から北へ約1.2キロ。管理人は協力的だ。',
+      '令状を請求すれば、発付は明日になる。管理人に頼めば、今すぐ開けてもらえる。'),
+    buttons: [
+      { label:'捜索差押許可状を請求する', fn: () => { closePaper(); S.warrant = 'requested';
+          S.pending.push({ day:S.day+1, msg:'（捜索差押許可状が発付された。）', fn: () => { S.warrant = 'ready'; } });
+          talk([['', '（請求書を書き、裁判所へ送った。）']], spend); } },
+      { label:'管理人に開けてもらう（令状なし）', cls:'red', fn: () => { closePaper(); doSearch('illegal'); } }
+    ] });
+}
+function doSearch(kind){
+  S.search = kind;
+  addDoc({ id:'jacket', title: kind === 'legal' ? '捜索差押調書' : '捜査報告書（居室の確認）', evid:true, kind:'inc', body: () =>
+    (kind === 'legal' ? P('捜索差押許可状に基づき、被疑者方居室を捜索した。') : P('管理人の承諾を得て、被疑者方居室に立ち入り、室内を確認した。<b>令状はない。</b>本人の承諾もない。'))
+    + kv([['発見したもの','灰色のナイロンジャケット1着（量販店の製品）<br>消費者金融の利用明細'], ['発見されなかったもの','刃物（台所の包丁を除く）、粘着テープ、多額の現金、手提げ金庫']]) });
+  addMem('m_jacket', '久住の部屋の押入れに、灰色のジャケットがあった。', 'jacket');
+  if(kind === 'illegal') addMem('m_illegal', 'ジャケットは、令状なしで部屋に入って見つけた。', null);
+  talk(kind === 'legal' ? [['', '（令状を示し、立会人のもとで部屋を捜索した。）'], ['', '（押入れに、灰色のジャケットがあった。）']]
+    : [['管理人','いいですよ、警察の方なら。'], ['', '（鍵が開く。押入れに、灰色のジャケットがあった。）']], spend);
+}
+
+/* --- 鑑定・照会・聞き込み --- */
+function doPrint(){
+  S.ev.print = true;
+  S.pending.push({ day:S.day+1, msg:'（指紋の鑑定書が届いている。）', fn: () => addDoc({ id:'print', title:'指紋鑑定書', evid:true, kind:'inc', body:
+    P('資料：被害者の手首に巻かれていた粘着テープ（粘着面）', '粘着面から指紋1個を検出した。不鮮明であり、照合可能な範囲は限られる。',
+      '被疑者の左手中指の指紋と<b>特徴点8点が合致</b>した。<b>同一と判断する基準（12点）には達しない。</b>相違点は認められない。',
+      '結論：同一人のものと断定することはできない。') }) });
+  talk([['', '（粘着テープを、科捜研へ送った。）']], spend);
+}
+function doFiber(){
+  S.ev.fiber = true;
+  S.pending.push({ day:S.day+1, msg:'（繊維の鑑定書が届いている。）', fn: () => addDoc({ id:'fiber', title:'繊維鑑定書', evid:true, kind:'inc', derive:'jacket', body:
+    P('資料1：現場の玄関マットから採取した灰色の繊維片', '資料2：被疑者方で押収したジャケット',
+      '両者は、色調、材質（ナイロン）、断面形状が<b>類似する</b>。', 'ただし、資料2は量販品であり、同種の製品は全国で大量に流通している。同一の衣服に由来するかどうかは判断できない。') }) });
+  talk([['', '（ジャケットを、科捜研へ送った。）']], spend);
+}
+function doCamera(){
+  S.ev.camera = true;
+  addDoc({ id:'camera', title:'防犯カメラ映像の解析報告', evid:true, kind:'inc', body:
+    P('書店から北へ約300メートルのコンビニエンスストア店頭カメラ。',
+      '<b>21時52分</b>、灰色の上着を着た男が、北へ歩いて画面を横切る。マスクの有無は不明。顔は判別できない。',
+      '推定身長は170〜180センチ（被疑者は176センチ）。', '同時刻帯に画面を通過した男性は、ほかに4名。') });
+  talk([['', '（周辺の店を回り、映像を集めた。使えそうなのは1本だけだった。）']], spend);
+}
+function doPhone(){
+  S.ev.phone = true;
+  S.pending.push({ day:S.day+1, msg:'（携帯電話会社から回答が届いている。）', fn: () => addDoc({ id:'phone', title:'通信記録の照会回答', evid:true, kind:'exc', body:
+    P('10月2日 <b>21時28分〜22時15分</b>、被疑者の携帯電話から、動画配信サービスへの継続的な通信がある。',
+      '接続していた基地局は「北見坂本町局」。この局の範囲は、<b>被疑者方と青柳書房の双方を含む。</b>',
+      '通信していたことは分かるが、誰が、どこで端末を持っていたかは分からない。') }) });
+  talk([['', '（令状を取り、携帯電話会社に照会した。）']], spend);
+}
+function doLoan(){
+  S.ev.loan = true;
+  addDoc({ id:'loan', title:'消費者金融の回答書', evid:true, kind:'inc', body:
+    kv([['債務残高','約120万円（事件前）'], ['返済','<b>10月4日</b>、店頭で<b>現金30万円</b>を返済'], ['それ以前','8月以降、延滞が続いていた']]) });
+  addMem('m_loan', '事件の2日後、久住は現金30万円を返していた。', 'loan');
+  talk([['', '（事件の2日後、まとまった現金での返済があった。）']], spend);
+}
+function doMother(){
+  S.ev.mother = true;
+  addDoc({ id:'mother', title:'久住和子（母）の供述', evid:true, kind:'exc', body:
+    P('9月28日に、透がこっちに来たとき、現金で30万円渡しました。借金で困っていると言うので。',
+      '家に置いておいたお金です。銀行から下ろしたものではありません。', 'あの子は、人に刃物を向けるような子じゃありません。')
+    + note('母の預金口座に、該当する出金の記録はない。') });
+  talk([['', '（電話の向こうで、母親は何度も同じことを言った。）'], ['久住和子','あの子は、そんな子じゃありません。']], spend);
+}
+function doCanvass(){
+  S.canvass++;
+  if(S.canvass === 1){
+    addDoc({ id:'murai', title:'村井の供述', evid:true, kind:'exc', body:
+      P('（村井良子・書店の裏に住む主婦）', '夜の9時半ごろ、ゴミを出しに行ったら、裏の路地に灰色の作業着みたいなのを着た男の人がいました。',
+        '背は……そんなに高くなかったと思います。うちの主人が170センチなんですけど、主人より低いくらい。暗かったので、確かではないです。') });
+    addMem('m_murai', '裏の住人・村井さんは「背はそんなに高くなかった」と言っていた。', 'murai');
+    talk([['村井','背は、そんなに高くなかったと思いますよ。暗かったけど。'], ['', '（久住の身長は176センチだ。）']], spend);
+  } else {
+    addDoc({ id:'regular', title:'常連客の供述', evid:true, kind:'exc', body:
+      P('（常連客・70代男性）', '裏口の鍵が植木鉢の下にあるのは、常連なら何人か知ってたよ。配達の人も使ってた。静江さん、そういうところは無頓着だから。') });
+    addMem('m_regular', '裏口の鍵の場所は、常連客や配達員も知っていた。', 'regular');
+    talk([['常連客','鍵の場所？ 知ってる人は、何人もいたよ。'], ['', '（「鍵の場所を知っていた」は、逮捕の根拠のひとつだった。）']], spend);
+  }
+}
+function doSafe(){
+  S.ev.safe = true;
+  const c = S.confession, G = S.truth === 'G';
+  let found = false;
+  if(c.place === 'yosui') found = rnd() < (G ? .6 : .25);   // 最寄りの水路。真犯人が誰であれ、捨てるならここだ。
+  S.safeFound = found;
+  const where = c.place === 'yosui' ? '書店裏の用水路' : '北見川（北見橋の下流）';
+  addDoc({ id:'safe', title:'金庫の捜索結果報告', evid:true, kind: found ? 'inc' : 'exc', body:
+    found ? P(where + 'を捜索したところ、裏口から約40メートル下流の水中から、<b>緑色の手提げ金庫（空）</b>を発見した。被害者が自店のものと確認した。',
+              '金庫の場所は、捜査側が把握していなかった事実である。')
+          : P('被疑者の供述に基づき、' + where + 'を2日間にわたり捜索したが、<b>金庫は発見されなかった。</b>', '水流により移動した可能性がある。') });
+  if(!found) addMem('m_safe', '自白どおりの場所から、金庫は見つからなかった。', 'safe');
+  else addMem('m_safe', '自白どおり、用水路から金庫が見つかった。', 'safe');
+  talk(found ? [['', '（胴長を履いた捜査員が、泥の中から何かを引き上げた。）'], ['', '（緑色の金庫だった。）']]
+    : [['', '（2日間、水の中を捜した。）'], ['', '（何も、出てこなかった。）']], spend);
+}
+
+function endAct1(){
+  const c = S.confession;
+  curtainSeq([
+    '<div class="big">勾留満期</div>',
+    '<div class="law">記録は、検察官のもとへ送られた。<br><br>' + (c ? '久住は、自白した。' : '久住は、最後まで否認した。') + '</div>'
+  ], startAct2);
+}
+
+/* ============================================================
+   第二部　起訴
+   ============================================================ */
+function startAct2(){
+  S.act = 2;
+  const c = S.confession;
+  if(c){
+    const pressured = S.sess.C > 0 || S.sess.D > 0;
+    if(c.voluntary) S.retract = false;
+    else if(S.truth === 'I') S.retract = rnd() < .85;
+    else S.retract = rnd() < (pressured ? .6 : .3);
+  }
+  // 送致意見：不利な証拠は請求、有利な証拠は請求しない
+  S.docs.filter(d => d.evid).forEach(d => { S.req[d.id] = d.kind !== 'exc'; });
+  S.docs.forEach(d => d.isNew = false);
+  S.heard = false;
+  curtainSeq([
+    '<div class="big">第二部　起訴</div>',
+    '<div class="law">北見坂地方検察庁　検事。<br><br>あなたは、この事件の記録を初めて読む。</div>',
+    '<div class="law">——ということに、なっている。</div>'
+  ], act2Menu);
+}
+function act2Layout(){ layout({ role:'検察官', date:'10月25日', info:'勾留満期の前日。起訴するか、しないか。', scene:'pros', deskLabel:'送致記録' }); }
+function act2Menu(first){
+  act2Layout();
+  const go = () => actions([
+    { label:'被疑者の言い分を聴く', sub: S.heard ? '聴取済み' : '久住透と会う', disabled:S.heard, fn: act2Hear },
+    { label:'裁判所に出す証拠を選ぶ', sub:'請求しない証拠は、法廷に出ない', fn: act2Select },
+    { label:'処分を決める', sub:'起訴か、不起訴か', fn: act2Decide, cls:'primary' }
+  ]);
+  if(first !== false && !S.act2talked){ S.act2talked = true;
+    talk([['', '（机の上に、警察から送られてきた記録が積まれている。）'], ['次席検事', S.confession ? '自白も取れてると聞いた。君の目で確かめてくれ。' : '否認事件だ。警察は「固い」と言ってるが、君の目で見てくれ。']], go);
+  } else go();
+}
+function act2Hear(){
+  S.heard = true; const c = S.confession, K = '久住';
+  let lines;
+  if(!c) lines = [[K,'やってません。それしか、言えません。'], [K,'検事さんも、僕がやったと思ってるんですよね。']];
+  else if(!S.retract) lines = [[K,'……僕が、やりました。'], [K,'青柳さんに、申し訳ないことをしました。']];
+  else {
+    lines = [[K,'警察では、認めました。'], [K,'でも、やってません。']];
+    if(S.sess.D) lines.push([K,'「認めれば、すぐ出られる」って言われたんです。母にも会えるって。']);
+    if(S.sess.C) lines.push([K,'毎日、夜中までで。もう何でもいいから、終わらせたかった。']);
+    if(S.leaks.length) lines.push([K,'金庫が緑だとか、テープが布だとか、写真で見せられて。そのとおりに言っただけです。']);
+    if(!S.sess.C && !S.sess.D && !S.leaks.length) lines.push([K,'……なんで認めたのか、自分でも分からないんです。']);
+  }
+  addMem('m_hear', c && S.retract ? '検事の前で、彼は自白を撤回した。' : c ? '検事の前でも、彼は自白を維持した。' : '検事の前でも、彼は否認した。', null);
+  talk(lines, () => act2Menu(false));
+}
+function act2Select(){
+  const ev = S.docs.filter(d => d.evid);
+  openPaper({ title:'証拠請求書（案）', sub:'チェックした証拠だけが、公判に請求される。最初のチェックは、警察の送致意見のとおり。',
+    body: ev.map(d => '<label class="check"><input type="checkbox" data-id="' + d.id + '"' + (S.req[d.id] ? ' checked' : '') + '><span>' + d.title
+      + '<span class="tag">' + ({inc:'被告人に不利', exc:'被告人に有利', neu:'客観'})[d.kind] + '</span></span></label>').join('')
+      + note('請求しなかった証拠を弁護人が知る機会は、限られている。'),
+    buttons: [{ label:'これで決める', cls:'green', fn: () => {
+      ov.querySelectorAll('input[type=checkbox]').forEach(i => { S.req[i.dataset.id] = i.checked; });
+      closePaper(); act2Menu(false); } }] });
+}
+function act2Decide(){
+  openPaper({ title:'処分', body:
+    P('起訴すれば、この事件は法廷で裁かれる。日本の刑事裁判の有罪率は、99パーセントを超える。',
+      '嫌疑が不十分なら、起訴しないこともできる。そのときは、久住は釈放される。'),
+    buttons: [
+      { label:'起訴する', cls:'red', fn: (b) => { lockButtons(); stampOn('起訴','red'); S.charged = true; setTimeout(() => { closePaper(); act2End(); }, 900); } },
+      { label:'不起訴（嫌疑不十分）', cls:'green', fn: (b) => { lockButtons(); stampOn('不起訴','green'); S.charged = false; setTimeout(() => { closePaper(); act2End(); }, 900); } }
+    ] });
+}
+function act2End(){
+  if(S.charged){
+    curtainSeq(['<div class="law">10月25日、久住透は起訴された。<br><br>罪名　建造物侵入、強盗。</div>'], startAct3);
+  } else {
+    curtainSeq(['<div class="law">10月25日、久住透は釈放された。<br><br>処分は、嫌疑不十分による不起訴。</div>',
+      '<div class="law">翌日の朝刊に、小さな記事が載った。<br>「元店員を不起訴　古書店強盗」<br><br>青柳静江は、取材に「では、誰が」とだけ答えた。<br><br>事件は、未解決のままである。</div>'],
+      () => finale({ verdict:'不起訴' }));
+  }
+}
+
+/* ============================================================
+   第三部　公判
+   ============================================================ */
+function startAct3(){
+  S.act = 3;
+  S.docs.forEach(d => { d.court = false; d.isNew = false; });
+  sfxBell();
+  curtainSeq([
+    '<div class="big">第三部　公判</div>',
+    '<div class="law">裁判官は、次に掲げる場合には、職務の執行から除斥される。<br>……<br>六　裁判官が事件について検察官又は司法警察員の職務を行つたとき。</div><div class="cite">刑事訴訟法　第20条</div>',
+    '<div class="law">北見坂地方裁判所　刑事部　裁判長。<br><br>あなたは、この事件について何も知らない。</div>',
+    '<div class="law">——そういうことに、なっている。</div>'
+  ], () => trialOpen(), { wait:1800 });
+}
+function act3Layout(info){
+  layout({ role:'裁判官', date:'第1回公判期日', info: info || '北見坂地方裁判所 第2号法廷', scene:'court', deskLabel:'法廷に出た証拠', memory:true });
+}
+function renderMemory(){
+  const el = $('#mems'); if(!el) return;
+  const items = memoryItems();
+  el.innerHTML = '';
+  if(!items.length){ el.innerHTML = '<span style="font-size:12px;color:#555">（なし）</span>'; return; }
+  items.forEach(m => {
+    const b = document.createElement('button');
+    b.className = 'mem' + (S.trial.touched[m.id] ? ' touched' : '');
+    b.textContent = '・' + m.text;
+    b.onclick = () => touchMemory(m);
+    el.appendChild(b);
+  });
+}
+function admitted(id){ return S.trial.rulings[id] === '採用'; }
+function memoryItems(){
+  return S.memory.filter(m => !m.src || !admitted(m.src));
+}
+function touchMemory(m){
+  if(talking) return;
+  S.trial.bias++; S.trial.touched[m.id] = true;
+  openPaper({ title:'あなたの記憶', body: P(m.text) + note('これは、この法廷に提出された証拠ではない。事実の認定は、証拠による（刑訴法317条）。<br>あなたはなぜ、それを知っているのか。'),
+    buttons: [] , onClose: renderMemory });
+  setTimeout(() => stampOn('証拠ではない', 'gray'), 250);
+}
+
+function indictBody(){
+  return P('<b>公訴事実</b>',
+    '被告人は、10月2日午後9時40分ころ、金品を強取する目的で、北見坂市本町所在の古書店「青柳書房」に裏口から侵入し、同店店主青柳静江（当時68歳）に対し、刃物を示して「金を出せ」などと申し向け、同人の両手首を粘着テープで緊縛するなどの暴行脅迫を加えてその反抗を抑圧し、同人管理の現金約38万円在中の手提げ金庫1個を強取したものである。',
+    '<b>罪名及び罰条</b>　建造物侵入、強盗　刑法第130条前段、第236条第1項')
+    + note('起訴状には、予断を生じさせるおそれのある書類を添付し、その内容を引用してはならない（刑訴法256条6項）。だから、ここには事件のあらまししか書かれていない。');
+}
+function trialOpen(){
+  act3Layout('冒頭手続');
+  const steps = [
+    { label:'人定質問', sub:'被告人が本人であることを確かめる', lines:[['裁判長（あなた）','被告人は、前に出てください。名前は。'], ['久住','久住、透です。'], ['', '（初めて見る顔だ。——そういうことになっている。）']] },
+    { label:'起訴状の朗読', sub:'検察官が公訴事実を読む', lines:[['検察官','公訴事実。被告人は、10月2日午後9時40分ころ……'], ['', '（起訴状が、机に置かれた。）']], after: () => { addDoc({ id:'indict', title:'起訴状', court:true, body: indictBody }); getDoc('indict').court = true; renderDocs(); } },
+    { label:'黙秘権を告げる', sub:'刑訴法291条5項', lines:[['裁判長（あなた）','被告人には黙秘権があります。終始沈黙することも、個々の質問に答えないこともできます。'], ['裁判長（あなた）','話したことは、有利にも不利にも証拠となりえます。']] },
+    { label:'被告人・弁護人の陳述', sub:'罪状認否', lines: () => (S.confession && !S.retract)
+        ? [['久住','……間違いありません。'], ['弁護人（芦田）','被告人と同じです。情状について立証します。']]
+        : [['久住','やっていません。'], ['弁護人（芦田）','被告人は犯人ではありません。無罪を主張します。'] ].concat(S.confession ? [['弁護人（芦田）','捜査段階の自白は、任意性を欠くものです。']] : []) }
+  ];
+  let i = 0;
+  const next = () => {
+    if(i >= steps.length){ trialEvidenceStart(); return; }
+    const s = steps[i];
+    actions(steps.map((x, j) => ({ label:x.label, sub:x.sub, disabled: j !== i, cls: j === i ? 'primary' : '', fn: () => {
+      i++; const L = typeof s.lines === 'function' ? s.lines() : s.lines; talk(L, () => { s.after && s.after(); next(); }); } })));
+  };
+  talk([['', '（開廷。傍聴席には、記者が数人と、被告人の母親らしき女性。）']], next);
+}
+
+/* --- 証拠調べ --- */
+function trialQueue(){
+  const Q = [];
+  const order = ['scene','victim','lineup','camera','print','jacket','fiber','phone','loan','hearsay','confession','safe','murai','regular'];
+  order.forEach(id => { if(getDoc(id) && S.req[id]) Q.push({ id, by:'検察官' }); });
+  // 弁護側は、自ら知りうるものを請求する
+  Q.push({ id:'mother', by:'弁護人' });
+  if(getDoc('phone') && !S.req.phone) Q.push({ id:'phone', by:'弁護人' });
+  return Q;
+}
+function opinion(id){
+  const illegal = S.search === 'illegal';
+  const pressured = S.sess.C > 0 || S.sess.D > 0;
+  switch(id){
+    case 'victim': return { op:'調書は不同意。', note:'検察官は、被害者の証人尋問を請求した。', correct:'採用' };
+    case 'print': return { op:'鑑定書は不同意。', note:'検察官は、鑑定人の証人尋問を請求した。', correct:'採用' };
+    case 'jacket': case 'fiber': return illegal
+      ? { op:'異議があります。令状なく、本人の承諾もなく居室に立ち入って得た証拠であり、違法収集証拠として排除を求めます。' + (id === 'fiber' ? '鑑定は、その違法な押収物に基づくものです。' : ''), correct:'却下' }
+      : { op:'同意。ただし証明力を争う。', correct:'採用' };
+    case 'hearsay': return { op:'不同意。伝聞であり、原供述者も特定されていない。', correct:'却下' };
+    case 'confession': return S.retract || pressured
+      ? { op:'任意性を争います。', note:'任意性の判断のため、留置記録と取調官の証言が示される。', correct: pressured ? '却下' : '採用', voir:true }
+      : { op:'同意。', correct:'採用' };
+    case 'mother': return { op:'（検察官）しかるべく。', note:'弁護人は、母の証人尋問を請求した。', correct:'採用' };
+    default: return { op:'同意。', correct:'採用' };
+  }
+}
+function trialEvidenceStart(){
+  S.trial.Q = trialQueue(); S.trial.qi = 0;
+  act3Layout('証拠調べ');
+  talk([['', '（証拠調べに入る。証拠の採否を、ひとつずつ決めていく。）'], ['', '（採用した証拠だけが、判断の材料になる。）']], trialNextEvidence);
+}
+function trialNextEvidence(){
+  const T = S.trial;
+  if(T.qi >= T.Q.length){ trialDefendant(); return; }
+  const item = T.Q[T.qi], d = item.id === 'mother' ? motherDocForCourt() : getDoc(item.id), op = opinion(item.id);
+  actions([{ label:'請求された証拠を見る', sub: item.by + '請求：' + d.title + '（' + (T.qi+1) + '/' + T.Q.length + '）', cls:'primary', fn: () => {
+    let body = kv([['請求者', item.by], ['証拠', d.title], ['相手方の意見', op.op]]) + (op.note ? note(op.note) : '');
+    if(op.voir) body += voirDire();
+    else if(item.id === 'victim' || item.id === 'print' || item.id === 'mother') body += note('採用すれば、証人尋問が行われる。');
+    else body += '<h4>内容</h4>' + (typeof d.body === 'function' ? d.body() : d.body);
+    openPaper({ title:'証拠調べ請求', body, noClose:true, buttons:[
+      { label:'採用', cls:'green', fn: () => rule(item, d, '採用') },
+      { label:'却下', cls:'red', fn: () => rule(item, d, '却下') }
+    ] });
+  } }]);
+}
+function motherDocForCourt(){
+  if(!getDoc('mother_w')) S.docs.push({ id:'mother_w', title:'証人　久住和子（母）', evid:true, kind:'exc', body:
+    P('9月28日に、息子に現金で30万円渡しました。家に置いていたお金です。', '（反対尋問）銀行から下ろした記録はありません。夫の遺したお金を、家に置いていました。') });
+  return getDoc('mother_w');
+}
+function rule(item, d, r){
+  lockButtons(); stampOn(r, r === '採用' ? 'green' : 'red');
+  const key = item.id === 'mother' ? 'mother_w' : item.id;
+  S.trial.rulings[key] = r;
+  setTimeout(() => {
+    closePaper();
+    if(r === '採用'){ d.court = true; d.isNew = true; }
+    renderDocs(); renderMemory();
+    S.trial.qi++;
+    const L = r === '採用' ? testimony(item.id) : [['', '（' + d.title + 'は、証拠から外された。）']];
+    talk(L, trialNextEvidence);
+  }, 800);
+}
+function voirDire(){
+  const rows = [];
+  let n = 0;
+  for(let i = 0; i < S.sess.A; i++) rows.push(['取調べ' + (++n), '約2時間']);
+  for(let i = 0; i < S.sess.B; i++) rows.push(['取調べ' + (++n), '約4時間']);
+  for(let i = 0; i < S.sess.C; i++) rows.push(['取調べ' + (++n), '<b>9:02 〜 23:14</b>（約14時間）']);
+  for(let i = 0; i < S.sess.D; i++) rows.push(['取調べ' + (++n), '約3時間']);
+  let t = '<h4>留置人出入簿（抜粋）</h4>' + kv(rows.length ? rows : [['—','記録なし']]);
+  t += '<h4>証人　北見坂署 刑事課 巡査部長</h4>' + note('見覚えのある肩書きだ。');
+  t += P('（検察官）「取調べは適正に行いました。黙秘権も告げています。供述は任意です。」');
+  if(S.sess.D) t += P('（弁護人）「『認めればすぐ出られる』と言いましたか。」', '「言っていません。」');
+  if(S.sess.C) t += P('（弁護人）「午後11時過ぎまで取り調べた日がありますね。」', '「必要な範囲でした。被疑者も応じていました。」');
+  if(S.leaks.length) t += P('（弁護人）「自白の前に、現場の写真を見せましたか。」', '「……確認のために、一部は。」');
+  t += '<h4>被告人</h4>';
+  t += S.retract ? P('「' + (S.sess.D ? '認めればすぐ出られると言われました。' : '') + (S.sess.C ? '毎晩遅くまでで、もう考えられなかった。' : '') + (S.leaks.length ? '写真で見たとおりに話しました。' : '') + 'やっていません。」')
+    : P('「……自分から話しました。」');
+  return t;
+}
+function testimony(id){
+  const V = '証人　青柳静江', D = '弁護人（芦田）';
+  switch(id){
+    case 'victim': {
+      const res = S.lineupRes, L = [['検察官','犯人の背格好を覚えていますか。'], [V,'背が高めで……灰色の上着でした。']];
+      if(res === 'single' || res === 'K'){ L.push(['検察官','犯人は、この法廷にいますか。'], [V,'……はい。あの人です。'], ['', '（証人は、被告人席を指さした。）']); }
+      else if(res === 'unsure' || res === 'filler'){ L.push(['検察官','犯人は、この法廷にいますか。'], [V,'……分かりません。似ている、とは思いますけれど。']); }
+      else L.push(['検察官','犯人は、この法廷にいますか。'], [V,'……あの人だと、思います。']);
+      L.push([D,'事件の直後、犯人が誰か分かっていましたか。'], [V,'いいえ。顔は、ほとんど見ていません。'],
+        [D,'久住さんの名前を最初に出したのは、あなたですか、刑事さんですか。'], [V,'……刑事さんに、「前に働いていた久住さんはどうか」と聞かれて。それで、そういえば、と。']);
+      if(S.lineup === 'single' || S.lineup === 'both') L.push([D,'警察で、写真は何枚見せられましたか。'], [V,'1枚です。久住くんの。']);
+      L.push([D,'あなたの身長は。'], [V,'148センチです。……たいていの人は、大きく見えます。']);
+      return L;
+    }
+    case 'print': return [['証人　鑑定人','特徴点は8点合致しました。同一と判断する基準は12点です。'], [D,'つまり、被告人の指紋だとは言えない。'], ['証人　鑑定人','断定はできません。否定もできません。']];
+    case 'mother': return [['証人　久住和子','あの子に、30万円渡しました。'], ['検察官','銀行から下ろした記録はありませんね。'], ['証人　久住和子','家に置いていたお金ですから。'], ['', '（母親は、一度も被告人席を見なかった。）']];
+    case 'confession': return [['', '（自白調書が、証拠として採用された。）']];
+    case 'jacket': return [['', '（灰色のジャケットが、証拠として法廷に出された。）']];
+    case 'murai': return [['', '（村井の供述調書が朗読された。「背はそんなに高くなかった」。）']];
+    default: { const d = getDoc(id); return [['', '（' + (d ? d.title : '証拠') + 'が、取り調べられた。）']]; }
+  }
+}
+
+/* --- 被告人質問・論告・弁論 --- */
+function trialDefendant(){
+  act3Layout('被告人質問');
+  const K = '被告人　久住';
+  let L;
+  if(S.confession && !S.retract) L = [[K,'……あの夜、青柳さんの店に行きました。'], [K,'お金が、どうしても必要で。'], ['弁護人（芦田）','いま、青柳さんに言いたいことは。'], [K,'……すみませんでした。']];
+  else L = [[K,'あの夜は、家で動画を見ていました。一人でした。'], ['検察官','それを証明できる人はいますか。'], [K,'……いません。'], ['検察官','事件の2日後に30万円を返済していますね。'], [K,'母に借りたお金です。'], ['検察官','鍵の場所を知っていましたね。'], [K,'知っていました。でも、知ってる人は他にもいました。']];
+  talk(L, () => actions([{ label:'論告・弁論へ', sub:'検察官と弁護人の最終意見', cls:'primary', fn: trialClosing }]));
+}
+function trialClosing(){
+  act3Layout('論告・弁論');
+  const inc = admittedIncriminating();
+  const L = [['検察官','被告人は、裏口の鍵の場所を知り、多額の借金を抱え、事件直後に現金で返済している。' + (admitted('confession') ? '自らも犯行を認めていた。' : '') + '被告人が犯人であることは明らかです。'],
+    ['検察官','懲役……いえ、拘禁刑6年を求刑します。'],
+    ['弁護人（芦田）','この事件には、被告人と犯行を直接結びつける証拠がありません。'],
+    ['弁護人（芦田）','鍵の場所を知っていた者は他にもいた。借金を抱えた人間は、この町に何人もいる。'],
+    ['弁護人（芦田）','疑わしいことと、証明されたことは違います。'],
+    ['被告人　久住', (S.confession && !S.retract) ? '……申し訳ありませんでした。' : '……やっていません。']];
+  talk(L, () => actions([{ label:'評議へ', sub:'陪席裁判官と合議する', cls:'primary', fn: trialDeliberation }]));
+}
+function admittedIncriminating(){
+  const L = [];
+  if(admitted('victim') && (S.lineupRes === 'single' || S.lineupRes === 'K' || !S.lineupRes)) L.push('victim');
+  ['print','camera','jacket','fiber','loan','safe','hearsay'].forEach(id => { if(admitted(id) && (id !== 'safe' || S.safeFound)) L.push(id); });
+  return L;
+}
+function trialDeliberation(){
+  layout({ role:'裁判官', date:'評議室', info:'合議体：裁判長（あなた）・右陪席 梶・左陪席 森下', scene:'pros', deskLabel:'法廷に出た証拠', memory:true });
+  const L = [['', '（評議室。陪席の二人が、記録をめくっている。）']];
+  if(admitted('confession')) L.push(['右陪席　梶', S.safeFound ? '自白どおりの場所から金庫が出ている。秘密の暴露と見る余地はあります。' : '自白に、捜査側が知らなかった事実は含まれていますか。私には見当たらない。']);
+  else if(S.confession) L.push(['右陪席　梶','自白を排除した以上、残る証拠で判断するしかありません。']);
+  L.push(['左陪席　森下', admitted('victim') ? '被害者の識別は、暗所で、ほぼ顔を見ていない。しかも名前を出したのは警察です。' : '被害者の識別供述がない以上、犯人性の立証は情況証拠だけです。']);
+  if(admitted('print')) L.push(['左陪席　森下','指紋は8点。基準に満たない。']);
+  L.push(['右陪席　梶','結論は、裁判長のご判断も伺ってから。']);
+  L.push(['', '（判決の草稿を書く。何を根拠に、どう判断するのか。）']);
+  talk(L, () => actions([{ label:'判決の草稿を書く', sub:'事実認定と主文', cls:'primary', fn: trialJudgment }]));
+}
+function trialJudgment(){
+  const ev = S.docs.filter(d => d.court && d.id !== 'indict');
+  openPaper({ title:'判決（草稿）', sub:'争点：被告人が犯人であることが、合理的な疑いを超えて証明されたか。',
+    body: '<h4>判断の根拠とする証拠</h4>'
+      + (ev.length ? ev.map(d => '<label class="check"><input type="checkbox" data-id="' + d.id + '"><span>' + d.title + '</span></label>').join('') : P('（採用された証拠はない）'))
+      + note('根拠にできるのは、法廷で取り調べた証拠だけである（刑訴法317条）。下の「あなたの記憶」は、ここには書けない。')
+      + '<h4>主文</h4>' + P('被告人は有罪か、無罪か。'),
+    noClose:true,
+    buttons: [
+      { label:'有罪', cls:'red', fn: () => decide('有罪') },
+      { label:'無罪', cls:'green', fn: () => decide('無罪') },
+      { label:'記録を見直す', fn: () => { collectRely(); closePaper(); actions([{ label:'判決の草稿に戻る', cls:'primary', fn: trialJudgment }]); } }
+    ] });
+  ov.querySelectorAll('input[type=checkbox]').forEach(i => { if(S.trial.rely[i.dataset.id]) i.checked = true; });
+}
+function collectRely(){ ov.querySelectorAll('input[type=checkbox]').forEach(i => { S.trial.rely[i.dataset.id] = i.checked; }); }
+function decide(v){
+  collectRely();
+  const relied = Object.keys(S.trial.rely).filter(k => S.trial.rely[k]);
+  if(v === '有罪' && !relied.length){
+    const pf = $('#pf'); if(pf && !pf.querySelector('.warn')){ const w = document.createElement('div'); w.className='warn'; w.style.cssText='width:100%;color:#a3342b;font-size:13px';
+      w.textContent = '根拠とする証拠を示さずに、有罪とすることはできない。'; pf.prepend(w); }
+    return;
+  }
+  S.trial.verdict = v; lockButtons(); stampOn(v, v === '有罪' ? 'red' : 'green');
+  setTimeout(() => { closePaper(); pronounce(v); }, 1000);
+}
+function pronounce(v){
+  act3Layout('判決言渡し');
+  const L = v === '有罪'
+    ? [['裁判長（あなた）','主文。被告人を拘禁刑5年に処する。'], ['', '（被告人は、まっすぐ前を見ていた。）'], ['', '（傍聴席で、誰かが小さく息を呑んだ。）']]
+    : [['裁判長（あなた）','主文。被告人は無罪。'], ['裁判長（あなた）','本件公訴事実について、犯罪の証明がない。'], ['', '（被告人は、しばらく動かなかった。）']];
+  talk(L, () => actions([{ label:'閉廷', cls:'primary', fn: () => epilogue() }]));
+}
+
+/* ============================================================
+   終幕
+   ============================================================ */
+function appealErrors(){
+  const E = [], T = S.trial, pressured = S.sess.C > 0 || S.sess.D > 0;
+  if(S.search === 'illegal' && (admitted('jacket') || admitted('fiber'))) E.push('令状も承諾もない居室への立入りで得たジャケット（とその鑑定）を採用した。令状主義の精神を没却する重大な違法がある。');
+  if(admitted('hearsay')) E.push('出どころの分からない噂を記した捜査報告書を採用した。伝聞証拠であり、例外の要件も満たさない（320条1項）。');
+  if(admitted('confession') && pressured) E.push('長時間の取調べ、または利益の約束のもとでなされた自白を採用した。任意性に疑いがある（319条1項）。');
+  if(T.verdict === '有罪' && admitted('confession')){
+    const other = admittedIncriminating().filter(x => x !== 'hearsay' && !(x === 'jacket' && S.search === 'illegal') && !(x === 'fiber' && S.search === 'illegal'));
+    if(!other.length) E.push('自白のほかに、それを補強する証拠がない（319条2項）。');
+  }
+  const wrongEx = [];
+  Object.keys(T.rulings).forEach(k => { if(T.rulings[k] === '却下' && k !== 'mother_w' && opinion(k).correct === '採用') wrongEx.push(k); });
+  return { E, wrongEx };
+}
+function epilogue(){
+  const v = S.trial.verdict, { E, wrongEx } = appealErrors();
+  const pages = [];
+  if(v === '有罪'){
+    if(E.length) pages.push('<div class="law">弁護人は控訴した。<br><br>控訴審は、原判決を破棄した。<br><br><span style="font-size:14px;color:#aaa">' + E.join('<br>') + '</span></div>');
+    else if(S.confession && !S.retract) pages.push('<div class="law">被告人は控訴しなかった。<br><br>判決は確定した。</div>');
+    else pages.push('<div class="law">弁護人は控訴した。<br><br>控訴は棄却され、上告も棄却された。<br><br>判決は確定した。</div>');
+  } else {
+    if(wrongEx.length) pages.push('<div class="law">検察官は控訴した。<br><br>証拠の採否について、控訴審の判断を待つことになる。</div>');
+    else pages.push('<div class="law">検察官は控訴しなかった。<br><br>判決は確定した。<br><br>久住透は、その日のうちに家に帰った。</div>');
+  }
+  curtainSeq(pages, () => finale({ verdict:v, errors: v === '有罪' ? E.length : (wrongEx.length ? '検察官控訴' : '—') }), { wait:1800 });
+}
+function finale(r){
+  const run = {
+    no: meta.runs.length + 1,
+    verdict: r.verdict,
+    confession: !S.confession ? 'なし' : (S.confession.voluntary ? 'あり（自発）' : 'あり') + (S.retract ? '・撤回' : ''),
+    safe: S.ev.safe ? (S.safeFound ? '発見' : '未発見') : '—',
+    bias: S.act === 3 ? S.trial.bias : '—',
+    errors: r.errors != null ? r.errors : '—'
+  };
+  meta.runs.push(run); save(META_KEY, meta);
+  const first = meta.runs.length === 1;
+  const pages = ['<div class="big" style="letter-spacing:.1em">あなたは、確信していましたか。</div>'];
+  if(first) pages.push('<div class="law" style="font-size:15px">この事件の「真相」は、ゲームを始めたときに内部で決められていました。<br>久住が犯人である世界か、そうでない世界か。<br><br>あなたが見た証拠の多くは、どちらの世界でも同じように現れます。<br><br>真相は、表示されません。<br>現実の法廷でも、表示されることはありません。</div>');
+  curtainSeq(pages, () => showRecord(true), { wait:2200 });
+}
+function showRecord(fromEnd){
+  const rows = meta.runs.slice().reverse();
+  app.innerHTML = '<div style="padding-top:24px"><header class="bar"><span class="role">記録</span><span class="info">これまでの事件。真相の欄はない。</span></header></div>';
+  const wrap = document.createElement('div');
+  wrap.innerHTML = '<div class="paper" style="margin-top:8px"><div class="paper-h">青柳書房事件　処理記録</div>'
+    + (rows.length ? '<table class="kv record"><tr><th>回</th><th>結果</th><th>自白</th><th>金庫</th><th>記憶に触れた回数</th><th>控訴審の指摘</th></tr>'
+      + rows.map(r => '<tr><td>' + r.no + '</td><td>' + r.verdict + '</td><td>' + r.confession + '</td><td>' + r.safe + '</td><td>' + r.bias + '</td><td>' + r.errors + '</td></tr>').join('') + '</table>'
+      : P('まだ記録はない。'))
+    + note('同じ証拠から、違う判断がありえた。違う真実も、ありえた。')
+    + '<div class="paper-f"><button class="pbtn" id="rq">冒頭の言葉</button><button class="pbtn" id="rt">タイトルへ</button></div></div>';
+  app.appendChild(wrap);
+  $('#rt').onclick = title;
+  $('#rq').onclick = () => quote(() => showRecord());
+}
+
+/* ============================================================
+   冒頭・タイトル
+   ============================================================ */
+function quote(done){
+  curtainSeq([
+    '<div class="quote">「法曹にならない人に対しては、刑事訴訟の大綱、あるいはその精神、とくに罪を犯したと思われる者にもなお『人権』があり、国家権力の行使に慎重な制約が設けられていることを理解してもらうだけでもよいだろう。」</div>'
+    + '<div class="cite">平野龍一『刑事訴訟法概説』<span style="white-space:nowrap">（東京大学出版会、1968年）1頁</span></div>'
+  ], done, { wait:4500 });
+}
+function title(){
+  closePaper();
+  app.innerHTML = '<div class="title"><div class="latin">IN DUBIO PRO REO</div><h1>疑わしきは</h1>'
+    + '<div class="menu"><button class="act primary" id="tb">はじめる</button><button class="act" id="tr">記録</button><button class="act" id="tl">条文帳</button></div>'
+    + '<div class="foot">本作はフィクションです。登場する人物・団体・地名は架空のものです。手続は現行法に基づいていますが、ゲームとして日数や手順を簡略化しています。</div></div>';
+  $('#tb').onclick = () => { ac(); sfxBell(); startAct1(); };
+  $('#tr').onclick = () => showRecord();
+  $('#tl').onclick = openLaw;
+}
+
+/* 起動：初回だけ、暗闇に引用 */
+if(!meta.seenQuote){ meta.seenQuote = true; save(META_KEY, meta); quote(title); }
+else title();
+</script>
+</body>
+</html>
