@@ -16,6 +16,14 @@
   const inCustody = S => S.c.arrest != null && !S.c.released;
   const custodyDay = S => S.day - S.c.arrest;
   const LIMIT = 23;
+  function limitBar(d, left) {
+    const seg = (cls, w, t) => '<span class="seg ' + cls + '" style="width:' + (w / LIMIT * 100) + '%">' + t + '</span>';
+    return '<div class="limit"><div class="row"><span>身柄拘束 ' + d + '日目</span><span>勾留満期まで あと' + left + '日</span></div>'
+      + '<div class="segs"><span class="done" style="width:' + Math.min(100, d / LIMIT * 100) + '%"></span>'
+      + seg('s1', 3, '送致・請求') + seg('s2', 10, '勾留 10日') + seg('s3', 10, '延長 10日')
+      + '<span class="now" style="left:calc(' + Math.min(100, d / LIMIT * 100) + '% - 1px)"></span></div>'
+      + '<div style="margin-top:2px">逮捕から48時間で送致、24時間以内に勾留請求、勾留10日、延長は最大10日（刑訴法203・205・208条）</div></div>';
+  }
 
   const C = {
     id: 'aoyagi', role: '捜査官', base: { m: 10, d: 3 }, dayCard: true,
@@ -26,11 +34,12 @@
         const d = custodyDay(S), left = LIMIT - d;
         const stage = d < 2 ? '送致前（48時間）' : d < 3 ? '勾留請求' : d < 13 ? '勾留' : '勾留延長';
         return { text: '青柳書房事件　' + (c.arrest_kind === 'bekken' ? '［別件（賭博）で拘束中］' : '') + stage,
-          clock: '<span>身柄拘束 ' + d + '日目</span><span class="track"><span class="fill" style="width:' + Math.min(100, d / LIMIT * 100) + '%"></span><span class="mark" style="left:' + (3 / LIMIT * 100) + '%"></span><span class="mark" style="left:' + (13 / LIMIT * 100) + '%"></span></span><span>満期まで' + left + '日</span>' };
+          clock: limitBar(d, left) };
       }
       return { text: '青柳書房事件　事件発生から' + (S.day + 1) + '日' };
     },
     scene: S => sc(inCustody(S) ? 'kuzumi' : null, 'office', ks(S)),
+    stopSkip: S => (inCustody(S) && (custodyDay(S) >= LIMIT || (custodyDay(S) >= 16 && !S.c.confession && !S.c.takeoverAsked))) || (S.c.arrest == null && S.day >= 28),
     endHint: S => inCustody(S) ? '満期までに記録を固める' : (S.tasks.length ? '部下の報告は日をまたいで届く' : ''),
     elements: S => {
       const c = S.c, d = id => !!K.doc(id);
@@ -82,6 +91,10 @@
       }
       if (inCustody(S)) {
         const d = custodyDay(S);
+        if (d === 1) {
+          K.addDoc({ id: 'news', title: '新聞記事', kind: 'memo', body: P('<b>古書店強盗　元店員の男を逮捕　「やっていない」と否認</b>', '北見坂署は、北見坂市本町の古書店で店主の女性（68）を粘着テープで縛り、現金約38万円入りの金庫を奪ったとして、強盗の疑いで、同市北見坂二丁目、物流会社契約社員、<b>久住透容疑者（34）</b>を逮捕した。同署によると、久住容疑者は「やっていない」と容疑を否認している。捜査関係者によると、同容疑者は多額の借金を抱えていたという。') });
+          L.push(['', '（朝刊の地域面に、久住の名前が出た。）', { scene: { bg: 'office' } }]);
+        }
         if (d === 2) L.push(['', '（48時間。久住は検察官に送致された。）'], ['kenji', '担当の検事です。勾留を請求します。……自白は、まだですか。', { scene: sc('kenji', 'pros') }]);
         if (d === 3) L.push(['', '（裁判官は勾留を認めた。10日間。）']);
         if (d === 5 && !S.staffGone.noguchi) { K.loseStaff('noguchi'); L.push(['todo', '野口は窃盗の応援に回す。被疑者はもう押さえてるんだ。', { scene: sc('todo') }]); }
@@ -91,6 +104,8 @@
         }
         if (d === 8 && !c.confession) L.push(['todo', '検事が電話してきた。自白はまだか、とな。', { scene: sc('todo') }]);
         if (d === 15 && !c.confession) L.push(['todo', 'やり方は任せる。結果を出せ。', { scene: sc('todo') }]);
+        if (d === 6) { c.fired = true; L.push(['shirai', '久住の会社、契約を打ち切ったそうです。新聞に名前と勤め先が出ましたからね。', { scene: sc('shirai') }], ['shirai', '……まあ、起訴されるまで待ってくれる会社なんて、ありゃしません。']); }
+        if (d === 10) L.push(['shirai', '久住のアパートの管理会社が、母親に「退去してほしい」と電話してきたそうです。', { scene: sc('shirai') }], ['', '（久住には接見禁止が付いている。母親は、まだ一度も息子に会えていない。）']);
         if (d === 20) L.push(['shirai', '主任、満期まであと3日です。', { scene: sc('shirai') }]);
         return L;
       }
@@ -99,10 +114,29 @@
       if (S.day === 9 && c.arrest == null) L.push(['todo', '逮捕状はまだか。新聞に「捜査難航」と書かれたら、署長が黙ってないぞ。', { scene: sc('todo') }]);
       if (S.day === 18 && c.arrest == null) L.push(['todo', '上からせっつかれてる。あと10日で目処をつけろ。', { scene: sc('todo') }]);
       if (S.day === 5) L.push(...homeScene(1));
+      if (S.day === 7) L.push(['aoyagi', '……刑事さん。犯人は、まだ捕まらないんですか。夜になると、裏口の音が気になって、眠れなくて。', { scene: sc('aoyagi', 'shop') }]);
+      if (S.day === 11 && S.fin.canvass1) L.push(['murai', 'うちの裏、あの路地でしょう。……夜、ゴミを出しに行くのも怖くて。早く捕まえてください。', { scene: sc('murai', 'street') }]);
       return L;
     },
     check: async S => {
       const c = S.c;
+      if (inCustody(S) && custodyDay(S) >= 16 && !c.confession && !c.takeoverAsked && !(c.sess.C || c.sess.D || c.sess.E)) {
+        c.takeoverAsked = true;
+        await G.talk([['todo', '……お前のやり方じゃ、埒があかん。', { scene: sc('todo') }], ['todo', '今夜は俺が調べる。昔のやり方でな。']]);
+        const v = await G.openPaper({ title: '東堂課長', body: P('課長が、自分で久住を取り調べると言っている。'), noClose: true,
+          buttons: [{ label: '課長に任せる', value: true, cls: 'red', small: '取調室のことは、あなたは見ない' }, { label: '自分にやらせてほしいと言う', value: false, small: '課長は不機嫌になる' }] });
+        if (v) {
+          c.todoTook = true; c.sess.C += 2; c.sess.E = (c.sess.E || 0) + 1; ['tape', 'safe', 'light'].forEach(x => { if (!c.leaks.includes(x)) c.leaks.push(x); });
+          c.meter = (c.meter || 0) + 75;
+          await G.talk([['', '（その夜、取調室の明かりは、午前1時過ぎまで消えなかった。）', { scene: { bg: 'interro' } }], ['', '（廊下まで、課長の声が聞こえた。）', { sfx: 'thud' }]]);
+          if (c.meter >= 100) await makeConfession(S, false, { by: 'todo' });
+          else await G.talk([['todo', '……しぶとい奴だ。', { scene: sc('todo') }]]);
+        } else {
+          await G.talk([['todo', 'なら、満期までに結果を出せ。白井も外す。', { scene: sc('todo') }]]);
+          K.loseStaff('shirai');
+        }
+        K.render();
+      }
       if (inCustody(S) && custodyDay(S) >= LIMIT) {
         if (c.arrest_kind === 'bekken') {
           await G.talk([['', '（賭博での勾留が満期を迎えた。久住は釈放された。）']]);
@@ -151,6 +185,8 @@
   A.push({ id: 'kandori', who: 'staff', days: 3, label: '鑑取り：被害者の人間関係', short: '鑑取り', sub: '裏口の鍵の場所を知っていた者は',
     done: S => { K.addDoc({ id: 'kandori', title: '鑑取り捜査報告書', kind: 'inc', evid: true, body: kv([['久住 透（34）', '元アルバイト店員。半年前に退職（レジの金の不足を疑われた）。裏口の鍵の場所を知っていた。<b>消費者金融に借金がある</b>との話。住居は書店の北約1.2km'],
         ['青柳 慎也（41）', '被害者の甥。事業の失敗で借金。相続の話で揉めたことがある'], ['宅配業者の配達員', '裏口から荷物を入れることがあり、鍵の場所を知っていた']]) });
+      K.addDoc({ id: 'profile', title: '久住透の身上', kind: 'memo', body: kv([['年齢', '34歳'], ['職業', '物流会社の契約社員（倉庫のピッキング、日勤、勤続2年）'], ['家族', '独身。母（久住和子、62）は隣県で一人暮らし。父は10年前に死亡'],
+        ['経歴', '高校卒業後、職を転々とする。28歳から5年間、青柳書房でアルバイト。半年前、レジの金の不足を疑われて辞めた'], ['借金', '約120万円。母の入院費を立て替えたのが始まりと聞く'], ['前科・前歴', 'なし']]) });
       return [['shirai', '鍵の場所を知っていて、金に困っていそうなのは三人。', { scene: sc('shirai') }], ['shirai', '筋がいいのは元店員の久住ですな。辞め方が辞め方だ。'], ['todo', '甥は事件の夜、勤め先の夜勤で防犯カメラに映ってる。配達員も同じ。残るのは一人だろう。', { scene: sc('todo') }]]; } });
   A.push({ id: 'teguchi', who: 'staff', days: 1, label: '手口照会：同じ手口の前歴者', short: '手口照会', sub: '刃物で脅して縛る強盗の前歴者',
     done: S => { K.addDoc({ id: 'miyashita', title: '手口照会結果', kind: 'exc', evid: true, body: kv([['宮下 剛（46）', '強盗の前歴1件（8年前、商店で店主を粘着テープで縛り現金を奪う）。<b>1年前に出所</b>。現住所は北見川の北、書店から約2km。身長168cm']]) });
@@ -182,6 +218,25 @@
     await G.talk([['todo', '宮下で令状？ 何を根拠に。前があって、アリバイがない。それだけだろう。'], ['todo', 'そんなもので部屋に入れたら、この国の前科者は全員捜索の対象だ。'], ['todo', '……それに、こっちには久住がいる。']]);
     S.c.miyaRefused = true;
   } });
+
+  A.push({ id: 'neighborsK', who: 'staff', days: 2, label: '久住の自宅周辺の聞き込み', short: '久住宅周辺の聞き込み', sub: '事件の夜の様子', cond: S => S.fin.kandori,
+    done: S => { K.addDoc({ id: 'neighborsK', title: '久住宅周辺の聞き込み結果', kind: 'neu', evid: true, body: P('（隣室の住人・20代男性）', 'あの人の部屋、夜はいつも野球の実況が聞こえてくるんですよ。壁が薄いんで。', '10月2日？ ……聞こえてた、と思います。いや、毎晩のことなんで、その日だったかと言われると……。') });
+      return [['noguchi', '隣の部屋の人が「毎晩、野球の音がしてる」と。あの夜もたぶん、だそうです。……「たぶん」ですけど。', { scene: sc('noguchi') }]]; } });
+  A.push({ id: 'register', who: 'self', label: '久住が辞めた事情を青柳さんに聞く', sub: 'レジの金の件', cond: S => S.fin.kandori && S.fin.victim, run: async S => {
+    G.drawScene(sc('aoyagi', 'shop'));
+    await G.talk([['aoyagi', 'あのお金のことは……あとで分かったんです。私の計算違いでした。'], ['aoyagi', '謝ろうと思っていたんです。でも、あの子はもう来なくなって。'], ['aoyagi', '……あの子が、恨んでいたとしても、仕方ないのかもしれません。']]);
+    K.addDoc({ id: 'register', title: '被害者の供述（退職の経緯）', kind: 'neu', evid: true, body: P('（青柳静江）', '久住くんが辞めるきっかけになったレジの不足金は、後になって私の計算違いだったと分かりました。本人には伝えられていません。') });
+  } });
+  A.push({ id: 'waterway', who: 'staff', days: 3, label: '書店周辺の水路と川を捜す', short: '水路の捜索', sub: '金庫が捨てられていないか', cond: S => S.fin.camera && !S.c.confession,
+    done: S => { const c = S.c; const found = rnd() < .35;
+      if (found) { c.safePre = true;
+        K.addDoc({ id: 'safePre', title: '金庫の発見報告', kind: 'neu', evid: true, body: P('書店裏の用水路、裏口から約40m下流の水中から、緑色の手提げ金庫（空）を発見した。被害者が自店のものと確認。', '長く水に浸かっていたため、指紋は検出できなかった。') + note('金庫の場所は、もう「捜査側の知らない事実」ではなくなった。') });
+        return [['shirai', '用水路から、緑の金庫が出ました。空です。指紋は、水で流れてる。', { scene: sc('shirai') }]]; }
+      K.addDoc({ id: 'safeNone', title: '水路の捜索結果', kind: 'neu', body: P('書店周辺の用水路と北見川の一部を捜索したが、金庫は発見されなかった。') });
+      return [['shirai', '水路と川をさらいましたが、何も。', { scene: sc('shirai') }]]; } });
+  A.push({ id: 'phoneSeize', who: 'staff', days: 7, label: '久住のスマートフォンを解析する', short: 'スマホの解析', sub: '差押え（捜索差押許可状で）', cond: S => S.c.searchWarrant || S.c.search === 'legal',
+    done: S => { K.addDoc({ id: 'phoneSeize', title: 'スマートフォン解析結果', kind: 'neu', evid: true, body: kv([['10月2日 21:26〜22:14', '動画アプリが前面で動作（端末の記録）'], ['位置情報', '設定が「オフ」のため記録なし'], ['10月3日 08:41', '検索「北見坂　古書店　強盗」'], ['その他', 'オンラインカジノのアプリ。9月中に多数の入出金']]) + note('事件を報じる最初のニュースは、10月3日午前7時。') });
+      return [['oka', 'スマホの中身です。事件の翌朝8時41分に「北見坂 古書店 強盗」で検索してます。', { scene: sc('oka') }], ['shirai', '……気になって調べた、か。ニュースは7時に出てますがね。', { scene: sc('shirai') }]]; } });
 
   /* ---------- 久住 ---------- */
   A.push({ id: 'ninni', who: 'self', label: '久住から任意で話を聴く', sub: '署に来てもらう。相手は帰ることもできる', cond: S => S.fin.kandori && S.c.arrest == null, run: async S => {
@@ -232,7 +287,7 @@
 
   // 被害者への誘導
   A.push({ id: 'victimSuggest', who: 'self', label: '被害者に「元店員の久住さんはどうか」と尋ねる', sub: '名前を出して確かめる', cond: S => S.fin.kandori && S.fin.victim,
-    risk: { id: 'suggest', title: '名前を出して尋ねると、被害者の記憶が変わるおそれがある', law: '法律上の禁止規定はない。ただし、識別供述の信用性の問題になる',
+    risk: { id: 'suggest', lure: '白井「ばあさん、本当は見当がついてるんじゃないですか。名前を出してやれば、思い出しますよ」', title: '名前を出して尋ねると、被害者の記憶が変わるおそれがある', law: '法律上の禁止規定はない。ただし、識別供述の信用性の問題になる',
       effects: ['被害者の記憶に、刑事が示した人物が混ざる', '後の面割りや法廷での証言が、その影響を受ける', '弁護人は、法廷でこの経緯を必ず尋ねる'] },
     run: async S => {
       G.drawScene(sc('aoyagi', 'shop'));
@@ -291,7 +346,7 @@
       S.c.warrantPending = { kind: 'honken', day: S.day };
     } });
   A.push({ id: 'warrantB', who: 'self', label: '賭博の容疑で逮捕状を請求する', sub: '別件。本命は強盗', cond: S => S.c.casino && S.c.arrest == null && !S.c.warrantPending && !S.c.warrantReady,
-    risk: { id: 'bekken', title: '別件逮捕：本件（強盗）の取調べのために、別の罪で身柄を拘束する', law: '刑訴法199条。適法かどうかは学説・裁判例で判断が分かれる（条文帳「学説　別件逮捕・勾留」）',
+    risk: { id: 'bekken', lure: '課長「強盗で令状が取れないなら、賭博で引っ張れ。身柄さえ押さえれば、取調べの時間は手に入る」', title: '別件逮捕：本件（強盗）の取調べのために、別の罪で身柄を拘束する', law: '刑訴法199条。適法かどうかは学説・裁判例で判断が分かれる（条文帳「学説　別件逮捕・勾留」）',
       effects: ['裁判所が本件基準説などの立場を採れば、身柄拘束は違法とされ、その間に得た自白は証拠から外される', '別件基準説を採る裁判所なら、適法とされうる', 'どちらの立場が採られるかは、事前には分からない'], always: true },
     run: async S => {
       G.drawScene(sc('todo'));
@@ -319,7 +374,7 @@
   A.push({ id: 'searchLegal', who: 'staff', days: 1, label: '久住の部屋を捜索する', short: '捜索（令状あり）', cond: S => S.c.searchWarrant && !S.c.search, start: S => { S.c.search = 'legal'; },
     done: S => searchDone(S, 'legal') });
   A.push({ id: 'searchIllegal', who: 'staff', days: 1, label: '管理人に部屋を開けさせる', short: '居室の確認（令状なし）', sub: '令状を待たずに', cond: S => S.fin.kandori && !S.c.search && !S.c.searchWarrant,
-    risk: { id: 'illegal', title: '令状なしで住居に立ち入る', law: '憲法35条、刑訴法218条1項', effects: ['見つけた物が、裁判で証拠として使えなくなる（違法収集証拠の排除）', '公判で、立ち入った捜査員が証人として追及される', '監察（内部調査）の対象になりうる', '誰かが、やっていない罪で裁かれる原因になりうる'] },
+    risk: { id: 'illegal', lure: '白井「令状を待ってる間に、母親が部屋を片づけに来たら終わりですよ。管理人は開けてくれます」', title: '令状なしで住居に立ち入る', law: '憲法35条、刑訴法218条1項', effects: ['見つけた物が、裁判で証拠として使えなくなる（違法収集証拠の排除）', '公判で、立ち入った捜査員が証人として追及される', '監察（内部調査）の対象になりうる', '誰かが、やっていない罪で裁かれる原因になりうる'] },
     start: S => { S.c.search = 'illegal'; }, done: S => searchDone(S, 'illegal') });
   function searchDone(S, kind) {
     K.addDoc({ id: 'jacket', title: kind === 'legal' ? '捜索差押調書' : '捜査報告書（居室の確認）', kind: 'inc', evid: true, illegal: kind === 'illegal', body:
@@ -333,7 +388,7 @@
   A.push({ id: 'phoneBase', who: 'staff', days: 5, label: '携帯電話の基地局記録（令状）', short: '基地局記録', cond: S => S.c.arrest != null,
     done: S => { K.addDoc({ id: 'phoneBase', title: '携帯電話会社の回答', kind: 'neu', evid: true, body: P('10月2日21時〜22時30分、久住の携帯電話は「北見坂本町局」に接続。', 'この基地局の範囲は、<b>久住の自宅と青柳書房の双方を含む</b>。') });
       return [['oka', '基地局は、自宅と書店の両方をカバーしてる局でした。どっちとも言えません。', { scene: sc('oka') }]]; } });
-  A.push({ id: 'safeSearch', who: 'staff', days: 2, label: '自白どおりに金庫を捜す', short: '金庫の捜索', cond: S => S.c.confession && S.c.confession.place !== 'none',
+  A.push({ id: 'safeSearch', who: 'staff', days: 2, label: '自白どおりに金庫を捜す', short: '金庫の捜索', cond: S => S.c.confession && S.c.confession.place !== 'none' && !S.c.safePre,
     done: S => {
       const c = S.c, cf = c.confession; let found = false;
       if (cf.place === 'yosui') found = rnd() < (c.truth === 'G' ? .6 : .25);   // 最寄りの水路。真犯人が誰であれ、捨てるならここだ
@@ -346,7 +401,7 @@
       return found ? [['', '（胴長を履いた白井が、泥の中から何かを引き上げた。）', { scene: { bg: 'street' } }], ['shirai', '……ありました。緑の金庫だ。'], ['shirai', '秘密の暴露ですな。これで決まりだ。']]
         : [['', '（2日間、水の中を捜した。）', { scene: { bg: 'street' } }], ['shirai', '……出ません。流されたか。']]; } });
   A.push({ id: 'hikiatari', who: 'self', label: '久住を現場に連れて行き、説明させる', sub: '引き当たり捜査', cond: S => !!S.c.confession && inCustody(S),
-    risk: { id: 'hikiatari', title: '現場を見せると、供述が現場に合わせて変わるおそれがある', law: '禁止規定はない。供述の信用性の問題', effects: ['現場の様子が、被疑者の供述に入り込む', '以後の供述が現場と一致しても、それが本人の記憶によるものか区別できなくなる'] },
+    risk: { id: 'hikiatari', lure: '課長「現場で説明させれば、調書に厚みが出る」', title: '現場を見せると、供述が現場に合わせて変わるおそれがある', law: '禁止規定はない。供述の信用性の問題', effects: ['現場の様子が、被疑者の供述に入り込む', '以後の供述が現場と一致しても、それが本人の記憶によるものか区別できなくなる'] },
     run: async S => {
       G.drawScene(sc('kuzumi', 'shop', ks(S)));
       await G.talk([['you', 'どこから入った。'], ['kuzumi', '……裏、から。'], ['', '（裏口、帳場、奥の照明。彼は一つずつ見て、一つずつ頷いた。）'], ['you', 'テープはどこで巻いた。'], ['kuzumi', '……ここ、ですか。']]);
@@ -361,49 +416,100 @@
     safe: [['', '（緑色の手提げ金庫の写真を並べる。）'], ['you', 'この緑の金庫を抱えて、裏から出たんだろう。'], ['kuzumi', '知らないって……言ってるじゃないですか。']],
     light: [['you', '店は奥の明かりが一つ点いてるだけだった。暗いのを知ってたから、閉店後を狙ったんだ。'], ['kuzumi', '……']]
   };
+  const POOL = {
+    A: [
+      S => [['kuzumi', '何度聞かれても、同じです。'], ['', '（彼は目を合わせない。それが何を意味するのかは、分からない。）']],
+      S => [['you', '仕事は、物流会社の倉庫だったな。'], ['kuzumi', '朝8時から5時まで。棚から荷物を集める仕事です。'], ['kuzumi', '……会社には、何て伝わってるんですか。']],
+      S => [['kuzumi', '青柳さんの店で、5年働きました。古い本の匂いが、好きで。'], ['kuzumi', 'レジの金が合わないって言われたとき、何も言い返せなかった。……それだけです。']],
+      S => [['kuzumi', '母は、元気ですか。'], ['you', '……'], ['', '（接見禁止が付いている。弁護人以外とは、家族とも会えない。）']],
+      S => [['kuzumi', 'あの夜見てたのは、昔のプロ野球の試合です。動画の履歴を見てもらえば分かる。'], ['you', '履歴は、どこで見ても残る。'], ['kuzumi', '……そうですね。']],
+      S => [['', '（彼は黙ったまま、机の木目を指でなぞっている。）'], ['kuzumi', '弁護士さんは、話さなくていいって言ってました。'], ['kuzumi', 'でも、やってないってことだけは、言っておきます。']],
+      S => S.c.casino ? [['you', 'お母さんに借りたというのは、嘘だったな。'], ['kuzumi', '……カジノのことは、すみません。母にも嘘をつかせた。'], ['kuzumi', 'でも、強盗はやってない。']] : null,
+      S => S.c.fired ? [['kuzumi', '会社、契約を切られたって、弁護士さんから聞きました。'], ['kuzumi', 'やってないのに。……ここを出ても、もう何もない。']] : null,
+      S => [['kuzumi', '刑事さんは、僕がやったと思ってるんですよね。'], ['you', '思っているかどうかは、関係ない。'], ['kuzumi', '……関係、ないんですか。']]
+    ],
+    B: [
+      S => S.fin.loan ? [['you', '事件の2日後、30万円を現金で返したな。'], ['kuzumi', '……カジノで、勝ったんです。たまたま。'], ['you', 'たまたま、か。']] : null,
+      S => K.doc('printK') ? [['you', 'テープの指紋が、お前の指紋と8点合っている。'], ['kuzumi', '8点って……合ってるってことなんですか。'], ['', '（12点に届かないことは、言わなかった。）']] : null,
+      S => (S.c.lineupRes === 'K' || S.c.lineupRes === 'single') ? [['you', '青柳さんが、写真でお前を選んだ。'], ['kuzumi', '……青柳さんが？'], ['', '（彼の顔から、血の気が引いた。）']] : null,
+      S => S.c.search ? [['you', '灰色のジャケット。お前の部屋にあった。'], ['kuzumi', 'あれは、ユニクロのです。誰でも持ってる。']] : null,
+      S => [['', '（同じ写真を、もう一度並べる。）'], ['kuzumi', 'もう、見たくないです。']]
+    ],
+    C: [
+      S => [['', '（取調べは朝9時から、午後11時過ぎまで続いた。）'], ['kuzumi', '……眠らせてください。'], ['you', '話せば終わる。']],
+      S => [['', '（今日も、日付が変わる少し前まで。）'], ['kuzumi', '頭が、回らないんです。何を言ったか、もう分からない。']],
+      S => [['', '（昼食の時間を除いて、13時間。）'], ['kuzumi', '同じことを何回言えばいいんですか。'], ['you', '本当のことを言うまでだ。']],
+      S => [['', '（午後10時。彼は椅子の上で、何度も船を漕いだ。）'], ['you', '起きろ。']]
+    ],
+    D: [
+      S => [['you', '認めれば、執行猶予だってありうる。すぐ出られるんだ。お母さんも安心する。'], ['kuzumi', '……本当、ですか。']],
+      S => [['you', '話してくれれば、接見禁止を解くよう検事に言ってやる。お母さんに会えるぞ。'], ['kuzumi', '……母に。']],
+      S => [['you', '否認を続けたら、裁判は長引く。保釈も出ない。何年も出られないぞ。'], ['kuzumi', '……']]
+    ],
+    E: [
+      S => [['you', 'いい加減にしろ！ お前しかいないんだよ！', { sfx: 'thud' }], ['', '（机を叩く音が、取調室に響いた。）'], ['kuzumi', '……っ。']],
+      S => [['you', 'お前の母親も、口裏を合わせた。母親もここに呼ぶことになるぞ。'], ['kuzumi', '母は関係ない！ やめてください……！']],
+      S => [['', '（椅子のすぐ横に立ち、耳元で同じ質問を繰り返す。1時間。）'], ['kuzumi', '……もう、やめて、ください。']]
+    ]
+  };
+  function poolLines(S, k) {
+    const c = S.c; c.used = c.used || {}; const used = c.used[k] = c.used[k] || [];
+    const pool = POOL[k];
+    for (let i = 0; i < pool.length; i++) { if (used.includes(i)) continue; const L = pool[i](S); if (L) { used.push(i); return L; } }
+    c.used[k] = []; for (let i = pool.length - 1; i >= 0; i--) { const L = pool[i](S); if (L) return L; }
+    return [['kuzumi', '……']];
+  }
   async function interro(S) {
-    const c = S.c; c.sess = c.sess || { A: 0, B: 0, C: 0, D: 0 }; c.leaks = c.leaks || [];
+    const c = S.c; c.sess = c.sess || { A: 0, B: 0, C: 0, D: 0, E: 0 }; c.sess.E = c.sess.E || 0; c.leaks = c.leaks || [];
     G.audio.ambient('interro'); G.drawScene(sc('kuzumi', 'interro', ks(S)));
     if (c.confession) {
       await G.talk([['kuzumi', c.confession.voluntary ? '……書いてあるとおりです。' : '……そう書いたんなら、そうなんでしょう。'], ['', '（それ以上、彼は何も言わなかった。）']]);
       G.audio.ambient(null); return;
     }
-    const total = c.sess.A + c.sess.B + c.sess.C + c.sess.D;
-    await G.talk(total === 0 ? [['', '（久住透。34歳。痩せている。）'], ['kuzumi', '……何回聞かれても、やってないです。']] : [['kuzumi', '……また、ですか。']]);
+    const total = c.sess.A + c.sess.B + c.sess.C + c.sess.D + c.sess.E;
+    await G.talk(total === 0 ? [['', '（久住透。34歳。痩せている。）'], ['kuzumi', '……何回聞かれても、やってないです。']] : [['kuzumi', G.pick(['……また、ですか。', '……おはようございます。', '……'])]]);
     const k = await G.openPaper({ title: '取調べ', sub: c.arrest_kind === 'bekken' ? '拘束の理由は賭博。だが、聞くのは強盗のことだ。' : '', noClose: true, body: P('どう進めるか。'),
       buttons: [{ label: '黙秘権を告げ、弁解を聴く', value: 'A', small: '言い分をそのまま聴き取る' },
-        { label: '証拠写真を見せて追及する', value: 'B', small: c.leaks.length < 3 ? '現場の様子を突きつける' : '同じ写真を、もう一度' },
+        { label: '証拠を示して追及する', value: 'B', small: c.leaks.length < 3 ? '現場の写真や、集めた証拠を突きつける' : '集めた証拠を突きつける' },
         { label: '夜まで取調べを続ける', value: 'C', cls: 'red', small: '朝9時から、話すまで' },
+        { label: '怒鳴りつけ、追い詰める', value: 'E', cls: 'red', small: '机を叩く。家族のことを持ち出す' },
         { label: '「認めれば、すぐ出られる」と言う', value: 'D', cls: 'red', small: '取引を持ちかける' }] });
-    if ((k === 'C' || k === 'D') && !(await G.confirmRisk(k === 'C'
-      ? { id: 'long', title: '長時間の取調べ', law: '憲法38条2項、刑訴法319条1項', effects: ['得た自白が、任意性を欠くとして証拠から外されうる', '公判で、取調官として追及される', '虚偽の自白を生む原因になる'] }
-      : { id: 'promise', title: '利益を約束して自白を求める', law: '刑訴法319条1項（判例：約束による自白）', effects: ['得た自白が、任意性を欠くとして証拠から外されうる', '公判で、取調官として追及される', '虚偽の自白を生む原因になる'] }))) { G.audio.ambient(null); return false; }
+    const RISK = {
+      C: { id: 'long', title: '長時間の取調べ', law: '憲法38条2項、刑訴法319条1項', lure: (c.meter || 0) >= 55 ? '白井「あいつ、もう限界ですよ。今夜詰めれば、落ちます」' : '白井「時間をかければ、人は話すもんです」', effects: ['得た自白が、任意性を欠くとして証拠から外されうる', '公判で、取調官として追及される', '虚偽の自白を生む原因になる'] },
+      D: { id: 'promise', title: '利益を約束して自白を求める', law: '刑訴法319条1項（判例：約束による自白）', lure: '白井「家族の話をすると、たいてい落ちますよ」', effects: ['得た自白が、任意性を欠くとして証拠から外されうる', '公判で、取調官として追及される', '虚偽の自白を生む原因になる'] },
+      E: { id: 'threat', title: '脅迫的な取調べ', law: '憲法38条2項、刑訴法319条1項', lure: '課長「否認してる奴に遠慮してどうする」', effects: ['得た自白が、脅迫による自白として証拠から外されうる', '公判で、取調官として追及される', '虚偽の自白を生む原因になる'] }
+    };
+    if (RISK[k] && !(await G.confirmRisk(RISK[k]))) { G.audio.ambient(null); return false; }
     c.sess[k]++; if (c.arrest_kind === 'bekken') c.bekkenInterro = (c.bekkenInterro || 0) + 1;
-    const n = c.sess[k]; let lines = [];
-    if (k === 'A') lines = n === 1 ? [['you', 'あなたには、言いたくないことは言わなくていい権利がある。そのうえで聞く。'], ['kuzumi', 'やってません。あの夜は、家で動画を見てました。'], ['kuzumi', '青柳さんには、世話になったんです。辞めたのだって……僕が盗ったわけじゃない。']]
-      : n === 2 ? [['kuzumi', '何度聞かれても、同じです。'], ['', '（彼は目を合わせない。それが何を意味するのかは、分からない。）']]
-        : c.casino ? [['you', 'お母さんに借りたというのは、嘘だったな。'], ['kuzumi', '……カジノのことは、すみません。母にも嘘をつかせた。'], ['kuzumi', 'でも、強盗はやってない。']] : [['kuzumi', '弁護士さんは、話さなくていいって言ってました。'], ['kuzumi', 'でも、やってないってことだけは言っておきます。']];
-    else if (k === 'B') { const nx = ['tape', 'safe', 'light'].find(x => !c.leaks.includes(x)); if (nx) { c.leaks.push(nx); lines = LEAKS[nx].slice(); } else lines = [['', '（同じ写真を、もう一度並べる。）'], ['kuzumi', 'もう、見たくないです。']]; }
-    else if (k === 'C') lines = n === 1 ? [['', '（取調べは朝9時から、午後11時過ぎまで続いた。）'], ['kuzumi', '……眠らせてください。'], ['you', '話せば終わる。']] : [['', '（今日も、日付が変わる少し前まで。）'], ['kuzumi', '頭が、回らないんです。何を言ったか、もう分からない。']];
-    else lines = [['you', '認めれば、執行猶予だってありうる。すぐ出られるんだ。お母さんも安心する。'], ['kuzumi', '……本当、ですか。']];
-    const inc = { A: { G: 8, I: 4 }, B: { G: 18, I: 14 }, C: { G: 32, I: 30 }, D: { G: 30, I: 30 } }[k][c.truth];
+    const n = c.sess[k]; let lines;
+    if (k === 'A' && n === 1) lines = [['you', 'あなたには、言いたくないことは言わなくていい権利がある。そのうえで聞く。'], ['kuzumi', 'やってません。あの夜は、家で動画を見てました。'], ['kuzumi', '青柳さんには、世話になったんです。辞めたのだって……僕が盗ったわけじゃない。']];
+    else if (k === 'B') { const nx = ['tape', 'safe', 'light'].find(x => !c.leaks.includes(x)); if (nx) { c.leaks.push(nx); lines = LEAKS[nx].slice(); } else lines = poolLines(S, 'B'); }
+    else lines = poolLines(S, k);
+    const inc = { A: { G: 8, I: 4 }, B: { G: 18, I: 14 }, C: { G: 32, I: 30 }, D: { G: 30, I: 30 }, E: { G: 28, I: 26 } }[k][c.truth] + (c.fired ? 5 : 0);
     c.meter = (c.meter || 0) + inc;
     let confess = c.meter >= 100, voluntary = false;
     if (!confess && k === 'A' && c.truth === 'G' && n >= 2 && rnd() < .18) { confess = true; voluntary = true; }
     await G.talk(lines);
     if (confess) await makeConfession(S, voluntary);
+    else {
+      const d = custodyDay(S);
+      if (c.meter >= 70) await G.talk([['shirai', '主任……あいつ、そろそろですよ。あと一押しすれば、落ちます。', { scene: sc('shirai') }]]);
+      else if (d >= 10 && c.meter < 45) await G.talk([['shirai', 'このままじゃ満期です。……やり方、考えたほうがいいんじゃないですか。', { scene: sc('shirai') }]]);
+    }
     G.audio.ambient(null);
   }
-  async function makeConfession(S, voluntary) {
+  async function makeConfession(S, voluntary, opt) {
+    opt = opt || {};
     const c = S.c, Gw = c.truth === 'G', det = {};
     ['tape', 'safe', 'light'].forEach(x => { det[x] = c.leaks.includes(x) ? true : (Gw ? rnd() < .8 : false); });
     const r = rnd();
     const place = Gw ? (r < .7 ? 'yosui' : r < .8 ? 'river' : 'none') : (r < .4 ? 'yosui' : r < .7 ? 'river' : 'none');
-    await G.talk(voluntary ? [['kuzumi', '……もう、いいです。'], ['kuzumi', '僕が、やりました。青柳さんに、謝りたい。']] : [['kuzumi', '……分かりました。'], ['kuzumi', '僕が、やりました。']]);
+    if (opt.by === 'todo') await G.talk([['todo', '落ちたぞ。調書はお前が巻け。', { scene: sc('todo') }]]);
+    else await G.talk(voluntary ? [['kuzumi', '……もう、いいです。'], ['kuzumi', '僕が、やりました。青柳さんに、謝りたい。']] : [['kuzumi', '……分かりました。'], ['kuzumi', '僕が、やりました。']]);
     G.audio.cue('confession');
-    const form = await G.openPaper({ title: '供述調書の作成', sub: 'どの形式で録取するか', noClose: true, body: P('被疑者の供述を調書にする。'),
+    const form = opt.by === 'todo' ? 'story' : await G.openPaper({ title: '供述調書の作成', sub: 'どの形式で録取するか', noClose: true, body: P('被疑者の供述を調書にする。'),
       buttons: [{ label: '一問一答で書く', value: 'qa', small: '問いと答えをそのまま記録する。読みにくい' }, { label: '物語式で書く', value: 'story', small: '一人称の文章にまとめる。課長も検事もこちらを好む' }] });
-    c.confession = { voluntary, det, place, day: S.day, form, custodyDay: custodyDay(S) };
+    c.confession = { voluntary, det, place, day: S.day, form, custodyDay: custodyDay(S), by: opt.by || 'you' };
     K.addDoc({ id: 'confession', title: '被疑者の供述調書（自白）', kind: 'inc', evid: true, body: () => confessionBody(c) });
     await G.talk([['', form === 'story' ? '（あなたが文章にまとめ、読み聞かせる。彼は、言われた場所に署名した。）' : '（問いと答えを書きとめ、読み聞かせる。彼は、言われた場所に署名した。）', { sfx: 'pen' }]]);
     if (!S.staffGone.oka) { K.loseStaff('oka'); await G.talk([['todo', '自白したか。よし、岡は別件に回す。', { scene: sc('todo') }]]); }
@@ -451,7 +557,7 @@
   G.cases = G.cases || {};
   G.cases.aoyagi = {
     run: async function () {
-      const S = { c: { truth: rnd() < .5 ? 'G' : 'I', leaks: [], sess: { A: 0, B: 0, C: 0, D: 0 } } };
+      const S = { c: { truth: rnd() < .5 ? 'G' : 'I', leaks: [], sess: { A: 0, B: 0, C: 0, D: 0, E: 0 } } };
       G.audio.cue('main'); G.audio.ambient('office');
       await G.curtain(['<div class="big">本章</div><div class="small">青柳書房事件</div>']);
       const how = await K.start(C, S);

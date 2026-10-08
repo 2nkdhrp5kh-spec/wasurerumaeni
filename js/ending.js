@@ -57,7 +57,7 @@
         if (v) sent.push('video'); else c.videoWithheld = true;
       }
       // 検察官
-      const pressured = c.sess.C > 0 || c.sess.D > 0;
+      const pressured = c.sess.C > 0 || c.sess.D > 0 || c.sess.E > 0;
       if (c.confession) c.retract = c.confession.voluntary ? false : c.truth === 'I' ? rnd() < .85 : rnd() < (pressured ? .6 : .3);
       const est = weigh(S, sent, false).w;
       G.layout({ role: '検察', date: '', info: '北見坂地方検察庁', scene: { bg: 'pros', who: 'kenji' } });
@@ -75,7 +75,7 @@
         if (c.search === 'illegal') { drop('jacket', 'ジャケットは、令状も承諾もない居室への立入りで押収されたもので、令状主義の精神を没却する重大な違法がある。証拠能力を否定する'); drop('fiber', '繊維鑑定は、違法に押収されたジャケットに基づくもので、同様に証拠能力を否定する'); }
         drop('hearsay', '捜査報告書（近隣の噂）は伝聞であり、原供述者も特定されていない');
         if (c.confession) {
-          if (pressured && rnd() < .8) drop('confession', '自白は、長時間の取調べ又は利益の約束の下でされたもので、任意性に疑いがある（刑訴法319条1項）');
+          if (pressured && rnd() < .8) drop('confession', '自白は、長時間の取調べ、脅迫的な言動又は利益の約束の下でされたもので、任意性に疑いがある（刑訴法319条1項）');
           else if (c.arrest_kind === 'bekken' && !c.rearrest && c.bekkenInterro) {
             c.stance = rnd() < .5 ? 'honken' : 'bekken';
             if (c.stance === 'honken') drop('confession', '賭博による逮捕・勾留は、実質的には本件の取調べのための身柄拘束であり、令状主義を潜脱する違法なものである（いわゆる本件基準説の立場）。この間に得た自白の証拠能力を否定する');
@@ -118,7 +118,7 @@
     pages.push({ html: '<div class="law" style="font-size:14px;color:#aaa">本件のような強盗事件の取調べは、現在も録音・録画の義務の対象ではない。<br>義務の対象は、裁判員裁判の対象事件と検察官独自捜査事件に限られる（刑事訴訟法301条の2、2019年施行）。<br>その範囲は、起訴される事件全体のおよそ3%にとどまると指摘されている。</div>', wait: 2600 });
     await G.curtain(pages);
     G.meta.runs.push({ no: G.meta.runs.length + 1, mode: '刑事編', result: verdict, confession: c.confession ? (c.confession.voluntary ? 'あり（自発）' : 'あり') + (c.retract ? '・撤回' : '') : 'なし',
-      illegal: (c.search === 'illegal' ? 1 : 0) + (c.sess.C ? 1 : 0) + (c.sess.D ? 1 : 0) + (c.arrest_kind === 'bekken' ? 1 : 0), withheld: (c.withheld || []).length + (c.videoWithheld ? 1 : 0),
+      illegal: (c.search === 'illegal' ? 1 : 0) + (c.sess.C ? 1 : 0) + (c.sess.D ? 1 : 0) + (c.sess.E ? 1 : 0) + (c.arrest_kind === 'bekken' ? 1 : 0), withheld: (c.withheld || []).length + (c.videoWithheld ? 1 : 0),
       revealed: revealed ? '判明' : '—' });
     G.saveMeta();
   };

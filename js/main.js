@@ -10,7 +10,7 @@
     $('#app').innerHTML = '<div class="title"><div class="sub">— 仮題 —</div><h1>調書</h1>'
       + '<div class="menu">'
       + '<button class="act primary" id="t-keiji"><span class="l">刑事編</span><span class="s">捜査官として</span></button>'
-      + '<button class="act" id="t-hanji" disabled><span class="l">判事編</span><span class="s">準備中</span></button>'
+      + '<button class="act" id="t-hanji" disabled><span class="l">判事編</span><span class="s">制作中（刑事編のあとに遊べるようになる予定）</span></button>'
       + '<button class="act" id="t-kyumon" disabled><span class="l">糾問編</span><span class="s">' + (done ? '準備中' : '刑事編と判事編のあとで') + '</span></button>'
       + '<button class="act ghost" id="t-rec"><span class="l">記録</span></button>'
       + '<button class="act ghost" id="t-law"><span class="l">条文帳</span></button>'
@@ -47,7 +47,7 @@
       + (rows.length ? '<table class="kv record"><tr><th>回</th><th>結果</th><th>自白</th><th>注意の付いた行動</th><th>送らなかった記録</th><th>真相</th></tr>'
         + rows.map(r => '<tr><td>' + r.no + '</td><td>' + r.result + '</td><td>' + r.confession + '</td><td>' + r.illegal + '</td><td>' + r.withheld + '</td><td>' + (r.revealed === '判明' ? '偶然、判明した' : '—') + '</td></tr>').join('') + '</table>'
         : G.P('まだ記録はない。'))
-      + G.note('同じ証拠から、違う判断がありえた。違う真実も、ありえた。')
+      + G.note('同じ証拠から、違う判断がありえた。違う真実も、ありえた。') + G.note('次は「判事編」：他の誰かが作った記録だけを読んで、裁く側に立つ。（制作中）')
       + '<div class="paper-f"><button class="pbtn" id="r-q">冒頭の言葉</button><button class="pbtn" id="r-t">タイトルへ</button></div></div>';
     $('#app').appendChild(w);
     $('#r-t').onclick = title;

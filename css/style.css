@@ -147,3 +147,14 @@ button{font:inherit;color:inherit}
 .record td,.record th{font-size:13px}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#2b2924;border:2px solid var(--amber);padding:6px 14px;z-index:40;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none}
 .toast.on{opacity:1}
+.endday.skip{background:#22201b;box-shadow:0 0 0 1px #4a463d inset;margin-top:6px;letter-spacing:.05em}
+.endday.skip:hover{background:#2e2b25}
+/* 身柄拘束の期限 */
+.limit{width:100%;font-size:11px;color:var(--muted)}
+.limit .row{display:flex;justify-content:space-between;margin-bottom:2px}
+.limit .segs{display:flex;height:16px;border:1px solid #000;position:relative}
+.limit .seg{position:relative;border-right:1px solid #000;display:flex;align-items:center;justify-content:center;color:#cfc8b8;font-size:10px;white-space:nowrap;overflow:hidden;background:#2a2824}
+.limit .seg:last-child{border-right:none}
+.limit .seg.s1{background:#3a2e26}.limit .seg.s2{background:#2e2a24}.limit .seg.s3{background:#342a22}
+.limit .now{position:absolute;top:-3px;bottom:-3px;width:3px;background:var(--shu);box-shadow:0 0 0 1px #000}
+.limit .done{position:absolute;inset:0 auto 0 0;background:rgba(178,58,46,.35)}

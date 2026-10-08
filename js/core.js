@@ -108,7 +108,7 @@ G.talk = function (lines, opt) {
       const L = lines[i++];
       if (typeof L === 'function') { L(); next(); return; }
       const [who, text, extra] = L;
-      if (extra && extra.scene) G.drawScene(Object.assign({}, G.lastScene, extra.scene));
+      if (extra && extra.scene) G.drawScene(extra.scene);
       if (extra && extra.sfx) G.audio.sfx(extra.sfx);
       const c = G.CHAR[who];
       const name = c ? c.name : (who || '');
@@ -165,7 +165,7 @@ G.toast = function (t) {
 /* 違法・不適切な行動の確認（赤い付箋） */
 G.confirmRisk = function (risk) {
   const first = !G.meta['risk_' + risk.id];
-  const body = '<div class="riskbox"><b>' + risk.title + '</b><br>根拠：' + risk.law
+  const body = (risk.lure ? '<p style="font-family:DotGothic16,sans-serif">' + risk.lure + '</p>' : '') + '<div class="riskbox"><b>' + risk.title + '</b><br>根拠：' + risk.law
     + (first || risk.always ? '<br>起こりうること：<ol>' + risk.effects.map(e => '<li>' + e + '</li>').join('') + '</ol>' : '')
     + '</div>' + (risk.note ? G.note(risk.note) : '');
   return G.openPaper({ title: '確認', red: true, body, noClose: true,

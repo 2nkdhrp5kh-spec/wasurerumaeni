@@ -69,7 +69,8 @@
     const wrap = G.$('#acts-wrap'); if (!wrap) return;
     const tab = G.ui.tab;
     wrap.innerHTML = '<div class="tabs"><button class="tab' + (tab === 'staff' ? ' on' : '') + '" data-t="staff">部下に指示する</button><button class="tab' + (tab === 'self' ? ' on' : '') + '" data-t="self">自分で動く</button></div><div class="acts" id="acts"></div>'
-      + '<button class="endday" id="endday">一日を終える<span class="s">' + C.endHint(S) + '</span></button>';
+      + '<button class="endday" id="endday">一日を終える<span class="s">' + C.endHint(S) + '</span></button>'
+      + (nextReport() ? '<button class="endday skip" id="skip">次の報告が届くまで進める<span class="s">' + nextReport() + '日後。その間に起きたことがあれば、そこで止まる</span></button>' : '');
     wrap.querySelectorAll('.tab').forEach(t => t.onclick = () => { G.ui.tab = t.dataset.t; G.audio.sfx('click'); renderActs(); });
     const acts = G.$('#acts');
     const list = C.actions.filter(a => a.who === tab && (!a.cond || a.cond(S)) && !(a.once !== false && S.done[a.id]));
@@ -88,6 +89,7 @@
       acts.appendChild(b);
     });
     G.$('#endday').onclick = () => K.endDay();
+    if (G.$('#skip')) G.$('#skip').onclick = () => K.skip();
   }
   K.refresh = () => { renderDocs(); renderActs(); const p = document.querySelectorAll('.panel'); if (p[0]) p[0].innerHTML = '<div class="ph"><span>捜査員</span></div>' + staffPanel(); if (p[1]) { p[1].innerHTML = '<div class="ph"><span>' + (C.elemTitle || '立証すべき事実') + '</span><span>■=証拠 <span style="color:#b23a2e">■</span>=自白</span></div>' + elemPanel(); } };
 
@@ -125,6 +127,30 @@
     if (lines && lines.length) { G.drawScene(C.scene(S)); await G.talk(lines); }
   }
 
+  function nextReport() {
+    if (!S.tasks.length) return 0;
+    const d = Math.min(...S.tasks.map(t => t.doneDay)) - S.day;
+    return d > 1 ? d : 0;
+  }
+  K.skip = async function () {
+    if (G.ui.talking || G.ui.busy) return;
+    G.ui.busy = true;
+    try {
+      const from = S.day; let lines = [];
+      for (let i = 0; i < 40; i++) {
+        S.day++; S.selfUsed = false;
+        lines = collect(false);
+        if (lines.length || (C.stopSkip && C.stopSkip(S))) break;
+      }
+      G.audio.sfx('steps');
+      await G.curtain([{ html: '<div class="big">' + K.date() + '</div><div class="small">' + (S.day - from) + '日が過ぎた　' + C.info(S).text + '</div>', wait: 600 }], { delay: 200 });
+      K.render('');
+      if (lines.length) await G.talk(lines);
+      if (S._ended) return;
+      if (C.check) { const r = await C.check(S); if (r === 'end') return; }
+      K.render();
+    } finally { G.ui.busy = false; }
+  };
   K.endDay = async function () {
     if (G.ui.talking || G.ui.busy) return;
     G.ui.busy = true;
@@ -140,6 +166,14 @@
   };
   async function morning(first) {
     K.render('');
+    const all = collect(first);
+    K.refresh();
+    if (all.length) await G.talk(all);
+    if (S._ended) return;
+    if (C.check) { const r = await C.check(S); if (r === 'end') return; }
+    K.render();
+  }
+  function collect(first) {
     const lines = [];
     // 完了した捜査
     const due = S.tasks.filter(t => t.doneDay <= S.day);
@@ -153,12 +187,7 @@
       (ls || []).forEach(l => lines.push(l));
     }
     const m = C.morning(S, first) || [];
-    const all = m.concat(lines).concat(C.after ? (C.after(S) || []) : []);
-    K.refresh();
-    if (all.length) await G.talk(all);
-    if (S._ended) return;
-    if (C.check) { const r = await C.check(S); if (r === 'end') return; }
-    K.render();
+    return m.concat(lines).concat(C.after ? (C.after(S) || []) : []);
   }
   K.end = function (result) { S._ended = true; const f = S._finish; S._finish = null; f && f(result); };
 })();
