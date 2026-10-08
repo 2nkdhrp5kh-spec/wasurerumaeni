@@ -17,7 +17,7 @@
   K.start = function (caseDef, state) {
     C = caseDef; S = state;
     S.day = S.day || 0; S.tasks = S.tasks || []; S.docs = S.docs || []; S.done = S.done || {}; S.selfUsed = false;
-    S.staffGone = S.staffGone || {}; S.flags = S.flags || {};
+    S.staffGone = S.staffGone || {}; S.flags = S.flags || {}; S.fin = S.fin || {};
     G.ui.tab = 'staff';
     return new Promise(res => { S._finish = res; K.morning(true); });
   };
@@ -113,12 +113,14 @@
       const r = a.run ? await a.run(S) : null;
       if (r === false) { K.render(); return; }   // 取りやめ
       if (a.once !== false) S.done[a.id] = true;
+      S.fin[a.id] = true;
       if (!a.free) S.selfUsed = true;
       if (S._ended) return;
       K.render();
     }
   }
   async function finishTask(t, a) {
+    S.fin[a.id] = true;
     const lines = a.done ? a.done(S) : [];
     if (lines && lines.length) { G.drawScene(C.scene(S)); await G.talk(lines); }
   }
@@ -144,6 +146,7 @@
     S.tasks = S.tasks.filter(t => t.doneDay > S.day);
     for (const t of due) {
       const a = C.actions.find(x => x.id === t.aid);
+      S.fin[t.aid] = true;
       const ls = a && a.done ? a.done(S) : [];
       const s = C.staff.find(x => x.id === t.staff);
       lines.push(['', '（' + (s ? s.name : '') + 'が「' + t.label + '」を終えて戻った。）']);

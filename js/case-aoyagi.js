@@ -143,7 +143,7 @@
     done: S => { K.addDoc({ id: 'murai', title: '村井良子の供述', kind: 'exc', evid: true, body: P('（村井良子・47歳、書店の裏に住む）', '夜の9時半ごろ、ゴミを出しに行ったら、裏の路地に灰色の作業着みたいなのを着た男の人がいました。',
         '背は……そんなに高くなかったと思います。うちの主人が170センチなんですけど、主人より低いくらい。暗かったので、確かではないです。') });
       return [['oka', '書店の裏の村井さんが、9時半ごろに灰色の上着の男を見てます。', { scene: sc('oka') }], ['murai', '背は、そんなに高くなかったと思いますよ。暗かったけど。', { scene: sc('murai', 'street') }]]; } });
-  A.push({ id: 'canvass2', who: 'staff', days: 2, label: '地取り：商店街', short: '地取り（商店街）', cond: S => S.done.canvass1,
+  A.push({ id: 'canvass2', who: 'staff', days: 2, label: '地取り：商店街', short: '地取り（商店街）', cond: S => S.fin.canvass1,
     done: S => {
       K.addDoc({ id: 'regular', title: '常連客の供述', kind: 'exc', evid: true, body: P('（常連客・70代男性）', '裏口の鍵が植木鉢の下にあるのは、常連なら何人か知ってたよ。配達の人も使ってた。静江さん、そういうところは無頓着だから。') });
       K.addDoc({ id: 'hearsay', title: '捜査報告書（近隣の噂）', kind: 'inc', evid: true, body: P('本町商店街の飲食店主によれば、「事件の夜、元店員の男が店の近くをうろついていた、と客の誰かが話していた」とのこと。', '話をした客が誰であるかは、店主は覚えていない。') });
@@ -158,33 +158,33 @@
   A.push({ id: 'camera', who: 'staff', days: 3, label: '防犯カメラのリレー捜査', short: '防犯カメラ', sub: '逃げた方向を追う',
     done: S => { K.addDoc({ id: 'camera', title: '防犯カメラ映像の解析報告', kind: 'inc', evid: true, body: P('書店から北へ約300mのコンビニエンスストア店頭カメラ。', '<b>21時52分</b>、灰色の上着を着た男が北へ歩く。顔は判別できない。推定身長170〜180cm。', '同時刻帯に画面を通過した男性は、ほかに4名。') });
       return [['noguchi', '21時52分、灰色の上着の男が北へ。顔は映ってません。', { scene: sc('noguchi') }]]; } });
-  A.push({ id: 'camera2', who: 'staff', days: 4, label: 'カメラをさらに北へたどる', short: 'カメラの追跡', cond: S => S.done.camera,
+  A.push({ id: 'camera2', who: 'staff', days: 4, label: 'カメラをさらに北へたどる', short: 'カメラの追跡', cond: S => S.fin.camera,
     done: S => { K.addDoc({ id: 'camera2', title: '防犯カメラ追跡報告', kind: 'neu', evid: true, body: P('男は22時01分、北見橋の手前の交差点を通過。以後、該当する人物は確認できない。', '北見橋の先には住宅地が広がり、カメラはほとんどない。') });
       return [['noguchi', '北見橋の手前で見失いました。その先は住宅地で、カメラがないんです。', { scene: sc('noguchi') }]]; } });
   A.push({ id: 'printDB', who: 'staff', days: 5, label: '粘着テープの指紋を照合する', short: '指紋の照合', sub: '前歴者のデータベースと',
     done: S => { K.addDoc({ id: 'printDB', title: '指紋照合結果', kind: 'neu', evid: true, body: P('粘着テープの粘着面から採取した指紋1個は不鮮明で、データベースの自動照合では該当者なし。', '特定の人物の指紋との個別の対照は可能。') });
       return [['oka', '自動照合では出ませんでした。不鮮明すぎるそうです。特定の人間となら、個別に対照できます。', { scene: sc('oka') }]]; } });
-  A.push({ id: 'printK', who: 'staff', days: 3, label: '久住の指紋と対照する', short: '指紋の対照（久住）', cond: S => S.done.printDB && (S.c.consentPrints || S.c.arrest != null),
+  A.push({ id: 'printK', who: 'staff', days: 3, label: '久住の指紋と対照する', short: '指紋の対照（久住）', cond: S => S.fin.printDB && (S.c.consentPrints || S.c.arrest != null),
     done: S => { K.addDoc({ id: 'printK', title: '指紋鑑定書（久住）', kind: 'inc', evid: true, body: P('粘着テープの指紋と、久住透の左手中指の指紋は、<b>特徴点8点で合致</b>する。相違点は認められない。', '同一と判断する基準（12点）には達しない。', '結論：同一人のものと断定することはできない。') });
       return [['oka', '久住と8点合致。相違点なし。ただ、基準の12点には届きません。', { scene: sc('oka') }]]; } });
-  A.push({ id: 'printM', who: 'staff', days: 3, label: '宮下の指紋と対照する', short: '指紋の対照（宮下）', cond: S => S.done.printDB && S.done.teguchi,
+  A.push({ id: 'printM', who: 'staff', days: 3, label: '宮下の指紋と対照する', short: '指紋の対照（宮下）', cond: S => S.fin.printDB && S.fin.teguchi,
     done: S => { K.addDoc({ id: 'printM', title: '指紋鑑定書（宮下）', kind: 'exc', evid: true, body: P('粘着テープの指紋と、宮下剛の右手人差し指の指紋は、<b>特徴点7点で合致</b>する。相違点は認められない。', '同一と判断する基準（12点）には達しない。') });
       return [['oka', '……宮下とも7点合致です。こっちも相違点なし。', { scene: sc('oka') }], ['shirai', 'つまり、あの指紋じゃ誰とも決められないってことだ。', { scene: sc('shirai') }]]; } });
-  A.push({ id: 'miyaAlibi', who: 'staff', days: 2, label: '宮下のアリバイを確かめる', short: '宮下の所在確認', cond: S => S.done.teguchi,
+  A.push({ id: 'miyaAlibi', who: 'staff', days: 2, label: '宮下のアリバイを確かめる', short: '宮下の所在確認', cond: S => S.fin.teguchi,
     done: S => { K.addDoc({ id: 'miyaAlibi', title: '宮下の所在確認', kind: 'exc', evid: true, body: P('宮下は単身でアパートに住む。日雇いの仕事。', '本人は「10月2日の夜は家で寝ていた」と言う。裏付ける者はいない。否定する者もいない。') });
       return [['shirai', '宮下は「家で寝てた」と。一人暮らしで、確かめようがありません。', { scene: sc('shirai') }]]; } });
-  A.push({ id: 'miyaTalk', who: 'self', label: '宮下に話を聴く', sub: '任意。相手は断れる', cond: S => S.done.teguchi, run: async S => {
+  A.push({ id: 'miyaTalk', who: 'self', label: '宮下に話を聴く', sub: '任意。相手は断れる', cond: S => S.fin.teguchi, run: async S => {
     G.drawScene(sc('miyashita', 'street'));
     await G.talk([['miyashita', '……また俺か。出てきてから、何かあるたびにこれだ。'], ['miyashita', '話すことはない。用があるなら令状を持ってこい。'], ['', '（ドアは閉められた。任意である以上、それ以上はできない。）']]);
   } });
-  A.push({ id: 'miyaWarrant', who: 'self', label: '宮下の部屋の捜索令状を求める', sub: '課長に相談する', cond: S => S.done.miyaAlibi && !S.c.miyaRefused, run: async S => {
+  A.push({ id: 'miyaWarrant', who: 'self', label: '宮下の部屋の捜索令状を求める', sub: '課長に相談する', cond: S => S.fin.miyaAlibi && !S.c.miyaRefused, run: async S => {
     G.drawScene(sc('todo'));
     await G.talk([['todo', '宮下で令状？ 何を根拠に。前があって、アリバイがない。それだけだろう。'], ['todo', 'そんなもので部屋に入れたら、この国の前科者は全員捜索の対象だ。'], ['todo', '……それに、こっちには久住がいる。']]);
     S.c.miyaRefused = true;
   } });
 
   /* ---------- 久住 ---------- */
-  A.push({ id: 'ninni', who: 'self', label: '久住から任意で話を聴く', sub: '署に来てもらう。相手は帰ることもできる', cond: S => S.done.kandori && S.c.arrest == null, run: async S => {
+  A.push({ id: 'ninni', who: 'self', label: '久住から任意で話を聴く', sub: '署に来てもらう。相手は帰ることもできる', cond: S => S.fin.kandori && S.c.arrest == null, run: async S => {
     const v = await G.openPaper({ title: '任意の事情聴取', body: P('久住透に任意で出頭を求め、話を聴く。', '被疑者は、逮捕・勾留されていなければ、いつでも退去できる（刑訴法198条1項ただし書）。'), noClose: true,
       buttons: [{ label: '話を聴き、指紋の任意提出を頼む', value: 'n' }, { label: '話すまで夜遅くまで帰さない', cls: 'red', value: 'late', small: '任意捜査の限界を超えるおそれ' }] });
     G.audio.ambient('interro'); G.drawScene(sc('kuzumi', 'interro', 0));
@@ -213,16 +213,16 @@
     K.addDoc({ id: 'video', title: '動画配信事業者の回答', kind: (v.exists && c.truth === 'I') ? 'exc' : 'neu', evid: true, late: !inCustody(S) && c.arrest != null, body });
     return [['oka', '動画配信の会社から、回答が届きました。', { scene: sc('oka') }]];
   }
-  A.push({ id: 'tail', who: 'staff', days: 3, label: '久住の行動確認', short: '行動確認', cond: S => S.done.kandori && S.c.arrest == null,
+  A.push({ id: 'tail', who: 'staff', days: 3, label: '久住の行動確認', short: '行動確認', cond: S => S.fin.kandori && S.c.arrest == null,
     done: S => { K.addDoc({ id: 'tail', title: '行動確認報告', kind: 'neu', body: P('久住は日中ほとんど外出せず、夜間はコンビニに出る程度。自室の明かりは深夜まで点いている。不審な行動は確認できない。') });
       return [['noguchi', '3日見ましたが、ほとんど家から出ません。夜中まで明かりがついてます。', { scene: sc('noguchi') }]]; } });
-  A.push({ id: 'loan', who: 'staff', days: 5, label: '消費者金融に照会する', short: '消費者金融の照会', sub: '197条2項', cond: S => S.done.kandori,
+  A.push({ id: 'loan', who: 'staff', days: 5, label: '消費者金融に照会する', short: '消費者金融の照会', sub: '197条2項', cond: S => S.fin.kandori,
     done: S => { K.addDoc({ id: 'loan', title: '消費者金融の回答書', kind: 'inc', evid: true, body: kv([['債務残高', '約120万円（事件前）'], ['返済', '<b>10月4日</b>、店頭で<b>現金30万円</b>'], ['それ以前', '8月以降、延滞が続いていた']]) });
       return [['oka', '事件の2日後に、現金で30万返してます。それまでは延滞続きでした。', { scene: sc('oka') }], ['shirai', '……出来すぎてますな。', { scene: sc('shirai') }]]; } });
-  A.push({ id: 'mother', who: 'staff', days: 1, label: '母親に確かめる', short: '母への確認', cond: S => S.c.claim && S.done.loan,
+  A.push({ id: 'mother', who: 'staff', days: 1, label: '母親に確かめる', short: '母への確認', cond: S => S.c.claim && S.fin.loan,
     done: S => { K.addDoc({ id: 'mother', title: '久住和子（母）の供述', kind: 'exc', evid: true, body: P('9月28日に、透がこっちに来たとき、現金で30万円渡しました。家に置いておいたお金です。', 'あの子は、人に刃物を向けるような子じゃありません。') });
       return [['mother', 'あの子に30万円、渡しました。家に置いてたお金です。……あの子は、そんな子じゃありません。'], ['noguchi', '口座から下ろした記録はないそうです。', { scene: sc('noguchi') }]]; } });
-  A.push({ id: 'bank', who: 'staff', days: 10, label: '久住の銀行口座を照会する', short: '銀行口座の照会', sub: '197条2項。回答まで日数がかかる', cond: S => S.done.loan,
+  A.push({ id: 'bank', who: 'staff', days: 10, label: '久住の銀行口座を照会する', short: '銀行口座の照会', sub: '197条2項。回答まで日数がかかる', cond: S => S.fin.loan,
     done: S => { S.c.casino = true;
       K.addDoc({ id: 'bank', title: '銀行の回答書', kind: 'inc', evid: true, body: kv([['10月1日', '入金　320,000円　振込人「ペイロード（カ」（決済代行業者）'], ['10月3日', '出金　300,000円　ATM'], ['9月中', '同社への送金（出金）が多数']])
         + note('同社は、海外のオンラインカジノの入出金の代行に使われていることが知られている。国内から賭ければ賭博罪（刑法185条）にあたる。') });
@@ -231,7 +231,7 @@
       return L; } });
 
   // 被害者への誘導
-  A.push({ id: 'victimSuggest', who: 'self', label: '被害者に「元店員の久住さんはどうか」と尋ねる', sub: '名前を出して確かめる', cond: S => S.done.kandori && S.done.victim,
+  A.push({ id: 'victimSuggest', who: 'self', label: '被害者に「元店員の久住さんはどうか」と尋ねる', sub: '名前を出して確かめる', cond: S => S.fin.kandori && S.fin.victim,
     risk: { id: 'suggest', title: '名前を出して尋ねると、被害者の記憶が変わるおそれがある', law: '法律上の禁止規定はない。ただし、識別供述の信用性の問題になる',
       effects: ['被害者の記憶に、刑事が示した人物が混ざる', '後の面割りや法廷での証言が、その影響を受ける', '弁護人は、法廷でこの経緯を必ず尋ねる'] },
     run: async S => {
@@ -241,7 +241,7 @@
       K.addDoc({ id: 'victim2', title: '被害者の供述調書（2通目）', kind: 'inc', evid: true, body: P('（青柳静江）', 'いま思うと、犯人の背格好は、以前うちで働いていた久住くんに似ていた気がします。') });
     } });
   // 面割り
-  A.push({ id: 'lineup', who: 'self', label: '被害者に写真を見せる', sub: '面割り（犯人の識別）', cond: S => S.done.kandori && S.done.victim && S.c.lineup !== 'array' && S.c.lineup !== 'both', once: false, run: async S => {
+  A.push({ id: 'lineup', who: 'self', label: '被害者に写真を見せる', sub: '面割り（犯人の識別）', cond: S => S.fin.kandori && S.fin.victim && S.c.lineup !== 'array' && S.c.lineup !== 'both', once: false, run: async S => {
     const c = S.c;
     const v = await G.openPaper({ title: '面割りの方法', body: P('被害者に写真を見せ、犯人かどうかを確かめる。') + (c.lineup === 'single' ? note('被害者はすでに久住の写真を1枚見ている。') : ''), noClose: false,
       buttons: (c.lineup ? [] : [{ label: '久住の写真を1枚だけ見せる', value: 'single', small: '早い' }]).concat([{ label: '8枚の写真から選んでもらう', value: 'array', small: '担当は誰が被疑者か知らない者にする' }]) });
@@ -283,7 +283,7 @@
     return { p, why };
   }
   A.push({ id: 'warrant', who: 'self', once: false, label: '逮捕状の請求を課長に上げる（強盗）', sub: '疎明資料をそろえて', primary: true,
-    cond: S => S.done.kandori && !S.c.warrantPending && S.c.warrantReady !== 'honken' && (S.c.arrest == null || S.c.arrest_kind === 'bekken' || S.c.released) && !S.c.honkenArrested, run: async S => {
+    cond: S => S.fin.kandori && !S.c.warrantPending && S.c.warrantReady !== 'honken' && (S.c.arrest == null || S.c.arrest_kind === 'bekken' || S.c.released) && !S.c.honkenArrested, run: async S => {
       G.drawScene(sc('todo'));
       const s = soumei(S);
       if (s.p < 3) { await G.talk([['todo', '……これで裁判官を説得できると思うか。'], ['todo', s.why.length ? s.why.join('、') + '。それだけじゃ弱い。' : '何もないじゃないか。'], ['todo', 'もう少し固めてこい。']]); return false; }
@@ -318,7 +318,7 @@
   } });
   A.push({ id: 'searchLegal', who: 'staff', days: 1, label: '久住の部屋を捜索する', short: '捜索（令状あり）', cond: S => S.c.searchWarrant && !S.c.search, start: S => { S.c.search = 'legal'; },
     done: S => searchDone(S, 'legal') });
-  A.push({ id: 'searchIllegal', who: 'staff', days: 1, label: '管理人に部屋を開けさせる', short: '居室の確認（令状なし）', sub: '令状を待たずに', cond: S => S.done.kandori && !S.c.search && !S.c.searchWarrant,
+  A.push({ id: 'searchIllegal', who: 'staff', days: 1, label: '管理人に部屋を開けさせる', short: '居室の確認（令状なし）', sub: '令状を待たずに', cond: S => S.fin.kandori && !S.c.search && !S.c.searchWarrant,
     risk: { id: 'illegal', title: '令状なしで住居に立ち入る', law: '憲法35条、刑訴法218条1項', effects: ['見つけた物が、裁判で証拠として使えなくなる（違法収集証拠の排除）', '公判で、立ち入った捜査員が証人として追及される', '監察（内部調査）の対象になりうる', '誰かが、やっていない罪で裁かれる原因になりうる'] },
     start: S => { S.c.search = 'illegal'; }, done: S => searchDone(S, 'illegal') });
   function searchDone(S, kind) {
