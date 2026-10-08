@@ -6,7 +6,7 @@
   const $ = G.$;
   async function title() {
     G.closePaper(); G.audio.cue('title'); G.audio.ambient(null);
-    const done = G.meta.runs.some(r => r.mode === '刑事編');
+    const done = G.meta.runs.length > 0;
     $('#app').innerHTML = '<div class="title"><div class="sub">— 仮題 —</div><h1>調書</h1>'
       + '<div class="menu">'
       + '<button class="act primary" id="t-keiji"><span class="l">刑事編</span><span class="s">捜査官として</span></button>'
@@ -33,8 +33,15 @@
       await G.curtain([{ html: '<div class="big">序章</div><div class="small">空き巣</div>', wait: 1000 }]);
       await G.cases.akisu.run();
     }
-    const S = await G.cases.aoyagi.run();
-    await G.ending.run(S);
+    const id = await G.openPaper({ title: '事件を選ぶ', sub: '刑事課の机に、四つの事件記録がある。', noClose: true, body: G.P('どの事件の主任になるか。'),
+      buttons: [
+        { label: '青柳書房事件', value: 'aoyagi', small: '強盗・誰がやったのか' },
+        { label: '北見坂駅前事件', value: 'ekimae', small: '傷害致死・正当防衛は成立するか（裁判員裁判）' },
+        { label: '8時12分発', value: 'chikan', small: '痴漢・証拠は被害者の供述' },
+        { label: '本町三丁目火災', value: 'kasai', small: '放火・火事か放火か（裁判員裁判）' }] });
+    const S = await G.cases[id].run();
+    if (id === 'aoyagi') await G.ending.run(S);
+    else await G.trial.run(S, G.cases[id].trial);
     record();
   }
 
@@ -43,9 +50,9 @@
     const rows = G.meta.runs.slice().reverse();
     $('#app').innerHTML = '<header class="bar"><span class="role">記録</span><span class="info">これまでの事件。真相の欄はない。</span></header>';
     const w = document.createElement('div');
-    w.innerHTML = '<div class="paper" style="margin-top:8px"><div class="paper-h">青柳書房事件　処理記録</div>'
-      + (rows.length ? '<table class="kv record"><tr><th>回</th><th>結果</th><th>自白</th><th>注意の付いた行動</th><th>送らなかった記録</th><th>真相</th></tr>'
-        + rows.map(r => '<tr><td>' + r.no + '</td><td>' + r.result + '</td><td>' + r.confession + '</td><td>' + r.illegal + '</td><td>' + r.withheld + '</td><td>' + (r.revealed === '判明' ? '偶然、判明した' : '—') + '</td></tr>').join('') + '</table>'
+    w.innerHTML = '<div class="paper" style="margin-top:8px"><div class="paper-h">事件処理記録</div>'
+      + (rows.length ? '<table class="kv record"><tr><th>回</th><th>事件</th><th>結果</th><th>自白</th><th>注意の付いた行動</th><th>送らなかった記録</th><th>真相</th></tr>'
+        + rows.map(r => '<tr><td>' + r.no + '</td><td>' + (r.mode === '刑事編' ? '青柳書房事件' : r.mode) + '</td><td>' + r.result + '</td><td>' + r.confession + '</td><td>' + r.illegal + '</td><td>' + r.withheld + '</td><td>' + (r.revealed === '判明' ? '偶然、判明した' : '—') + '</td></tr>').join('') + '</table>'
         : G.P('まだ記録はない。'))
       + G.note('同じ証拠から、違う判断がありえた。違う真実も、ありえた。') + G.note('次は「判事編」：他の誰かが作った記録だけを読んで、裁く側に立つ。（制作中）')
       + '<div class="paper-f"><button class="pbtn" id="r-q">冒頭の言葉</button><button class="pbtn" id="r-t">タイトルへ</button></div></div>';

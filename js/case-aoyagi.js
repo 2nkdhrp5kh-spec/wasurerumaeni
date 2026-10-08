@@ -642,6 +642,7 @@
       K.render('（送致記録をまとめる。）');
       const ev = S.docs.filter(d => d.evid && !(d.id === 'video' && d.late));
       const sent = {}; ev.forEach(d => sent[d.id] = true);
+      G.ui.busy = false;
       await new Promise(done => {
         C.actsOverride = (S2, wrap) => {
           if (!wrap) return true;

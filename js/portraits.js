@@ -18,7 +18,10 @@
     cardigan: { cloth: '#7a6a58', clothSh: '#5c4f41', clothHi: '#8a7a66' },
     jacket:   { cloth: '#4b4f3c', clothSh: '#35382a', clothHi: '#5d624b' },
     navy:     { cloth: '#2f3a4e', clothSh: '#222a39', clothHi: '#3d4a62' },
-    blouse:   { cloth: '#8c8f86', clothSh: '#6c6f67', clothHi: '#a3a69c' }
+    blouse:   { cloth: '#8c8f86', clothSh: '#6c6f67', clothHi: '#a3a69c' },
+    coat:     { cloth: '#6a6a66', clothSh: '#4e4e4b', clothHi: '#7c7c78' },
+    lab:      { cloth: '#d6d4cc', clothSh: '#aeaca4', clothHi: '#e6e4dc' },
+    beige:    { cloth: '#b8a888', clothSh: '#968868', clothHi: '#c8b898' }
   };
 
   // 久住の段階（逮捕当日→勾留20日目）
@@ -229,8 +232,23 @@
     murai:    () => ({ o: { female: true, hair: 'long', cloth: 'blouse', brows: 'thin', mouth: 'flat' }, p: Object.assign({}, SKIN.b, CLOTH.blouse, { hair: '#3a2c24', hairHi: '#54423a', lip: '#a8645a' }) }),
     miyashita:() => ({ o: { hair: 'crop', brows: 'stern', narrow: true, stubble: 1, cloth: 'jacket', mouth: 'tight', wide: 10.2, jaw: 7.4 }, p: Object.assign({}, SKIN.c, CLOTH.jacket, { hair: '#1e1a17', hairHi: '#2e2824', stub: '#7a6656' }) }),
     sakai:    () => ({ o: { hair: 'thin', brows: 'n', stubble: 1, cloth: 'jacket', mouth: 'flat', eyes: 1, wrinkles: 1 }, p: Object.assign({}, SKIN.a, CLOTH.jacket, { hair: '#2b2622', hairHi: '#3e3832', cloth: '#5a4a3a', clothSh: '#43372b', clothHi: '#6a5848' }) }),
+    toda:     st => ({ o: susp({ hair: 'crop', brows: 'thick', cloth: 'navy', tie: true, mouth: 'tight', wide: 11.4, jaw: 6 }, st), p: Object.assign({}, SKIN.c, CLOTH.navy, { hair: '#1e1a17', hairHi: '#34302a', tie: '#3a3a52', stub: '#6e5c4e' }) }),
+    saeki:    st => ({ o: susp({ hair: 'parted', glasses: true, cloth: 'suit', tie: true, mouth: 'flat', wrinkles: 1 }, st), p: Object.assign({}, SKIN.a, CLOTH.suit, { hair: '#4a4540', hairHi: '#6e6860', tie: '#5a2a2a' }) }),
+    misaki:   () => ({ o: { female: true, hair: 'long', cloth: 'beige', brows: 'thin', mouth: 'flat', wide: 10 }, p: Object.assign({}, SKIN.b, CLOTH.beige, { hair: '#2a1e18', hairHi: '#44342a', lip: '#b06a60' }) }),
+    eto:      () => ({ o: { hair: 'thin', narrow: true, cloth: 'coat', mouth: 'tight', wrinkles: 1, stubble: 1 }, p: Object.assign({}, SKIN.a, CLOTH.coat, { hair: '#3a3632', hairHi: '#55504a' }) }),
+    otsuka:   st => ({ o: susp({ hair: 'thin', brows: 'n', cloth: 'cardigan', mouth: 'flat', wrinkles: 2, wide: 10.8 }, st), p: Object.assign({}, SKIN.old, CLOTH.cardigan, { hair: '#77726a', hairHi: '#99948b', cloth: '#5a5a48', clothSh: '#44443a', clothHi: '#6a6a58' }) }),
+    kiyo:     () => ({ o: { female: true, hair: 'bun', wrinkles: 2, cloth: 'cardigan', brows: 'thin', mouth: 'flat', eyes: 1 }, p: Object.assign({}, SKIN.old, CLOTH.cardigan, { hair: '#c8c4bc', hairHi: '#e0dcd4', cloth: '#8a7a8a', clothSh: '#6a5a6a', clothHi: '#9a8a9a' }) }),
+    prof:     () => ({ o: { hair: 'parted', glasses: true, cloth: 'suitBrown', tie: false, mouth: 'flat', wrinkles: 2, brows: 'thin' }, p: Object.assign({}, SKIN.old, CLOTH.suitBrown, { hair: '#a8a49c', hairHi: '#c8c4bc' }) }),
+    kasoken:  () => ({ o: { hair: 'short', glasses: true, cloth: 'lab', mouth: 'tight' }, p: Object.assign({}, SKIN.a, CLOTH.lab, { hair: '#231c18', hairHi: '#3a302a' }) }),
+    clerk:    () => ({ o: { female: true, hair: 'bun', cloth: 'blouse', brows: 'thin', mouth: 'flat', wide: 10 }, p: Object.assign({}, SKIN.b, CLOTH.blouse, { hair: '#3a2a20', hairHi: '#54402e', cloth: '#3a6a5a', clothSh: '#2a5040', clothHi: '#4a7a6a' }) }),
     kenji:    () => ({ o: { hair: 'parted', brows: 'n', cloth: 'suitBrown', tie: true, mouth: 'tight', glasses: true, wrinkles: 1 }, p: Object.assign({}, SKIN.a, CLOTH.suitBrown, { hair: '#1c1714', hairHi: '#332a24', tie: '#2a3a2a' }) })
   };
+  // 被疑者は、勾留が長くなるほどやつれていく
+  function susp(o, st) {
+    st = st || 0;
+    return Object.assign({}, o, { eyes: o.narrow ? 0 : [0, 1, 2, 3][st], stubble: Math.max(o.stubble || 0, [0, 0, 1, 2][st]), messy: [0, 0, 5, 10][st],
+      brows: st === 3 ? 'sad' : o.brows, mouth: st === 3 ? 'frown' : o.mouth, gaunt: st === 3 });
+  }
   const cache = {};
   function sprite(id, stage, v) {
     v = v || {};
