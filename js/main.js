@@ -18,7 +18,7 @@
       + '<button class="act ghost" id="t-law"><span class="l">条文帳</span></button>'
       + '<button class="act ghost" id="t-cr"><span class="l">クレジット</span></button>'
       + '<button class="act ghost" id="t-warn"><span class="l">注意事項</span></button>'
-      + '<button class="act ghost" id="t-diff"><span class="l">難しさ：' + G.DIFF_LABEL[G.diff()] + '</span><span class="s">押すと切り替わる</span></button></div>'
+      + '<button class="act ghost" id="t-diff"><span class="l">難しさ：' + G.DIFF_LABEL[G.diff()] + '</span><span class="s">' + G.DIFF_DESC[G.diff()][0] + '　押すと選び直せる</span></button></div>'
       + '<div class="foot">本作はフィクションです。登場する人物・団体・地名は架空のものです。<br>暴力的な描写を含みます。<br>手続は現行法に基づいていますが、ゲームとして日数や手順を簡略化しています。</div>'
       + '<button class="devreset" id="t-reset">開発用：進捗をリセット</button></div>';
     $('#t-keiji').onclick = () => { G.audio.unlock(); G.audio.sfx('select'); keiji(); };
@@ -58,11 +58,11 @@
     };
     $('#t-cr').onclick = credits;
     $('#t-warn').onclick = () => G.showWarning(false);
-    $('#t-diff').onclick = () => { const order = ['easy', 'normal', 'hard'], i = order.indexOf(G.diff()); G.meta.diff = order[(i + 1) % 3]; G.saveMeta(); G.audio.sfx('click');
-      G.toast({ easy: 'やさしい：思いつきの書き込みで評価が下がらない。令状当番の書類が早く読める', normal: 'ふつう', hard: 'むずかしい：部下が一人少ない。手がかりの下線・読み返し・見立てがない。令状当番の書類を読むのに時間がかかる' }[G.meta.diff]); title(); };
+    $('#t-diff').onclick = async () => { G.audio.sfx('click'); await G.chooseDiff(false); title(); };
   }
 
   async function keiji() {
+    if (!G.meta.diffChosen) await G.chooseDiff(true);
     G.lawMode = 'keiji'; G.inMode = true;
     G.audio.cue('law1');
     await G.curtain([{ html: '<div class="big">刑事編</div>', wait: 1000 }, { html: G.QUOTES.law1a, wait: 3000 },

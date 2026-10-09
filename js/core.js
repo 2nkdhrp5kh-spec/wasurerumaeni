@@ -150,11 +150,11 @@ G.talk = function (lines, opt) {
     // 続けて別の台詞が始まるなら、戻らずにそのまま（戻るのは、最後の台詞が終わってから）
     let backTo = null;
     if (G._scrollBack) { clearTimeout(G._scrollBack.t); backTo = G._scrollBack.y; G._scrollBack = null; }
-    const r0 = box.getBoundingClientRect();
+    // 背景・人物・台詞欄のすべて（.scene 全体）が画面に収まっていなければ、そこまで動かす
+    const sc = box.closest('.scene') || box, r0 = sc.getBoundingClientRect();
     if (r0.top < 0 || r0.bottom > window.innerHeight) {
       if (backTo == null) backTo = window.scrollY;
-      const sc = box.closest('.scene') || box;
-      window.scrollTo({ top: Math.max(0, window.scrollY + sc.getBoundingClientRect().top - 8), behavior: 'smooth' });
+      window.scrollTo({ top: Math.max(0, window.scrollY + r0.top - 6), behavior: 'smooth' });
     }
     let i = 0, typing = null, full = '', waitArrive = null, startType = null;
     let marked = [];
@@ -295,7 +295,19 @@ G.toast = function (t) {
 /* 違法・不適切な行動の確認（赤い付箋） */
 /* 難しさ：easy（やさしい）／normal（ふつう）／hard（むずかしい） */
 G.diff = () => (G.meta && G.meta.diff) || 'easy';   // はじめての人は「やさしい」から
-G.DIFF_LABEL = { easy: 'やさしい', normal: 'ふつう', hard: 'むずかしい' };
+G.DIFF_LABEL = { easy: '初学者', normal: '既習者', hard: '実務家' };
+G.DIFF_DESC = {
+  easy: ['刑事訴訟法・刑法・憲法を学んだことがない人向け。', 'まずは刑事手続の流れ（捜査→逮捕→勾留→送致→起訴）をつかもう。いまの目的と次にできることが示され、照らし合わせの手がかりも出る。危うい手段を選ぶと、その前に確認の付箋が出る。'],
+  normal: ['刑事訴訟法・刑法・憲法を学んだことがある人向け。', '根拠となる条文を確かめ、どの学説を採るかで結論がどう分かれるかを考えてみよう。危うい手段に確認は出ない。適法かどうかは、条文帳で自分で判断する。'],
+  hard: ['刑事手続を一通り学んだ人向け。ヒントはない。', '次にできることの案内、照らし合わせの下線、部下の読み返し、見立ての目盛りは出ない。部下も一人少ない。条文を自分で引き、どの手続をとるかを自分で決めよう。']
+};
+// 難しさを選ぶ画面
+G.chooseDiff = async function (first) {
+  const v = await G.openPaper({ title: '難しさを選ぶ', sub: first ? 'はじめに、あなたに合った難しさを選ぶ。あとからタイトル画面で変えられる。' : 'いまは「' + G.DIFF_LABEL[G.diff()] + '」', noClose: !!first,
+    body: '', buttons: ['easy', 'normal', 'hard'].map(k => ({ label: G.DIFF_LABEL[k] + (G.diff() === k && !first ? '（いま）' : ''), value: k, small: G.DIFF_DESC[k][0] + G.DIFF_DESC[k][1], cls: k === 'easy' ? 'green' : '' })) });
+  if (!v) return;
+  G.meta.diff = v; G.meta.diffChosen = true; G.saveMeta(); G.audio.sfx('click');
+};
 
 /* 初めてのときだけの説明 */
 G.tip = function (key, lines) { G.meta.tips = G.meta.tips || {}; if (G.meta.tips[key]) return Promise.resolve(); G.meta.tips[key] = true; G.saveMeta(); return G.talk(lines); };

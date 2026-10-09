@@ -13,6 +13,8 @@
     ['逮捕', '犯罪の疑いのある人（被疑者）の身柄を、強制的に押さえること。原則として、裁判官が出す「逮捕状」が要る（憲法33条）。犯行中・直後の「現行犯」なら令状なしで誰でも逮捕できる。逮捕すると、そこから最長23日の時計が動く。'],
     ['逮捕状', '裁判官が「この人を逮捕してよい」と許可する書面。請求には、①罪を犯したと疑うに足りる相当な理由（証拠）、②逮捕の必要（逃げる・証拠を隠すおそれ）が要る。このゲームでは、課長に疎明資料（裏付けの記録）を見せて請求し、翌日に出る。'],
     ['被疑者', '犯罪の疑いをかけられ、捜査の対象になっている人。起訴されると「被告人」と呼ばれる。まだ犯人と決まったわけではない。'],
+    ['任意捜査', '強制の処分（相手の意思に反して、身体・住居・財産などの権利を制約するもの）に当たらない捜査。相手の同意を得ることが多いが、「同意があるもの」という意味ではなく、「強制処分ではないもの」という意味。聞き込み、照会、尾行なども含まれる。必要性や相当性を欠けば違法になりうる。捜査は任意捜査で行うのが原則（刑訴法197条1項）。'],
+    ['強制処分', '逮捕・勾留・捜索・差押えなど、相手の意思に反して権利を制約する捜査。法律に特別の定めがある場合に限って許され（強制処分法定主義、刑訴法197条1項ただし書）、原則として裁判官の令状が要る（令状主義、憲法33条・35条）。'],
     ['任意の取調べ', '逮捕する前に、署に来てもらって話を聴くこと。相手は断れるし、いつでも帰れる（刑訴法198条1項ただし書）。録画の義務はない。長時間・強圧的になると違法になりうる。'],
     ['取調べ', '被疑者から話を聴くこと。始める前に、言いたくないことは言わなくてよい（黙秘権）と告げなければならない。逮捕・勾留中は、取調室に来ることを拒めないとされている。脅し・約束・偽り・長時間の取調べで得た自白は、裁判で証拠にできないことがある。'],
     ['黙秘権', '言いたくないことは言わなくてよい権利（憲法38条1項、刑訴法198条2項）。取調べの前に必ず告げる。'],
@@ -119,7 +121,7 @@
     if (S.hl && S.hl.length) { const a = K.doc(S.hl[0]), b = K.doc(S.hl[1]); if (a && b) out.push('岡が言っていた：<b>「' + a.title + '」</b>と<b>「' + b.title + '」</b>を並べて読む（光っている記録）。'); }
     else if (easy && C.pick && C.compare) {
       const open = Object.keys(C.pick).filter(k => { const [x, y] = k.split('|'); return K.doc(x) && K.doc(y) && !(S.compared || {})[k] && C.compare(S, x, y); });
-      if (open.length) { const [x, y] = open[0].split('|'); out.push('（やさしい）<b>「' + K.doc(x).title + '」</b>と<b>「' + K.doc(y).title + '」</b>を並べると、何か見えてきそうだ。'); }
+      if (open.length) { const [x, y] = open[0].split('|'); out.push('（初学者向けの手がかり）<b>「' + K.doc(x).title + '」</b>と<b>「' + K.doc(y).title + '」</b>を並べると、何か見えてきそうだ。'); }
     }
     const free = K.freeStaff().filter(s => true);
     const staffActs = C.actions.filter(a => a.who === 'staff' && (!a.cond || a.cond(S)) && !(a.once !== false && S.done[a.id]) && !K.busy(a.id));
@@ -155,7 +157,7 @@
         const s = steps[i];
         const el = s.el ? document.querySelector(s.el) : null;
         if (el) el.scrollIntoView({ block: s.block || 'center', behavior: 'instant' });
-        box.innerHTML = '<div class="ch-hole"></div><div class="ch-bub"><div class="ch-t">' + (s.title || '') + '<span>' + (i + 1) + '／' + steps.length + '</span></div><div class="ch-x">' + s.text + '</div><div class="ch-f">'
+        box.innerHTML = '<div class="ch-hole"></div><div class="ch-bub"><div class="ch-t">' + (s.title || '') + '<span>' + (i + 1) + '／' + steps.length + '</span></div><div class="ch-x">' + (typeof s.text === 'function' ? s.text() : s.text) + '</div><div class="ch-f">'
           + (i > 0 ? '<button class="ch-b" data-a="back">もどる</button>' : '') + '<button class="ch-b ch-n" data-a="next">' + (i === steps.length - 1 ? 'わかった' : 'つぎへ') + '</button></div></div>';
         place();
         box.querySelectorAll('.ch-b').forEach(b => b.onclick = e => { e.stopPropagation(); G.audio.sfx('click'); i += b.dataset.a === 'back' ? -1 : 1; show(); });
@@ -173,7 +175,7 @@
         bub.style.cssText = 'left:' + Math.max(8, Math.min(vw - Math.min(vw - 16, 460) - 8, r.left)) + 'px;top:' + top + 'px';
       };
       window.addEventListener('resize', place);
-      box.onclick = e => { if (e.target === box || e.target.classList.contains('ch-hole')) { i++; show(); } };
+      box.onclick = e => { e.stopPropagation(); };   // 「もどる」「つぎへ」以外を押しても進まない
       show();
     });
   };
@@ -207,7 +209,7 @@
     { el: '#desk', title: '照らし合わせ', text: '記録が増えてきた。捜査の要は、<b>記録どうしを並べて読む</b>こと。<br>①記録をタップして開く → ②下の「横に並べる」 → ③並べる相手の記録を選ぶ → ④左右の記録から、食い違う（またはつながる）一文を一つずつタップ → ⑤「記録する」。<br>当たれば、新しい捜査の糸口が開ける。見つけたことは「照らし合わせの記録」に書き足される。外れても記録には残らない。' }
   ]);
   U.compareView = () => U.once('coachCmpView', [
-    { el: '.cmpp .paper[data-i="0"]', title: '①一つ目の記録', text: '気になる一文をタップする。<b>点線の下線</b>が引かれた一文は、照らし合わせる価値がありそうな箇所（むずかしいでは出ない）。', block: 'start' },
+    { el: '.cmpp .paper[data-i="0"]', title: '①一つ目の記録', text: () => document.querySelector('.cmpp .u.cand') ? '気になる一文をタップする。<b>点線の下線</b>が引かれた一文は、照らし合わせる価値がありそうな箇所。' : '気になる一文をタップする。<br>この二つの記録には、照らし合わせる価値がありそうな箇所の印（<b>点線の下線</b>）は付いていない。それでも、自分で気になった一文を選んでよい。', block: 'start' },
     { el: '.cmpp .paper[data-i="1"]', title: '②二つ目の記録', text: 'こちらからも一文を選ぶ。二つが<b>食い違っている</b>か、<b>つながっている</b>と思う組み合わせを選ぶ。', block: 'start' },
     { el: '#cmpgo', title: '③記録する', text: '二つ選んだら押す。当たりなら、部下が気づいたことを話し、「照らし合わせの記録」に書き足される。同じ物・場所・番号などが一致するだけの記載なら「一致」と出る。外れなら、そう伝えられ、選び直せる。' }
   ]);

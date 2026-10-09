@@ -674,24 +674,24 @@
     R(x, hair || '#16130f', Math.round(cx0 - hw / 2), Math.round(cy0 - sh - hh), hw, Math.max(1, Math.round(hh / 3)));
   }
   // 刑事部屋：手前から奥へ、通路の両側に机の島が並ぶ。左の壁に窓、奥にホワイトボードと課長席
-  const ZB = 5.2;
-  const RO = { back: [Math.round(P3(-2.6, 0, ZB)[0]), Math.round(P3(0, 1.9, ZB)[1]), Math.round(P3(2.6, 0, ZB)[0]), Math.round(P3(0, 0, ZB)[1])], ceil: '#2a2823', side: '#302e28', sideR: '#2b2924', floor: '#24221d', wall: '#2e2c26', wallTex: '#33302a' };
+  const ZB = 5.2, ROOM_H = 2.2, FIG_H = 1.42;   // 目の高さ（座って約1.2m）を1とする。人の背は約1.7m、天井は約2.6m
+  const RO = { back: [Math.round(P3(-2.6, 0, ZB)[0]), Math.round(P3(0, ROOM_H, ZB)[1]), Math.round(P3(2.6, 0, ZB)[0]), Math.round(P3(0, 0, ZB)[1])], ceil: '#2a2823', side: '#302e28', sideR: '#2b2924', floor: '#24221d', wall: '#2e2c26', wallTex: '#33302a' };
   BG.office = x => {
     room(x, RO);
     // 床：通路のリノリウムの継ぎ目
     for (let k = 1; k < 9; k++) { const z = 1 + k * .5; const [a, y] = P3(-2.6, 0, z), [b] = P3(2.6, 0, z); R(x, 'rgba(0,0,0,.12)', Math.round(a), Math.round(y), Math.round(b - a), 1); }
     ln(x, 'rgba(255,255,255,.05)', ...P3(-.45, 0, 1), ...P3(-.45, 0, ZB)); ln(x, 'rgba(255,255,255,.05)', ...P3(.45, 0, 1), ...P3(.45, 0, ZB));
     // 天井の蛍光灯（奥へ並ぶ）
-    for (let k = 0; k < 4; k++) { const z = 1.4 + k * 1.1; [-1.2, 1.2].forEach(X => { const a = P3(X - .35, 1.9, z), b = P3(X + .35, 1.9, z), c = P3(X + .35, 1.9, z + .25), d = P3(X - .35, 1.9, z + .25); poly(x, '#d8d4c0', [c, d, a, b]); }); }
+    for (let k = 0; k < 4; k++) { const z = 1.4 + k * 1.1; [-1.2, 1.2].forEach(X => { const a = P3(X - .35, ROOM_H, z), b = P3(X + .35, ROOM_H, z), c = P3(X + .35, ROOM_H, z + .25), d = P3(X - .35, ROOM_H, z + .25); poly(x, '#d8d4c0', [c, d, a, b]); }); }
     // 左の壁：窓とブラインド（奥へ縮む）
     for (let w = 0; w < 2; w++) { const u0 = .12 + w * .42, u1 = u0 + .32; poly(x, '#1b1f22', onSide(RO, false, u0, u1, .22, .58)); for (let k = 0; k < 10; k++) { const v = .235 + k * .034; poly(x, '#62707a', onSide(RO, false, u0 + .01, u1 - .01, v, v + .018)); } }
     // 右の壁：書類棚とロッカー
     for (let k = 0; k < 3; k++) { const u0 = .15 + k * .26; poly(x, '#4a463c', onSide(RO, true, u0, u0 + .22, .42, .98)); for (let j = 0; j < 4; j++) poly(x, '#3a362e', onSide(RO, true, u0 + .02, u0 + .2, .46 + j * .13, .55 + j * .13)); }
     // 奥の壁：ホワイトボード、ポスター、時計、課長席
     const [l, t, r, b] = RO.back;
-    R(x, '#1d1c19', l + 17, t + 3, 28, 13); R(x, '#d6d3c8', l + 18, t + 4, 26, 11); R(x, '#c9bfa6', l + 20, t + 6, 4, 5); R(x, '#c9bfa6', l + 26, t + 6, 4, 5); R(x, '#b23a2e', l + 20, t + 12, 16, 1); R(x, '#3a4a6a', l + 33, t + 6, 9, 1); R(x, '#3a4a6a', l + 33, t + 8, 7, 1);
-    R(x, '#1d1c19', l + 6, t + 5, 9, 12); R(x, '#cdbf9a', l + 7, t + 6, 7, 10); R(x, '#a3342b', l + 7, t + 6, 7, 2);   // ポスター「検挙に勝る防犯なし」
-    R(x, '#3a3428', r - 17, t + 3, 13, 6); R(x, '#c9b46a', r - 16, t + 4, 11, 4);                                    // 額（署長賞）
+    R(x, '#1d1c19', l + 16, t + 9, 25, 12); R(x, '#d6d3c8', l + 17, t + 10, 23, 10); R(x, '#c9bfa6', l + 19, t + 12, 4, 4); R(x, '#c9bfa6', l + 25, t + 12, 4, 4); R(x, '#b23a2e', l + 19, t + 17, 15, 1); R(x, '#3a4a6a', l + 31, t + 12, 7, 1); R(x, '#3a4a6a', l + 31, t + 14, 6, 1);
+    R(x, '#1d1c19', l + 5, t + 9, 9, 12); R(x, '#cdbf9a', l + 6, t + 10, 7, 10); R(x, '#a3342b', l + 6, t + 10, 7, 2);   // ポスター「検挙に勝る防犯なし」
+    R(x, '#3a3428', r - 20, t + 12, 13, 6); R(x, '#c9b46a', r - 19, t + 13, 11, 4);                                    // 額（署長賞）
     box3(x, -.7, .7, ZB - .55, ZB - .1, .42, '#4a3a2a', '#3a2d20', '#2e241a', '#5a4733');                                    // 課長席の机
     R(x, '#151515', ...P3(.2, .42, ZB - .4).map(Math.round), 3, 2);
     // 机の島：左右に3つずつ。机の上にモニタ、書類。座っている同僚も
@@ -841,7 +841,7 @@
        取調官は扉の側に座る。被疑者の背後は窓のない壁（換気口）。録音・録画の機材。筆記具は机に置かない。
      課長席：刑事課の大部屋の、窓を背にした奥の席（個室ではない）。刑事課は署の2階以上。窓の外は向かいのビルと空。
      相談室：被害者や参考人から話を聴き、調書を作る署内の小部屋。 */
-  const RI2 = { back: [Math.round(P3(-1.25, 0, 2.15)[0]), Math.round(P3(0, 1.9, 2.15)[1]), Math.round(P3(1.25, 0, 2.15)[0]), Math.round(P3(0, 0, 2.15)[1])], ceil: '#1f1d19', side: '#2a2822', sideR: '#26241f', floor: '#1e1c18', wall: '#2e2c26', wallTex: '#33302a' };
+  const RI2 = { back: [Math.round(P3(-1.25, 0, 2.15)[0]), Math.round(P3(0, 2.2, 2.15)[1]), Math.round(P3(1.25, 0, 2.15)[0]), Math.round(P3(0, 0, 2.15)[1])], ceil: '#1f1d19', side: '#2a2822', sideR: '#26241f', floor: '#1e1c18', wall: '#2e2c26', wallTex: '#33302a' };
   BG.interro = x => {
     room(x, RI2);
     const [l, t, r, b] = RI2.back;
@@ -852,9 +852,9 @@
     poly(x, '#5a6266', onSide(RI2, false, .2, .4, .24, .42)); poly(x, '#6e787c', onSide(RI2, false, .21, .3, .25, .3));
     poly(x, '#888', onSide(RI2, false, .44, .47, .56, .6));                                             // 取っ手
     // 右上の隅：録音・録画のカメラ
-    const cam = P3(1.2, 1.85, 2.0).map(Math.round); R(x, '#151515', cam[0] - 5, cam[1], 6, 4); R(x, '#2a2a2a', cam[0] - 4, cam[1] + 1, 3, 2); R(x, '#b33', cam[0] - 1, cam[1] + 1, 1, 1);
+    const cam = P3(1.2, 2.12, 2.0).map(Math.round); R(x, '#151515', cam[0] - 5, cam[1], 6, 4); R(x, '#2a2a2a', cam[0] - 4, cam[1] + 1, 3, 2); R(x, '#b33', cam[0] - 1, cam[1] + 1, 1, 1);
     // 天井灯
-    const a1 = P3(-.35, 1.9, 1.3), a2 = P3(.35, 1.9, 1.3), a3 = P3(.35, 1.9, 1.7), a4 = P3(-.35, 1.9, 1.7); poly(x, '#d8d0b0', [a4, a3, a2, a1]);
+    const a1 = P3(-.35, 2.2, 1.3), a2 = P3(.35, 2.2, 1.3), a3 = P3(.35, 2.2, 1.7), a4 = P3(-.35, 2.2, 1.7); poly(x, '#d8d0b0', [a4, a3, a2, a1]);
     lightCone(x, 120, 14, 16, 80, 70, .04);
   };
   FG.interro = x => {
@@ -892,7 +892,7 @@
     R(x, '#151515', 166, 95, 24, 9); R(x, '#26282b', 168, 96, 20, 7);                                    // 電話
   };
   // 相談室：署内の小部屋。被害者や参考人から話を聴き、調書を作る
-  const RD = { back: [Math.round(P3(-1.5, 0, 2.5)[0]), Math.round(P3(0, 1.95, 2.5)[1]), Math.round(P3(1.5, 0, 2.5)[0]), Math.round(P3(0, 0, 2.5)[1])], ceil: '#2e2b26', side: '#3a362f', sideR: '#36322b', floor: '#2a2620', wall: '#433e35', wallTex: '#48433a' };
+  const RD = { back: [Math.round(P3(-1.5, 0, 2.5)[0]), Math.round(P3(0, 2.2, 2.5)[1]), Math.round(P3(1.5, 0, 2.5)[0]), Math.round(P3(0, 0, 2.5)[1])], ceil: '#2e2b26', side: '#3a362f', sideR: '#36322b', floor: '#2a2620', wall: '#433e35', wallTex: '#48433a' };
   BG.soudan = x => {
     room(x, RD);
     const [l, t, r, b] = RD.back;
@@ -939,7 +939,7 @@
   // 人物の立ち位置：机の向こうに座る／立つ高さ（スプライト上端の y）
   // 立って話す場面（自分は座っている。相手の目は、こちらの目の高さ＝消失点より上に来る）
   const TALL = { office: 6, street: 17, shop: 10 };
-  const PLACE = { soudan: 26, kacho: 22, interro: 24, office: 30, pros: 26, shop: 28, home: 30, chambers: 28, street: 41, court: 41, phone: 41, dark: 41 };
+  const PLACE = { soudan: 30, kacho: 30, interro: 24, office: 30, pros: 26, shop: 28, home: 30, chambers: 28, street: 41, court: 41, phone: 41, dark: 41 };
   const fgCache = {};
   function fgCanvas(k) {
     if (!FG[k]) return null;
@@ -1013,7 +1013,7 @@
   const DETAIL_FG = {};
   Object.keys(FG).forEach(k => { DETAIL_FG[k] = x => { if (k === 'office') mug2(x, 330, 180, true); }; });
   // 壁の時計（背景ごとの位置。2倍の座標で描く）。時刻は G.clock = { h, m }
-  const CLOCKS = { office: [139, 45, 6, '#f1ece0'], chambers: [90, 26, 9, '#f1ece0'], kacho: [214, 18, 8, '#f1ece0'] };
+  const CLOCKS = { interro: [96, Math.round(P3(0, 2.2, 2.15)[1]) + 3, 8, '#d6d0c0'], office: [141, Math.round(P3(0, ROOM_H, 5.2)[1]) + 2, 6, '#f1ece0'], chambers: [90, 26, 9, '#f1ece0'], kacho: [214, 18, 8, '#f1ece0'] };
   function drawClock(x, bg) {
     const c = CLOCKS[bg]; if (!c) return;
     const t = G.clock || { h: 10, m: 0 }, cx0 = (c[0] + c[2] / 2) * 2, cy0 = (c[1] + c[2] / 2) * 2, r = c[2] - 1;
@@ -1026,7 +1026,7 @@
   /* 人影（背景を歩く人）。f：歩きの位相（0〜1で一歩）。face：'r'右向き 'l'左向き 'f'こちら向き 'b'向こう向き 'w'立ち止まって作業
      横向きの歩きは、昔からのドット絵の歩行（脚を開く・すれ違う・開く）にならい、すれ違うときに体が1ドット上がる */
   function figure(x, X, z, f, col, face, work) {
-    const [fx, fy] = P3(X, 0, z), h = Math.max(7, 62 * 1.7 / z), s = h / 30;
+    const [fx, fy] = P3(X, 0, z), h = Math.max(7, 62 * FIG_H / z), s = h / 30;
     const px = (a, b, w, hh) => x.fillRect(Math.round(a), Math.round(b), Math.max(1, Math.round(w)), Math.max(1, Math.round(hh)));
     x.fillStyle = col;
     const walking = face !== 'w', ph = f * Math.PI * 2;
@@ -1065,6 +1065,13 @@
     if (u < o.stayA + o.walk) { const k = (u - o.stayA) / o.walk; return { p: k, face: o.goFace, f: (u - o.stayA) * o.steps / o.walk }; }
     if (u < o.stayA + o.walk + o.stayB) return { p: 1, face: 'w', f: u * .8 };
     const k = (u - o.stayA - o.walk - o.stayB) / o.walk; return { p: 1 - k, face: o.backFace, f: (u - o.stayA - o.walk - o.stayB) * o.steps / o.walk };
+  }
+  // 検査用：刑事部屋を歩く人影の、足元と頭の位置（論理座標）
+  function ambientBoxes(t) {
+    const out = [], box = (X, z) => { const [fx, fy] = P3(X, 0, z), h = Math.max(7, 62 * FIG_H / z); out.push({ X, z, foot: fy, head: fy - h, ceil: P3(X, ROOM_H, z)[1] }); };
+    const a = shuttle(t, { walk: 7, stayA: 9, stayB: 11, steps: 9, goFace: 'r', backFace: 'l' }); box(-1.9 + a.p * 2.9, 4.95);
+    const b = shuttle(t, { walk: 8, stayA: 14, stayB: 9, steps: 11, goFace: 'f', backFace: 'b', off: 6 }); box(.1, 4.6 - b.p * 2.0);
+    return out;
   }
   function ambient(x, bg, now) {
     const t = now / 1000;
@@ -1145,5 +1152,7 @@
   // 歩いて来る人が着くまでの残り時間（台詞は着いてから出す）
   const arrivalLeft = () => A.enter ? Math.max(0, A.enter.t0 + A.enter.dur - performance.now()) : 0;
   const skipArrival = () => { if (A.enter) A.enter.t0 = performance.now() - A.enter.dur; };
-  G.portraits = { scene, sprite, PEOPLE, face, arrivalLeft, skipArrival };
+  G.portraits = { scene, sprite, PEOPLE, face, arrivalLeft, skipArrival,
+    // 検査用（tools/check-scenes.js）：配置の数値と、各層の絵
+    debug: { W, H, N, TALL, PLACE, CLOCKS, P3, bgCanvas, fgCanvas, BG: () => Object.keys(BG), ambientFigures: t => ambientBoxes(t) } };
 })();
