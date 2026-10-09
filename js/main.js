@@ -46,8 +46,8 @@
         buttons: [{ label: 'すべて消す', value: true, cls: 'red' }], closeLabel: 'やめる' });
       if (!v) return;
       const muted = G.meta.muted;
-      try { localStorage.removeItem('chousho.meta.v1'); } catch (e) {}
-      G.meta = { seenQuote: false, runs: [], revealedOnce: false, prologueDone: false, muted: !!muted };
+      G.store.remove('chousho.meta.v1');
+      G.meta = Object.assign(G.newMeta(), { muted: !!muted });
       G.saveMeta(); G.toast('進捗をリセットした'); title();
     };
     $('#t-rec').onclick = record;

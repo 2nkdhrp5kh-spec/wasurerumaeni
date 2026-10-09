@@ -13,10 +13,28 @@ G.note = t => '<p class="note">' + t + '</p>';
 G.sleep = ms => new Promise(r => setTimeout(r, ms));
 
 /* ---------- 保存 ---------- */
+// 保存先は G.store を通す。ブラウザでは localStorage。将来アプリにするときは、ここだけを差し替える
+// （例：Steam のクラウドセーブ、スマホの保存領域）。窓口を一つにしておけば、ほかのコードは変えなくてよい
 const META_KEY = 'chousho.meta.v1';
-G.load = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } };
-G.save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
-G.meta = G.load(META_KEY, null) || { seenQuote: false, runs: [], revealedOnce: false, prologueDone: false, muted: false };
+G.store = window.CHOUSHO_STORE || {
+  get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} },
+  remove: k => { try { localStorage.removeItem(k); } catch (e) {} }
+};
+G.load = (k, d) => { try { const v = G.store.get(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } };
+G.save = (k, v) => { try { G.store.set(k, JSON.stringify(v)); } catch (e) {} };
+// セーブデータの版。形を変えたら番号を上げ、MIGRATE に「前の版からの直し方」を足す（古いセーブを壊さないため）
+G.SAVE_VERSION = 2;
+const MIGRATE = {
+  // 1 → 2：版番号を持たない最初の形。中身はそのまま使える
+  1: m => m
+};
+G.newMeta = () => ({ v: G.SAVE_VERSION, seenQuote: false, runs: [], revealedOnce: false, prologueDone: false, muted: false });
+G.meta = (() => {
+  const m = G.load(META_KEY, null); if (!m) return G.newMeta();
+  let v = m.v || 1; while (v < G.SAVE_VERSION && MIGRATE[v]) { MIGRATE[v](m); v++; }
+  m.v = G.SAVE_VERSION; return m;
+})();
 G.saveMeta = () => G.save(META_KEY, G.meta);
 
 /* ---------- 暗転の画面 ---------- */
