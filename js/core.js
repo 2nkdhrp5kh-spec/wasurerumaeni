@@ -222,8 +222,37 @@ G.stampOn = function (t, c, round) {
   const st = $('#stamps'); if (!st) return;
   // 判子は紙の上のほうに押す。スマホで下までスクロールしていても見えるように、上へ戻す
   const ov = $('#overlay'); if (ov && ov.scrollTop > 0) ov.scrollTo({ top: 0, behavior: 'smooth' });
-  const s = document.createElement('span'); s.className = 'stamp hit ' + c + (round ? ' round' : ''); s.textContent = t;
+  const s = document.createElement('span'); s.className = 'stamp hit ' + c + (round ? ' round' : ''); s.innerHTML = G.sealSvg(t, round ? 'round' : 'rect');
   s.style.transform = 'rotate(' + (-12 + G.rnd() * 8).toFixed(1) + 'deg)'; st.appendChild(s); G.audio.sfx('stamp');
+};
+// 判子の絵（SVG）。二重の枠、篆書風の字、朱肉のかすれ（ノイズで欠けさせ、縁を揺らす）
+let sealN = 0;
+G.sealSvg = function (t, kind) {
+  const id = 'sl' + (++sealN), seed = Math.floor(G.rnd() * 999);
+  const flt = '<filter id="' + id + '" x="-5%" y="-5%" width="110%" height="110%">'
+    + '<feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="' + seed + '" result="n"/>'
+    + '<feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -1.8 1.8" result="m"/>'
+    + '<feComposite in="SourceGraphic" in2="m" operator="in" result="ink"/>'
+    + '<feTurbulence type="turbulence" baseFrequency="0.05" numOctaves="1" seed="' + (seed + 7) + '" result="w"/>'
+    + '<feDisplacementMap in="ink" in2="w" scale="2.2" xChannelSelector="R" yChannelSelector="G"/></filter>';
+  const font = "font-family=\"'Yuji Syuku','Noto Serif JP',serif\" fill=\"currentColor\"";
+  if (kind === 'round') {
+    // 裁判官の印：外周に庁名、中に「裁判官」
+    return '<svg viewBox="0 0 80 80" width="64" height="64"><defs>' + flt + '<path id="' + id + 'p" d="M40,40 m-27,0 a27,27 0 1,1 54,0 a27,27 0 1,1 -54,0"/></defs>'
+      + '<g filter="url(#' + id + ')"><circle cx="40" cy="40" r="37" fill="none" stroke="currentColor" stroke-width="3.6"/><circle cx="40" cy="40" r="31.5" fill="none" stroke="currentColor" stroke-width="1"/>'
+      + '<circle cx="40" cy="40" r="19" fill="none" stroke="currentColor" stroke-width="1.2"/>'
+      + '<text ' + font + ' font-size="8.5" letter-spacing="1.2"><textPath href="#' + id + 'p" startOffset="2%">北見坂地方裁判所　　令状部　　</textPath></text>'
+      + '<text ' + font + ' x="40" y="38" font-size="13" text-anchor="middle" font-weight="700">' + (t === '印' ? '裁判' : t.slice(0, 2)) + '</text>'
+      + '<text ' + font + ' x="40" y="52" font-size="13" text-anchor="middle" font-weight="700">' + (t === '印' ? '官印' : t.slice(2, 4)) + '</text></g></svg>';
+  }
+  // 角印：太い外枠と細い内枠、上に庁名、中に文言
+  const n = [...t].length, w = Math.max(84, 30 + n * 26);
+  return '<svg viewBox="0 0 ' + w + ' 60" width="' + w + '" height="60"><defs>' + flt + '</defs><g filter="url(#' + id + ')">'
+    + '<rect x="2" y="2" width="' + (w - 4) + '" height="56" rx="3" fill="none" stroke="currentColor" stroke-width="4"/>'
+    + '<rect x="7" y="7" width="' + (w - 14) + '" height="46" rx="1" fill="none" stroke="currentColor" stroke-width="1"/>'
+    + '<line x1="7" y1="18" x2="' + (w - 7) + '" y2="18" stroke="currentColor" stroke-width="1"/>'
+    + '<text ' + font + ' x="' + (w / 2) + '" y="15.5" font-size="7.5" text-anchor="middle" letter-spacing="1.5">北見坂地方裁判所</text>'
+    + '<text ' + font + ' x="' + (w / 2) + '" y="45" font-size="25" text-anchor="middle" font-weight="700" letter-spacing="' + (n <= 2 ? 6 : 2) + '">' + t + '</text></g></svg>';
 };
 // 判を押した紙を、相手（書記官など）に渡す：紙が机から離れていく
 G.handOff = async function (msg) {
@@ -263,7 +292,21 @@ G.WARNING = G.P('<b>本作はフィクションです。</b>登場する人物�
 G.showWarning = (first) => G.openPaper({ title: '注意', sub: 'はじめに、お読みください', body: G.WARNING, noClose: !!first, red: true,
   buttons: first ? [{ label: '読んだ。はじめる', value: true }] : [] });
 
+// 違法かどうかは、プレイヤーが条文から判断する。印も確認もしない（「やさしい」のときだけ、確認の付箋を出す）
+// 誘い文句（lure）は、台詞として聞こえる
 G.confirmRisk = function (risk) {
+  if (G.diff() !== 'easy') {
+    const m = (risk.lure || '').match(/^(白井|課長|岡|野口|検事)「(.*)」$/);
+    const who = m ? { 白井: 'shirai', 課長: 'todo', 岡: 'oka', 野口: 'noguchi', 検事: 'kenji' }[m[1]] : '';
+    G.meta['risk_' + risk.id] = true;
+    // 誘いの一言：その場に声の主を映し、言い終えたら元の場面に戻す
+    const prev = G.lastScene ? Object.assign({}, G.lastScene) : null;
+    const line = who && prev ? [who, m[2], { scene: Object.assign({}, prev, { who }) }] : [who, m ? m[2] : risk.lure];
+    return (risk.lure ? G.talk([line]) : Promise.resolve()).then(() => { if (prev && who) G.drawScene(prev); return true; });
+  }
+  return G.confirmRiskBox(risk);
+};
+G.confirmRiskBox = function (risk) {
   const first = !G.meta['risk_' + risk.id];
   const body = (risk.lure ? '<p style="font-family:DotGothic16,sans-serif">' + risk.lure + '</p>' : '')
     + (risk.gain ? '<div class="gainbox"><b>うまくいけば</b><ul>' + risk.gain.map(g => '<li>' + g + '</li>').join('') + '</ul></div>' : '')

@@ -115,7 +115,7 @@
   /* 行動 */
   A.push({ id: 'claimTalk', who: 'self', label: '戸田から任意で話を聴く', sub: '逮捕前。録画の義務はない', cond: S => S.c.arrest == null && !S.fin.claimTalk, run: async S => {
     const v = await G.openPaper({ title: '任意の事情聴取', body: P('戸田は自分から119番通報し、署に来ている。逮捕はしていない。いつでも帰れる。'), noClose: true,
-      buttons: [{ label: '言い分を聴く', value: 'n' }, { label: '「先に手を出したのはお前だろう」と朝まで詰める', value: 'p', cls: 'red', small: '録画されない場所で' }, { label: 'やめる', value: null }] });
+      buttons: [{ label: '言い分を聴く', value: 'n' }, { label: '「先に手を出したのはお前だろう」と朝まで詰める', value: 'p', small: '録画されない場所で' }, { label: 'やめる', value: null }] });
     if (!v) return false;
     G.drawScene(sc('toda', 'interro', 0));
     if (v === 'p' && !(await G.confirmRisk({ id: 'ninniP', title: '任意の取調べで、長時間・強圧的に追及する', law: '刑訴法198条1項ただし書、319条1項（任意捜査の限界）', lure: '課長「逮捕したら録画だ。今のうちに、話を固めておけ」', effects: ['任意取調べでも、社会通念上相当な限度を超えれば違法となりうる', 'ここで得た供述は、任意性を欠くとして証拠から外されうる', '録画がない以上、何があったかは、あなたと戸田の言い分だけになる'] }))) return false;

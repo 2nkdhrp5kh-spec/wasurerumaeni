@@ -7,7 +7,7 @@
   const sc = (who, bg) => ({ bg: bg || 'office', who });
 
   const C = {
-    id: 'akisu', role: '捜査官', base: { m: 9, d: 9 }, dayCard: true,
+    id: 'akisu', role: '捜査官', custodyEvents: false, base: { m: 9, d: 9 }, dayCard: true,
     staff: [{ id: 'shirai', name: '白井' }, { id: 'oka', name: '岡' }, { id: 'noguchi', name: '野口' }],
     elemTitle: '立証すべき事実',
     info: S => ({ text: '住宅侵入窃盗（空き巣）' + (S.c.arrest != null ? '　・逮捕' + (S.day - S.c.arrest) + '日目' : '') }),

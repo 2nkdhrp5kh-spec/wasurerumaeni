@@ -164,7 +164,7 @@
       const days = typeof a.days === 'function' ? a.days(S) : a.days;
       const running = K.busy(a.id);
       let dis = running || (tab === 'staff' && !free) || (tab === 'self' && S.selfUsed && !a.free);
-      b.innerHTML = '<span class="l">' + a.label + (a.risk ? '<span class="risk">注意</span>' : '') + '</span><span class="s">' + (running ? '進行中' : (typeof a.sub === 'function' ? a.sub(S) : a.sub) || '') + '</span>'
+      b.innerHTML = '<span class="l">' + a.label + (a.risk && G.diff() === 'easy' ? '<span class="risk">注意</span>' : '') + '</span><span class="s">' + (running ? '進行中' : (typeof a.sub === 'function' ? a.sub(S) : a.sub) || '') + '</span>'
         + (days != null && tab === 'staff' ? '<span class="d">' + (days === 0 ? '即日' : days + '日') + '</span>' : '');
       b.disabled = dis;
       b.onclick = () => K.doAction(a);
@@ -265,6 +265,8 @@
     const all = collect(first);
     K.refresh();
     if (all.length) await G.talk(all);
+    if (S._ended) return;
+    if (G.kit && G.kit.custodyEvents && C.custodyEvents !== false) await G.kit.custodyEvents(S);
     if (S._ended) return;
     if (C.check) { const r = await C.check(S); if (r === 'end') return; }
     K.render();

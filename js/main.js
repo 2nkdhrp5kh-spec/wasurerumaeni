@@ -19,7 +19,8 @@
       + '<button class="act ghost" id="t-cr"><span class="l">クレジット</span></button>'
       + '<button class="act ghost" id="t-warn"><span class="l">注意事項</span></button>'
       + '<button class="act ghost" id="t-diff"><span class="l">難しさ：' + G.DIFF_LABEL[G.diff()] + '</span><span class="s">押すと切り替わる</span></button></div>'
-      + '<div class="foot">本作はフィクションです。登場する人物・団体・地名は架空のものです。<br>暴力的な描写を含みます。<br>手続は現行法に基づいていますが、ゲームとして日数や手順を簡略化しています。</div></div>';
+      + '<div class="foot">本作はフィクションです。登場する人物・団体・地名は架空のものです。<br>暴力的な描写を含みます。<br>手続は現行法に基づいていますが、ゲームとして日数や手順を簡略化しています。</div>'
+      + '<button class="devreset" id="t-reset">開発用：進捗をリセット</button></div>';
     $('#t-keiji').onclick = () => { G.audio.unlock(); G.audio.sfx('select'); keiji(); };
     $('#t-hanji').onclick = async () => {
       G.audio.unlock(); G.audio.sfx('click');
@@ -36,6 +37,16 @@
       if (v === 'trials') { await G.hanji.trials(); G.archive.announce(G.archive.afterTrials(G.hanji._S)); }
       else { await G.hanji.duty(v === 'resume'); G.archive.announce(G.archive.afterDuty(G.hanji._S)); }
       record();
+    };
+    // 開発用：保存されている進捗（記録・記章・経歴・令状当番の続き・説明の既読など）をすべて消す
+    $('#t-reset').onclick = async () => {
+      const v = await G.openPaper({ title: '進捗をリセット', sub: '開発用', body: G.P('記録・記録庫・記章・経歴・令状当番の続き・説明の既読を、すべて消します。元には戻せません。'),
+        buttons: [{ label: 'すべて消す', value: true, cls: 'red' }], closeLabel: 'やめる' });
+      if (!v) return;
+      const muted = G.meta.muted;
+      try { localStorage.removeItem('chousho.meta.v1'); } catch (e) {}
+      G.meta = { seenQuote: false, runs: [], revealedOnce: false, prologueDone: false, muted: !!muted };
+      G.saveMeta(); G.toast('進捗をリセットした'); title();
     };
     $('#t-rec').onclick = record;
     $('#t-arc').onclick = () => G.archive.open(CASES);
@@ -132,7 +143,7 @@
     const w = document.createElement('div');
     w.innerHTML = '<div class="paper" style="margin-top:8px"><div class="paper-h">事件処理記録</div>'
       + (rows.length ? truthRate(rows) : '')
-      + (rows.length ? '<table class="kv record"><tr><th>回</th><th>事件</th><th>結果</th><th>自白</th><th>注意の付いた行動</th><th>送らなかった記録</th><th>真相</th></tr>'
+      + (rows.length ? '<table class="kv record"><tr><th>回</th><th>事件</th><th>結果</th><th>自白</th><th>問題のある捜査</th><th>送らなかった記録</th><th>真相</th></tr>'
         + rows.map(r => '<tr><td>' + r.no + '</td><td>' + (r.mode === '刑事編' ? '青柳書房事件' : r.mode) + '</td><td>' + r.result + '</td><td>' + r.confession + '</td><td>' + r.illegal + '</td><td>' + r.withheld + '</td><td>' + (r.revealed === '判明' ? '偶然、判明した' : '—') + '</td></tr>').join('') + '</table>'
         : G.P('まだ記録はない。'))
       + G.note('同じ証拠から、違う判断がありえた。違う真実も、ありえた。') + G.note('「判事編」：他の誰かが作った記録だけを読んで、裁く側に立つ。')

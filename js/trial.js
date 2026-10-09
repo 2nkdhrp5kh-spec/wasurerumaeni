@@ -46,6 +46,7 @@
           G.audio.cue('trial');
           const admit = sent.slice();
           const drop = (id, why) => { const i = admit.indexOf(id); if (i >= 0) { admit.splice(i, 1); excluded.push(why); if (/任意性|違法|相当な限度/.test(why)) c.excludedIllegal = (c.excludedIllegal || 0) + 1; } };
+          if (c.confession && c.custodyBad && G.rnd() < .7) drop('confession', '自白は、本件の勾留を余罪の取調べに流用し、又は期間の満了後も身柄の拘束を続ける違法な状態の下で得られたもので、証拠能力を否定する');
           T.admit(S, admit, drop);
           const r = T.weigh(S, admit, true);
           const d = T.decide(S, r, admit);

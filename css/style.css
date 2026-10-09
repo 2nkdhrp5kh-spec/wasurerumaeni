@@ -108,8 +108,9 @@ button{font:inherit;color:inherit}
 .pbtn:disabled{opacity:.4;cursor:default}
 .pbtn small{display:block;font-size:11px;opacity:.85}
 .stamps{position:absolute;top:10px;right:12px;display:flex;flex-direction:column;align-items:flex-end;gap:4px;pointer-events:none}
-.stamp{font-family:'DotGothic16',sans-serif;border:3px solid currentColor;border-radius:4px;padding:0 6px;font-size:16px;letter-spacing:.15em;transform:rotate(-8deg);opacity:.85}
-.stamp.round{border-radius:50%;width:56px;height:56px;display:flex;align-items:center;justify-content:center;font-size:14px;letter-spacing:0;padding:0}
+.stamp{display:block;line-height:0;transform:rotate(-8deg);opacity:.88;mix-blend-mode:multiply}
+.stamp svg{display:block;overflow:visible}
+.stamp.round{margin-top:-6px}
 .stamp.red{color:var(--shu)} .stamp.green{color:var(--green)} .stamp.gray{color:#555}
 .stamp.hit{animation:stampin .22s ease-out}
 @keyframes stampin{0%{transform:scale(2.4) rotate(-8deg);opacity:0}70%{transform:scale(.92) rotate(-8deg);opacity:1}100%{transform:scale(1) rotate(-8deg)}}
@@ -300,3 +301,12 @@ button{font:inherit;color:inherit}
 .bdg{border:1px dashed #b8ab8e;padding:5px 7px;font-size:12px;line-height:1.5;color:#9a8e74}.bdg b{display:block;font-size:13px}
 .bdg.on{border:2px solid #b23a2e;color:var(--ink);background:#f3e9d2}.bdg.on b{color:#b23a2e}
 .bdg small{font-size:11px}
+/* 手続の振り返り */
+.procrev{list-style:none;margin:6px 0 0;padding:0;text-align:left}
+.procrev li{margin:6px 0;padding:6px 8px;border-left:4px solid #888;background:rgba(0,0,0,.04);font-size:13px;line-height:1.55}
+.procrev li b{display:inline-block;font-size:11px;padding:0 6px;margin-right:6px;border-radius:3px;color:#fff}
+.procrev li small{display:block;color:#6b5f52;font-size:11.5px;margin-top:2px}
+.procrev .pr-ok{border-color:#4a8a5a}.procrev .pr-ok b{background:#4a8a5a}
+.procrev .pr-ng{border-color:#b23a2e}.procrev .pr-ng b{background:#b23a2e}
+.procrev .pr-mid{border-color:#a08030}.procrev .pr-mid b{background:#a08030}
+.devreset{margin-top:18px;font-size:11px;opacity:.55;background:none;border:1px dashed #777;color:#aaa;padding:4px 10px;cursor:pointer}

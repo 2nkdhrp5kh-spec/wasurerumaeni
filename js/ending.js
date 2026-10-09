@@ -70,7 +70,7 @@
         if (v) sent.push('video'); else c.videoWithheld = true;
       }
       // 検察官
-      const pressured = c.sess.C > 0 || c.sess.D > 0 || c.sess.E > 0;
+      const pressured = c.sess.C > 0 || c.sess.D > 0 || c.sess.E > 0 || !!c.custodyBad;
       if (c.confession) c.retract = c.retractCustody ? true : c.confession.voluntary ? false : c.truth === 'I' ? rnd() < .85 : rnd() < (pressured ? .6 : .3);
       const est = weigh(S, sent, false).w;
       G.layout({ role: '検察', date: '', info: '北見坂地方検察庁', scene: { bg: 'pros', who: 'kenji' } });

@@ -171,7 +171,7 @@
         c.takeoverAsked = true;
         await G.talk([['todo', '……お前のやり方じゃ、埒があかん。', { scene: sc('todo') }], ['todo', '今夜は俺が調べる。昔のやり方でな。']]);
         const v = await G.openPaper({ title: '東堂課長', body: P('課長が、自分で久住を取り調べると言っている。'), noClose: true,
-          buttons: [{ label: '課長に任せる', value: true, cls: 'red', small: '取調室のことは、あなたは見ない' }, { label: '自分にやらせてほしいと言う', value: false, small: '課長は不機嫌になる' }] });
+          buttons: [{ label: '課長に任せる', value: true, small: '取調室のことは、あなたは見ない' }, { label: '自分にやらせてほしいと言う', value: false, small: '課長は不機嫌になる' }] });
         if (v) {
           c.todoTook = true; c.sess.C += 2; c.sess.E = (c.sess.E || 0) + 1; ['tape', 'safe', 'light'].forEach(x => { if (!c.leaks.includes(x)) c.leaks.push(x); });
           c.meter = (c.meter || 0) + 75;
@@ -356,7 +356,7 @@
   /* ---------- 久住 ---------- */
   A.push({ id: 'ninni', who: 'self', label: '久住から任意で話を聴く', sub: '署に来てもらう。相手は帰ることもできる', cond: S => S.fin.kandori && S.c.arrest == null, run: async S => {
     const v = await G.openPaper({ title: '任意の事情聴取', body: P('久住透に任意で出頭を求め、話を聴く。', '被疑者は、逮捕・勾留されていなければ、いつでも退去できる（刑訴法198条1項ただし書）。'), noClose: true,
-      buttons: [{ label: '話を聴き、指紋の任意提出を頼む', value: 'n' }, { label: '話すまで夜遅くまで帰さない', cls: 'red', value: 'late', small: '任意捜査の限界を超えるおそれ' }, { label: 'やめる', value: null }] });
+      buttons: [{ label: '話を聴き、指紋の任意提出を頼む', value: 'n' }, { label: '話すまで夜遅くまで帰さない', value: 'late', small: '任意捜査の限界を超えるおそれ' }, { label: 'やめる', value: null }] });
     if (!v) return false;
     G.audio.ambient('interro'); G.drawScene(sc('kuzumi', 'interro', 0));
     if (v === 'late') { S.c.lateVoluntary = true; G.meta.risk_late = true; }
@@ -423,7 +423,7 @@
       c.lineup = 'single'; c.lineupRes = 'single';
       await G.talk([['', '（久住の運転免許証の写真を、1枚だけ机に置く。）'], ['aoyagi', '……ええ。'], ['aoyagi', 'この人、だと思います。……たぶん。']]);
       const omit = await G.openPaper({ title: '写真面割り結果報告書', sub: '報告書に書く内容を決める', noClose: true, body: P('被害者は「この人だと思う。たぶん」と述べた。'),
-        buttons: [{ label: '「示した写真は1枚」と書く', value: false }, { label: '方法は書かず、結果だけ書く', value: true, cls: 'red', small: '読む人には、正式な面割りに見える' }] });
+        buttons: [{ label: '「示した写真は1枚」と書く', value: false }, { label: '方法は書かず、結果だけ書く', value: true, small: '読む人には、正式な面割りに見える' }] });
       c.lineupOmit = omit;
     } else {
       let res;
@@ -599,7 +599,7 @@
     ].filter(t => !c.asked[t.k]);
     if (!topics.length) await G.talk([['', '（自白の中身は、もう一通り聞いた。これ以上は何も話さなそうだ。）']]);
     const k = await G.openPaper({ title: '取調べ（自白の裏付け）', body: P('自白の内容を、細かく確かめる。答えが本当なら、裏付けが取れるはずだ。'), noClose: true,
-      buttons: topics.map(t => ({ label: t.label, value: t.k, small: t.small })).concat([{ label: '雑談をする', value: '_chat', small: '事件以外の話' }, { label: '何か話すまで続ける', value: '_push', cls: 'red', small: '夜まで' }, { label: '今日はやめておく', value: null, small: '時間は使わない' }]) });
+      buttons: topics.map(t => ({ label: t.label, value: t.k, small: t.small })).concat([{ label: '雑談をする', value: '_chat', small: '事件以外の話' }, { label: '何か話すまで続ける', value: '_push', small: '夜まで' }, { label: '今日はやめておく', value: null, small: '時間は使わない' }]) });
     if (!k) return false;
     if (k === '_chat') {
       await G.talk(G.kit.poolLines(S, [S2 => [['kuzumi', '青柳書房の本、まだ並んでますか。……全集の棚、僕が並べたんです。']], S2 => [['kuzumi', '母、ちゃんと食べてるかな。']], S2 => [['kuzumi', '倉庫の仕事、嫌いじゃなかったんです。黙ってできるから。']]], 'chat'));
@@ -629,22 +629,29 @@
     if (c.confession) { const r = await afterConfession(S); G.audio.ambient(null); return r; }
     const total = c.sess.A + c.sess.B + c.sess.C + c.sess.D + c.sess.E;
     await G.talk(total === 0 ? [['', '（久住透。34歳。痩せている。）'], ['kuzumi', '……何回聞かれても、やってないです。']] : [['kuzumi', G.pick(['……また、ですか。', '……おはようございます。', '……'])]]);
-    const k = await G.openPaper({ title: '取調べ', sub: c.arrest_kind === 'bekken' ? '拘束の理由は賭博。だが、聞くのは強盗のことだ。' : '', noClose: true, body: P('どう進めるか。'),
+    const k0 = await G.openPaper({ title: '取調べ', sub: c.arrest_kind === 'bekken' ? '拘束の理由は賭博。だが、聞くのは強盗のことだ。' : '', noClose: true, body: P('どう進めるか。'),
       buttons: [{ label: '黙秘権を告げ、弁解を聴く', value: 'A', small: '言い分をそのまま聴き取る' },
         { label: '証拠を示して追及する', value: 'B', small: c.leaks.length < 3 ? '現場の写真や、集めた証拠を突きつける' : '集めた証拠を突きつける' },
-        { label: '夜まで取調べを続ける', value: 'C', cls: 'red', small: '朝9時から、話すまで' },
-        { label: '怒鳴りつけ、追い詰める', value: 'E', cls: 'red', small: '机を叩く。家族のことを持ち出す' },
-        { label: '「認めれば、すぐ出られる」と言う', value: 'D', cls: 'red', small: '取引を持ちかける' }, { label: 'やめておく', value: null, small: '時間は使わない' }] });
-    if (!k) { G.audio.ambient(null); return false; }
+        { label: '休憩を入れて、夕方まで追及する', value: 'F', small: '朝9時から夕方まで。昼食と休憩をはさむ' },
+        { label: '夜まで取調べを続ける', value: 'C', small: '朝9時から、話すまで' },
+        { label: '「現場からお前の指紋が出た」と告げる', value: 'G', small: '照合の結果は、まだはっきりしない。反応を見る' },
+        { label: '怒鳴りつけ、追い詰める', value: 'E', small: '机を叩く。家族のことを持ち出す' },
+        { label: '「認めれば、すぐ出られる」と言う', value: 'D', small: '取引を持ちかける' }, { label: 'やめておく', value: null, small: '時間は使わない' }] });
+    if (!k0) { G.audio.ambient(null); return false; }
+    const k = k0 === 'F' ? 'A' : k0 === 'G' ? 'D' : k0;   // F（休憩を入れた取調べ）は A と同じ扱い、G（偽計）は D と同じ扱い
     const RISK = {
       C: { id: 'long', title: '長時間の取調べ', law: '憲法38条2項、刑訴法319条1項', lure: (c.meter || 0) >= 55 ? '白井「あいつ、もう限界ですよ。今夜詰めれば、落ちます」' : '白井「時間をかければ、人は話すもんです」', effects: ['得た自白が、任意性を欠くとして証拠から外されうる', '公判で、取調官として追及される', '虚偽の自白を生む原因になる'] },
       D: { id: 'promise', title: '利益を約束して自白を求める', law: '刑訴法319条1項（判例：約束による自白）', lure: '白井「家族の話をすると、たいてい落ちますよ」', effects: ['得た自白が、任意性を欠くとして証拠から外されうる', '公判で、取調官として追及される', '虚偽の自白を生む原因になる'] },
       E: { id: 'threat', title: '脅迫的な取調べ', law: '憲法38条2項、刑訴法319条1項', lure: '課長「否認してる奴に遠慮してどうする」', effects: ['得た自白が、脅迫による自白として証拠から外されうる', '公判で、取調官として追及される', '虚偽の自白を生む原因になる'] }
     };
+    if (k0 === 'G') RISK.D = Object.assign({}, RISK.D, { id: 'trick', title: '偽計を用いた取調べ', law: '憲法38条2項、刑訴法319条1項（判例：偽計による自白）', lure: '白井「ハッタリですよ。みんなやってます」' });
     if (RISK[k] && !(await G.confirmRisk(RISK[k]))) { G.audio.ambient(null); return false; }
+    if (k0 === 'G') c.trick = (c.trick || 0) + 1;
     c.sess[k]++; if (c.arrest_kind === 'bekken') c.bekkenInterro = (c.bekkenInterro || 0) + 1;
     const n = c.sess[k]; let lines;
-    if (k === 'A' && n === 1) lines = [['you', 'あなたには、言いたくないことは言わなくていい権利がある。そのうえで聞く。'], ['kuzumi', 'やってません。あの夜は、家で動画を見てました。'], ['kuzumi', '青柳さんには、世話になったんです。辞めたのだって……僕が盗ったわけじゃない。']];
+    if (k0 === 'F') lines = [['', '（昼食と休憩をはさみ、夕方まで、あの夜の行動を一つずつ確かめた。）'], ['kuzumi', '……家にいました。何度聞かれても、同じです。']];
+    else if (k0 === 'G') lines = [['you', '粘着テープから、お前の指紋が出たぞ。'], ['kuzumi', '……え。'], ['', '（久住の顔から、血の気が引いた。……照合の結果は、同一と言えるほどではなかった。）']];
+    else if (k === 'A' && n === 1) lines = [['you', 'あなたには、言いたくないことは言わなくていい権利がある。そのうえで聞く。'], ['kuzumi', 'やってません。あの夜は、家で動画を見てました。'], ['kuzumi', '青柳さんには、世話になったんです。辞めたのだって……僕が盗ったわけじゃない。']];
     else if (k === 'B') { const nx = ['tape', 'safe', 'light'].find(x => !c.leaks.includes(x)); if (nx) { c.leaks.push(nx); lines = LEAKS[nx].slice(); } else lines = poolLines(S, 'B'); }
     else lines = poolLines(S, k);
     const inc = { A: { G: 8, I: 4 }, B: { G: 18, I: 14 }, C: { G: 32, I: 30 }, D: { G: 30, I: 30 }, E: { G: 28, I: 26 } }[k][c.truth] + (c.fired ? 5 : 0);
