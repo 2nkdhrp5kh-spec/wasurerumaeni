@@ -217,7 +217,7 @@
     async reveal(S, verdict) {
       const c = S.c, punished = verdict.startsWith('有罪') || verdict.startsWith('略式');
       if (punished && c.truth === 'I' && rnd() < .55) {
-        await G.curtain([{ html: '<div class="big">3年後</div>', wait: 1200 },
+        await G.curtain([{ html: '<div class="big">3年後</div>', wait: 1200, cue: 'grave' },
           { html: '<div class="doc-s"><h3>同じ路線で</h3>江藤浩二（57歳）が、別の女性への痴漢で逮捕された。乗客がスマートフォンで撮影していた。<br>押収された江藤のスマートフォンには、日付と時刻、車両の番号を記した手帳のようなメモが残っていた。<br><br>その中に、「6/10　7:16　2両目」の記載があった。</div>', wait: 3400 },
           { html: '<div class="doc-s"><h3>再審</h3>' + (verdict.startsWith('略式') ? '確定した略式命令は、確定判決と同一の効力を持つ（刑訴法470条）。佐伯修は、再審を請求した。<br>「あの日、帰りたかった。娘の顔が見たかった。だから、やってもいないことを認めた。」' : '佐伯修は再審を請求した。') + '<br><br>再審で、佐伯は無罪となった。<br>会社には、戻らなかった。</div>', wait: 3600 }]);
         return true;

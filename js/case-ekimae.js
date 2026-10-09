@@ -63,7 +63,7 @@
           '・記録を開いて「横に並べる」と、二枚を見比べられる。食い違いやつながりに気づけば、捜査の糸口になる。') });
         return L;
       }
-      if (S.day === 1) { c.dead = true; L.push(['', '（午前10時12分。樋口和也が、搬送先の病院で死亡した。急性硬膜下血腫。）', { sfx: 'bell' }], ['', '（病院の廊下で、樋口の母親が、息子の革靴を胸に抱いて座り込んでいた。「来月、結婚するはずだったんです」。）'], ['todo', '……人が死んだ。28歳だ。何の罪で、どう扱うか。逮捕状を取るなら、今日明日だぞ。何の罪で、どう扱うか。逮捕状を取るなら、今日明日だぞ。', { scene: sc('todo') }]); }
+      if (S.day === 1) { c.dead = true; L.push(['', '（午前10時12分。樋口和也が、搬送先の病院で死亡した。急性硬膜下血腫。）', { sfx: 'bell', cue: 'grave' }], ['', '（病院の廊下で、樋口の母親が、息子の革靴を胸に抱いて座り込んでいた。「来月、結婚するはずだったんです」。）'], ['todo', '……人が死んだ。28歳だ。何の罪で、どう扱うか。逮捕状を取るなら、今日明日だぞ。', { scene: sc('todo') }]); }
       if (c.warrantPending && S.day > c.warrantPending) { c.warrantPending = null; c.warrantReady = true; kit.forms.issued(S, C); L.push(['todo', '逮捕状が出た。', { scene: sc('todo') }]); }
       if (inC(S)) {
         L.push(...kit.custodyMorning(S, { name: '戸田', kenji2: '……正当防衛の主張は、崩せそうですか。', wantConfession: '「先に手を出した」と認めたか、とな。' }));
@@ -315,7 +315,7 @@
     async reveal(S, verdict) {
       const c = S.c, guilty = verdict.startsWith('有罪');
       if (guilty && c.truth === 'D' && rnd() < .55) {
-        await G.curtain([{ html: '<div class="big">4年後</div>', wait: 1200 },
+        await G.curtain([{ html: '<div class="big">4年後</div>', wait: 1200, cue: 'grave' },
           { html: '<div class="doc-s"><h3>動画</h3>ある女性のスマートフォンに、古い動画が残っていた。<br>あの夜、駅前でバスを待っていた彼女は、酔った若い男がタクシーの運転手に掴みかかる様子を、面白半分に撮っていた。<br><br>動画の中で、運転手は三度「離せ」と言い、男の手を振り払っていた。<br>男は、自分の勢いで、後ろに倒れた。</div>', wait: 3400 },
           { html: '<div class="doc-s"><h3>再審</h3>戸田誠は、すでに刑を終えていた。<br>動画は新証拠と認められ、再審が開始された（刑訴法435条6号）。<br>再審公判で、戸田は無罪となった。<br><br>「あの夜、振り払わなければよかったんですかね。……じゃあ、どうすればよかったんですか」</div>', wait: 3400 }]);
         return true;

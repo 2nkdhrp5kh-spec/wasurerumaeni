@@ -202,6 +202,7 @@ G.talk = function (lines, opt) {
         G.drawScene({ bg: G.lastScene.bg, who: cc.portrait });
       }
       if (extra && extra.sfx) G.audio.sfx(extra.sfx);
+      if (extra && extra.cue) G.audio.cue(extra.cue);
       const c = G.CHAR[who];
       const name = c ? c.name : (who || '');
       const nar = !who;

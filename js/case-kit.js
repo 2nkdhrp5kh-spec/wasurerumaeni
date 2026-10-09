@@ -96,7 +96,7 @@
     }
     // 満期後の留め置き：満期の3日前
     if (!ev.hold && d >= kit.LIMIT - 3 && !c.confession && !c.releaseAsked) {
-      ev.hold = true;
+      ev.hold = true; G.audio.cue('expiry');
       await G.talk([['todo', 'いいか。満期で処分保留の釈放になっても、*そのまま帰すな*。', { scene: sc('todo') }],
         ['todo', '「任意で」残ってもらえ。署の外に出すのは、話がついてからでいい。'], ['', '（課長は、それを' + who + 'にも伝えておけと言った。）']]);
       const v = await G.openPaper({ title: '満期の日のこと', sub: '勾留の期間は、延長を含めて最大20日。', noClose: true, body: P('課長の指示に、どう答えるか。'),
@@ -182,7 +182,7 @@
   kit.interro = async function (S, cfg) {
     const c = S.c; c.sess = c.sess || { A: 0, B: 0, C: 0, D: 0, E: 0 };
     const lure = kit.lure(S); if (lure) await G.talk(lure);
-    G.audio.ambient('interro'); G.drawScene(kit.sc(cfg.who, 'interro', kit.stage(S)));
+    G.audio.ambient('interro'); G.audio.cue('interro'); G.drawScene(kit.sc(cfg.who, 'interro', kit.stage(S)));
     if (c.rightsDay !== S.day) { if (!(await kit.rights(S, cfg.who))) { G.audio.ambient(null); return false; } c.rightsDay = S.day; }
     if (c.confession) { const r = cfg.afterConfession ? await cfg.afterConfession(S) : (await G.talk([[cfg.who, '……書いてあるとおりです。']]), false); G.audio.ambient(null); return r; }
     const rec = c.recorded != null ? c.recorded : cfg.recorded;

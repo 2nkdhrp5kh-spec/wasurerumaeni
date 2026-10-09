@@ -909,7 +909,7 @@
     async reveal(S, verdict) {
       const c = S.c, guilty = verdict.startsWith('有罪');
       if (guilty && c.truth === 'G' && rnd() < .55) {
-        await G.curtain([{ html: '<div class="big">4年後</div>', wait: 1200 },
+        await G.curtain([{ html: '<div class="big">4年後</div>', wait: 1200, cue: 'grave' },
           { html: '<div class="doc-s"><h3>別の事件</h3>久住透が、別の強盗事件で逮捕された。取調べは録画されていた。<br>「古本屋も、おれです。金庫は裏の用水路に投げた」<br>用水路の泥の中から、緑色の金庫が見つかった。</div>', wait: 3000 },
           { html: '<div class="doc-s"><h3>再審</h3>宮下剛は、再審で無罪となった。<br>「前があるってのは、こういうことだ」――逮捕の朝、彼はそう言った。</div>', wait: 3000 }]);
         return true;

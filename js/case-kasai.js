@@ -264,7 +264,7 @@
     async reveal(S, verdict) {
       const c = S.c, guilty = verdict.startsWith('有罪');
       if (guilty && c.truth === 'N' && rnd() < .55) {
-        await G.curtain([{ html: '<div class="big">5年後</div>', wait: 1200 },
+        await G.curtain([{ html: '<div class="big">5年後</div>', wait: 1200, cue: 'grave' },
           { html: '<div class="doc-s"><h3>リコール</h3>石油ストーブKT-2300について、転倒時に自動消火装置が作動しない欠陥が確認され、メーカーはリコールを発表した。同型の火災は全国で11件に上っていた。<br><br>弁護人は、新たな証拠として再審を請求した。</div>', wait: 3400 },
           { html: '<div class="doc-s"><h3>再審</h3>再審で、大塚茂は無罪となった。<br>母キヨは、その2年前、施設で亡くなっていた。<br><br>「最後に会ったのは、あの夜、背負って外に出たときです。……背中が、温かかった。」</div>', wait: 3600 }]);
         return true;

@@ -846,7 +846,7 @@
   async function night(n) {
     S.night = n; S.t = 0; S.nightOver = false; S.handedTonight = false;
     S.reqs = S.defs.filter(d => d.night === n && (!d.when || d.when(S))).map(inst).sort((a, b) => a.at - b.at);
-    G.audio.cue('silence'); G.audio.ambient(null);
+    G.audio.cue('warrant'); G.audio.ambient(null);
     await G.curtain([{ html: '<div class="big">' + NIGHTS[n].name + '</div><div class="small">' + NIGHTS[n].date + '　午後9時　令状当番</div>', wait: 1200 }], { delay: 300 });
     G.audio.ambient('night');
     return new Promise(async res => {
@@ -974,7 +974,7 @@
     D('zenka', '前科調書', 0, kv([['前科', '窃盗 1犯（10年前。拘禁刑1年・執行猶予3年）'], ['内容', '勤務先の売上金の着服']]))
   ];
   async function trial() {
-    G.audio.cue('trial'); G.audio.ambient('court');
+    G.audio.cue('hanjiTrial'); G.audio.ambient('court');
     await G.curtain([{ html: '<div class="big">数か月後</div><div class="small">北見坂地方裁判所　刑事部　単独事件</div>', wait: 1400, sfx: 'crowd' },
       { html: '<div class="law">令状の当番ではない日。<br>あなたは、法廷にいる。<br><br>捜査は、もう終わっている。<br>あなたが読めるのは、法廷に出された記録だけだ。</div>', wait: 2000 }]);
     const read = {};
@@ -1029,7 +1029,7 @@
   const ART312 = '<div class="art"><b>刑事訴訟法 第312条（抄）</b>①裁判所は、検察官の請求があるときは、公訴事実の同一性を害しない限度において、起訴状に記載された訴因又は罰条の追加、撤回又は変更を許さなければならない。<br>②裁判所は、審理の経過に鑑み適当と認めるときは、訴因又は罰条を追加又は変更すべきことを命ずることができる。<br>⑦裁判所は、訴因又は罰条の追加又は変更により被告人の防御に実質的な不利益を生ずるおそれがあると認めるときは、被告人又は弁護人の請求により、決定で、被告人に十分な防御の準備をさせるため必要な期間公判手続を停止しなければならない。</div>';
   const SOIN = note('訴因：検察官が起訴状に書いた、「罪となるべき事実」の具体的な主張（刑訴法256条3項）。裁判所は、原則として、訴因として示された事実について審理し、判断する。訴因と異なる事実を認定するには、多くの場合、訴因の変更が必要になる。');
   async function trial2() {
-    G.audio.cue('trial'); G.audio.ambient('court');
+    G.audio.cue('hanjiTrial'); G.audio.ambient('court');
     await G.curtain([{ html: '<div class="big">さらに数か月後</div><div class="small">北見坂地方裁判所　刑事部　合議事件（裁判員裁判）</div>', wait: 1400, sfx: 'crowd' },
       { html: '<div class="law">殺人被告事件。<br>あなたは、裁判長として、裁判員と評議をする。<br><br>証拠調べが、終わろうとしている。</div>', wait: 2000 }]);
     const read = {}; let soin = '殺人', allowed = null;

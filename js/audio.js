@@ -4,12 +4,20 @@
    ============================================================ */
 (function () {
   // ---- 曲 ----
+  const OP110_FUGA = 0;   // 録音の中でフーガが始まる位置（秒）
   const TRACKS = {
     barcarolle: 'audio/barcarolle.mp3',   // ショパン 舟歌 作品60（導入）
     waltz:      'audio/waltz34-2.mp3',    // ショパン ワルツ第3番 作品34-2（序章）
     eroica:     'audio/eroica2.mp3',      // ベートーヴェン 交響曲第3番 第2楽章（本章）
-    funeral:    'audio/sonata2-3.mp3',    // ショパン ピアノソナタ第2番 第3楽章（公判〜数年後）
-    pathetique: 'audio/pathetique2.mp3'   // ベートーヴェン ピアノソナタ第8番 第2楽章（終幕・仮）
+    prelude20:  'audio/prelude20.mp3',    // ショパン 前奏曲 作品28-20（取調べ）
+    noct48:     'audio/noct48-1.mp3',     // ショパン 夜想曲第13番 作品48-1（勾留の満期）
+    op110:      'audio/op110-3.mp3',      // ベートーヴェン ピアノソナタ第31番 第3楽章（刑事編の公判・判決）
+    noct20:     'audio/noct20.mp3',       // ショパン 夜想曲第20番 嬰ハ短調 遺作（数年後）
+    pathetique: 'audio/pathetique2.mp3',  // ベートーヴェン ピアノソナタ第8番 第2楽章（終幕）
+    waldstein:  'audio/waldstein2.mp3',   // ベートーヴェン ピアノソナタ第21番 第2楽章（判事編の公判）
+    aria:       'audio/goldberg-aria.mp3',// バッハ ゴルトベルク変奏曲 アリア（令状当番）
+    etude257:   'audio/etude25-7.mp3',    // ショパン 練習曲 作品25-7（経歴の終章・証人）
+    funeral:    'audio/sonata2-3.mp3'     // ショパン ピアノソナタ第2番 第3楽章（重大な場面だけ：死、えん罪の判明、再審）
   };
   // ---- 場面ごとの指定 ----
   // t: 曲（null は無音）／at: 開始位置（秒）／restart: 同じ曲が鳴っていても頭出しし直す
@@ -24,10 +32,16 @@
     arrest:       { t: 'eroica', at: 255, restart: true },
     confession:   { t: 'eroica', at: 470, restart: true },
     soutchi:      { t: 'eroica', at: 760, restart: true },
-    trial:        { t: 'funeral', at: 0, restart: true },
-    verdict:      { t: 'funeral', at: 95, restart: true },
-    years:        { t: 'funeral', at: 200, restart: true },
+    interro:      { t: 'prelude20', at: 0 },               // 取調べのたびに頭から鳴らし直さない
+    expiry:       { t: 'noct48', at: 0, restart: true },
+    trial:        { t: 'op110', at: 0, restart: true },
+    verdict:      { t: 'op110', at: OP110_FUGA, restart: true },  // フーガの入り
+    years:        { t: 'noct20', at: 0, restart: true },
+    grave:        { t: 'funeral', at: 0, restart: true },
     finale:       { t: 'pathetique', at: 0, restart: true },
+    hanjiTrial:   { t: 'waldstein', at: 0, restart: true },
+    warrant:      { t: 'aria', at: 0, restart: true },
+    witness:      { t: 'etude257', at: 0, restart: true },
     silence:      { t: null }
   };
 
