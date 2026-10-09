@@ -116,6 +116,7 @@
     const ok = (t, w) => R.push('<li class="pr-ok"><b>適法</b>' + t + '<small>' + w + '</small></li>');
     const ng = (t, w) => R.push('<li class="pr-ng"><b>違法の疑い</b>' + t + '<small>' + w + '</small></li>');
     const mid = (t, w) => R.push('<li class="pr-mid"><b>争いあり</b>' + t + '<small>' + w + '</small></li>');
+    if (c.rightsSkip) ng('黙秘権を告げずに取り調べた（' + c.rightsSkip + '回）', '刑訴法198条2項・犯罪捜査規範169条に反する。告げなかったことだけで直ちに自白が証拠から外されるとは限らないが、任意性を判断する事情の一つになる');
     if (c.fair) ok('休憩を入れ、夕方までの取調べ（' + c.fair + '回）', '社会通念上相当な方法・限度の範囲（刑訴法198条、最決昭和59年2月29日）');
     if (s.C) ng('夜まで続けた取調べ（' + s.C + '回）', '長時間の取調べによる自白は、任意性に疑いが生じる（憲法38条2項、刑訴法319条1項）');
     if (c.trick) ng('「指紋が出た」という偽計（' + c.trick + '回）', '偽計で心理的強制を与え、虚偽の自白を誘発するおそれがあれば任意性を欠く（最大判昭和45年11月25日）');
@@ -152,9 +153,37 @@
     return [['', '（沈黙が続いた。）']];
   };
   /* cfg: { who, bg, labels:{A..E}, pools:{A..E}, first, inc:{A..E:{G,I}}, truthKey:'G'|'I' 値, recorded, after(S) , confess(S, voluntary) , afterConfession(S) } */
+  /* 取調べの前：刑事部屋で、部下や課長が「近道」をささやく（選ぶ前に聞かされる誘い） */
+  const LURES = [
+    S => (S.c.meter || 0) >= 55 ? ['shirai', '主任。あいつ、もう限界ですよ。今夜まで粘れば、落ちます。……昔はみんな、そうやってました。'] : null,
+    S => ['shirai', '「現場からお前の指紋が出た」とでも言ってやればいいんですよ。ハッタリです。みんなやってます。'],
+    S => ['todo', '否認してる奴に遠慮するな。机の一つも叩いてみろ。'],
+    S => ['shirai', '「認めれば、すぐ出られる」。……そう言えば、たいてい落ちますよ。'],
+    S => ['todo', '検事が待ってるんだ。今日こそ落としてこい。やり方は任せる。']
+  ];
+  kit.lure = function (S) {
+    const c = S.c; if (c.confession || c.lureDay === S.day || G.rnd() > .6) return null;
+    const opts = LURES.map(f => f(S)).filter(Boolean).filter(l => l[1] !== c.lastLure);
+    if (!opts.length) return null;
+    const l = opts[Math.floor(G.rnd() * opts.length)]; c.lureDay = S.day; c.lastLure = l[1];
+    return [['', '（取調室へ向かおうとすると――）', { scene: kit.sc(l[0]) }], [l[0], l[1], { scene: kit.sc(l[0]) }]];
+  };
+  /* 取調べの始めに、黙秘権（供述拒否権）を告げる（刑訴法198条2項）。告げずに始めることもできてしまう */
+  kit.rights = async function (S, who) {
+    const c = S.c;
+    const v = await G.openPaper({ title: '取調べを始める', sub: '取調室。' + (c.rightsTold ? '今日の取調べの始め。' : 'はじめての取調べ。'), noClose: true,
+      body: P('最初に何をするか。') + G.note('刑訴法198条2項：取調べに際しては、あらかじめ、自己の意思に反して供述をする必要がない旨を告げなければならない。犯罪捜査規範169条：取調べが相当期間中断した後に再開するときや、取調官が交代したときは、改めて告げる。'),
+      buttons: [{ label: '黙秘権を告げる', value: 'ok', cls: 'green', small: '「言いたくないことは、言わなくていい」' }, { label: '告げずに始める', value: 'skip', small: '前にも告げた。時間が惜しい' }, { label: 'やめておく', value: null, small: '今日は取り調べない' }] });
+    if (!v) return false;
+    if (v === 'ok') { c.rightsTold = (c.rightsTold || 0) + 1; await G.talk([['you', G.pick(['あなたには、言いたくないことは言わなくていい権利があります。', '今日も最初に言っておく。言いたくないことは、言わなくていい。', '話したくないことは、話さなくていい。そのうえで聞く。'])], [who, G.pick(['……はい。', '……', '……分かってます。'])]]); }
+    else c.rightsSkip = (c.rightsSkip || 0) + 1;
+    return true;
+  };
   kit.interro = async function (S, cfg) {
     const c = S.c; c.sess = c.sess || { A: 0, B: 0, C: 0, D: 0, E: 0 };
+    const lure = kit.lure(S); if (lure) await G.talk(lure);
     G.audio.ambient('interro'); G.drawScene(kit.sc(cfg.who, 'interro', kit.stage(S)));
+    if (c.rightsDay !== S.day) { if (!(await kit.rights(S, cfg.who))) { G.audio.ambient(null); return false; } c.rightsDay = S.day; }
     if (c.confession) { const r = cfg.afterConfession ? await cfg.afterConfession(S) : (await G.talk([[cfg.who, '……書いてあるとおりです。']]), false); G.audio.ambient(null); return r; }
     const rec = c.recorded != null ? c.recorded : cfg.recorded;
     if (rec) await G.talk([['', '（録画装置の赤いランプが点いている。この取調べは、最初から最後まで記録される。）']]);
@@ -313,7 +342,7 @@
     const mism = c.chargeMismatch ? 1 : 0;
     const base = { '有罪': 4, '有罪（減軽）': 3, '略式命令（罰金）': 3, '無罪': -2, '不起訴': 0, '釈放（不起訴）': -1, '未解決': -2 }[verdict] ?? 0;
     const miss = c.missPoints || 0;
-    let sc = base - (miss >= 6 && G.diff() !== 'easy' ? 1 : 0) + (c.confession ? 1 : 0) - (c.excludedIllegal || 0) * 2 - (c.releaseRejected ? 1 : 0) - mism;
+    let sc = base + (c.confession ? 1 : 0) - (c.excludedIllegal || 0) * 2 - (c.releaseRejected ? 1 : 0) - mism;
     const grade = sc >= 4 ? 'A' : sc >= 2 ? 'B' : sc >= 0 ? 'C' : 'D'; c.grade = grade;
     const word = { A: '「よくやった。次の異動、悪いようにはせん」（東堂課長）', B: '「まあ、及第点だ」（東堂課長）', C: '「署長が渋い顔をしてたぞ」（東堂課長）', D: '「本部長賞は、別の係に行った」（東堂課長）' }[grade];
     const proc = (c.sess ? (c.sess.C ? 1 : 0) + (c.sess.D ? 1 : 0) + (c.sess.E ? 1 : 0) : 0) + (c.illegalCount || 0) + (c.search === 'illegal' ? 1 : 0) + (c.arrest_kind === 'bekken' ? 1 : 0);
@@ -321,7 +350,7 @@
     if (revealed === 'wrong') after = '<br><br>数年後、再審無罪が報じられた日、県警本部は「当時の捜査は適正に行われた」とのコメントを出した。<br>あなたの人事記録の評価は、変わらなかった。';
     if (revealed === 'free') after = '<br><br>数年後、事件が報じられた日、県警本部は「当時の判断に問題はなかった」とのコメントを出した。';
     return '<div class="doc-s"><h3>本部の評価　' + grade + '</h3>' + word + '<br><br>結果：' + verdict + (c.confession ? '　／　自白：あり' : '') + (c.charge ? '<br>送致罪名：' + (kit.charge(S) || {}).label + (mism ? '（検察官が罪名を改めた）' : '') : '')
-      + (miss >= 6 ? '<br>「捜査メモに、思いつきの書き込みが多すぎる」（東堂課長）' : '') + '<br><br><span style="color:#aaa">手続の記録：問題のある捜査 ' + proc + '件　／　送らなかった記録 ' + (c.withheld || []).length + '件</span>' + kit.procReview(S) + after + '</div>';
+ + '<br><br><span style="color:#aaa">手続の記録：問題のある捜査 ' + proc + '件　／　送らなかった記録 ' + (c.withheld || []).length + '件</span>' + kit.procReview(S) + after + '</div>';
   };
 
   // 送致書（目録）の画面

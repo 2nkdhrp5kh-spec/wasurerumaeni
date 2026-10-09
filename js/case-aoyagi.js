@@ -267,8 +267,9 @@
   }
 
   /* ---------- 初動 ---------- */
-  A.push({ id: 'victim', who: 'self', label: '被害者から詳しく話を聴く', sub: '青柳静江（68歳）', run: async S => {
-    G.drawScene(sc('aoyagi', 'shop'));
+  A.push({ id: 'victim', who: 'self', label: '被害者から詳しく話を聴く', sub: '署に来てもらい、調書を作る', run: async S => {
+    G.drawScene(sc('aoyagi', 'soudan'));
+    await G.talk([['', '（署の相談室。青柳さんに来てもらい、あの夜のことを一つずつ聴いて、調書にまとめる。）']]);
     await G.talk([['aoyagi', '帳場で売上を数えていたら、裏から男の人が……。刃物のようなものを見せて、「金を出せ」と。'], ['aoyagi', '灰色っぽい上着に、白いマスク。背は高めに見えました。……私は148センチですから、たいていの方は大きく見えますけれど。'],
       ['aoyagi', '奥の明かりしか点けていなくて、暗かったんです。顔は、ほとんど。'], ['aoyagi', '声は低かったと思います。……ごめんなさい、それくらいしか。']]);
     K.addDoc({ id: 'victim', title: '被害者の供述調書', kind: 'inc', evid: true, body: P('（青柳静江・68歳）', '帳場で売上を数えていたら、裏口から男が入ってきて、刃物のようなものを見せて「金を出せ」と言いました。刃物はよく見ていません。',
@@ -296,6 +297,19 @@
   A.push({ id: 'camera', who: 'staff', days: 3, label: '防犯カメラのリレー捜査', short: '防犯カメラ', sub: '逃げた方向を追う',
     done: S => { K.addDoc({ id: 'camera', title: '防犯カメラ映像の解析報告', kind: 'inc', evid: true, body: P('書店から北へ約300mのコンビニエンスストア店頭カメラ。', '<b>21時52分</b>、灰色の上着を着た男が北へ歩く。顔は判別できない。推定身長170〜180cm。', '同時刻帯に画面を通過した男性は、ほかに4名。') });
       return [['noguchi', '21時52分、灰色の上着の男が北へ。顔は映ってません。', { scene: sc('noguchi') }]]; } });
+  // 真相によって結果が変わる捜査：足を使えば、どちらの道かが見えてくる
+  A.push({ id: 'camera3', who: 'staff', days: 4, label: '交差点から先のカメラを一軒ずつ当たる', short: '交差点の先のカメラ', sub: '住宅地の個人宅・店のカメラまで', cond: S => S.fin.camera2,
+    done: S => { const G_ = S.c.truth === 'G';
+      K.addDoc({ id: 'camera3', title: '防犯カメラ追跡報告（2）', kind: 'neu', evid: true, body: G_
+        ? P('交差点から西へ約400m、コインランドリー店頭のカメラ（北見坂二丁目）：<b>22時09分</b>、灰色の上着の男が通過。両手に何も持っていない。', '同店の向かいは、久住透の住むコーポ北見。男が建物に入るところは画角の外。')
+        : P('北見橋の歩道を照らす市のカメラ：<b>22時03分</b>、灰色の上着の男が橋を北へ渡る。<b>脇に緑色の四角い物</b>を抱えている。', '橋の北側（川北）は、宮下剛の住むアパートの方角。') });
+      return [['noguchi', G_ ? '交差点から西に行ってます。コインランドリーのカメラに映ってました。……向かいが、久住のアパートです。' : '北見橋を渡ってます。脇に、緑色の箱みたいなものを抱えて。……橋の向こうは、宮下の家の方角です。', { scene: sc('noguchi') }]]; } });
+  A.push({ id: 'miyaNeighbors', who: 'staff', days: 2, label: '宮下のアパートの聞き込み', short: '宮下宅周辺の聞き込み', sub: '事件の夜の出入り', cond: S => S.fin.teguchi,
+    done: S => { const I = S.c.truth === 'I';
+      K.addDoc({ id: 'miyaNeighbors', title: '宮下宅周辺の聞き込み結果', kind: 'neu', evid: true, body: I
+        ? P('（隣室の住人・60代男性）', '10月2日は、夜の10時過ぎに宮下さんが帰ってきた。いつもは9時前には戻って、すぐ寝るのに。', 'ドアの前で、何か硬い物を置くような音がした。')
+        : P('（隣室の住人・60代男性）', '10月2日？ 宮下さんは、夕方6時ごろ帰ってきて、それからは出ていないと思う。壁が薄いから、出入りは分かる。', '夜の10時ごろも、いびきが聞こえていた。') });
+      return [['oka', I ? '宮下、事件の夜は10時過ぎに帰ってきてるそうです。いつもより遅かった。' : '宮下は、夕方に帰ってからは出ていないと。隣の人は、いびきまで聞いてます。', { scene: sc('oka') }]]; } });
   A.push({ id: 'camera2', who: 'staff', days: 4, label: 'カメラをさらに北へたどる', short: 'カメラの追跡', cond: S => S.fin.camera,
     done: S => { K.addDoc({ id: 'camera2', title: '防犯カメラ追跡報告', kind: 'neu', evid: true, body: P('男は22時01分、北見橋の手前の交差点を通過。以後、該当する人物は確認できない。', '北見橋の先には住宅地が広がり、カメラはほとんどない。') });
       return [['noguchi', '北見橋の手前で見失いました。その先は住宅地で、カメラがないんです。', { scene: sc('noguchi') }]]; } });
@@ -416,7 +430,7 @@
     risk: { id: 'suggest', lure: '白井「ばあさん、本当は見当がついてるんじゃないですか。名前を出してやれば、思い出しますよ」', title: '名前を出して尋ねると、被害者の記憶が変わるおそれがある', law: '法律上の禁止規定はない。ただし、識別供述の信用性の問題になる',
       effects: ['被害者の記憶に、刑事が示した人物が混ざる', '後の面割りや法廷での証言が、その影響を受ける', '弁護人は、法廷でこの経緯を必ず尋ねる'] },
     run: async S => {
-      G.drawScene(sc('aoyagi', 'shop'));
+      G.drawScene(sc('aoyagi', 'soudan'));
       await G.talk([['you', '前にこちらで働いていた、久住さん。……背格好は、どうでしょう。'], ['aoyagi', '久住くん？ ……あの子が？'], ['aoyagi', '…………'], ['aoyagi', 'そう言われると……背格好は、似ていたような気がします。']]);
       S.c.victimSuggested = true;
       K.addDoc({ id: 'victim2', title: '被害者の供述調書（2通目）', kind: 'inc', evid: true, body: P('（青柳静江）', 'いま思うと、犯人の背格好は、以前うちで働いていた久住くんに似ていた気がします。') });
@@ -427,7 +441,7 @@
     const v = await G.openPaper({ title: '面割りの方法', body: P('被害者に写真を見せ、犯人かどうかを確かめる。') + (c.lineup === 'single' ? note('被害者はすでに久住の写真を1枚見ている。') : ''), noClose: false,
       buttons: (c.lineup ? [] : [{ label: '久住の写真を1枚だけ見せる', value: 'single', small: '早い' }]).concat([{ label: '8枚の写真から選んでもらう', value: 'array', small: '担当は誰が被疑者か知らない者にする' }]) });
     if (!v) return false;
-    G.drawScene(sc('aoyagi', 'shop'));
+    G.drawScene(sc('aoyagi', 'soudan'));
     const G_ = c.truth === 'G';
     if (v === 'single') {
       c.lineup = 'single'; c.lineupRes = 'single';
@@ -461,6 +475,7 @@
     if (d('printK')) { p += 1; why.push('指紋8点合致'); }
     if (c.casino && d('mother')) { p += 1; why.push('返済金について嘘をついた'); }
     if (d('hearsay')) { p += .5; }
+    if (d('camera3') && c.truth === 'G') { p += 1; why.push('カメラの男が久住のアパートの方へ'); }
     return { p, why };
   }
   A.push({ id: 'warrant', who: 'self', once: false, label: '逮捕状の請求を課長に上げる', sub: '罪名を決め、疎明資料をそろえて', primary: true,
@@ -523,8 +538,10 @@
     return [['shirai', '押入れに灰色のジャケットがありました。金も、金庫も、テープもなし。', { scene: sc('shirai') }]];
   }
   A.push({ id: 'fiber', who: 'staff', days: 7, label: 'ジャケットの繊維鑑定', short: '繊維鑑定', cond: S => !!S.c.search && !S.c.jacketGone,
-    done: S => { K.addDoc({ id: 'fiber', title: '繊維鑑定書', kind: 'inc', evid: true, derive: 'jacket', body: P('現場の玄関マットの灰色の繊維片と、押収したジャケットの繊維は、色調・材質（ナイロン）・断面形状が<b>類似する</b>。', 'ただし量販品であり、同種の製品は全国で大量に流通している。同一の衣服に由来するかは判断できない。') });
-      return [['oka', '繊維は「類似」。ただ量販品で、同じ物は日本中にあるそうです。', { scene: sc('oka') }]]; } });
+    done: S => { const G_ = S.c.truth === 'G';
+      K.addDoc({ id: 'fiber', title: '繊維鑑定書', kind: 'inc', evid: true, derive: 'jacket', body: P('現場の玄関マットの灰色の繊維片と、押収したジャケットの繊維は、色調・材質（ナイロン）・断面形状が<b>類似する</b>。', 'ただし量販品であり、同種の製品は全国で大量に流通している。同一の衣服に由来するかは判断できない。')
+        + (G_ ? P('なお、ジャケットの右袖口から、<b>布製粘着テープの粘着剤と同じ成分</b>の付着物を検出した。') : P('ジャケットからは、粘着剤その他の付着物は検出されない。')) });
+      return [['oka', '繊維は「類似」。量販品だそうです。' + (G_ ? '……それと、袖口に粘着テープの糊が付いてました。' : '袖口なんかにも、何も付いてません。'), { scene: sc('oka') }]]; } });
   A.push({ id: 'phoneBase', who: 'staff', days: 5, label: '携帯電話の基地局記録（令状）', short: '基地局記録', cond: S => S.c.arrest != null,
     done: S => { K.addDoc({ id: 'phoneBase', title: '携帯電話会社の回答', kind: 'neu', evid: true, body: P('10月2日21時〜22時30分、久住の携帯電話は「北見坂本町局」に接続。', 'この基地局の範囲は、<b>久住の自宅と青柳書房の双方を含む</b>。') });
       return [['oka', '基地局は、自宅と書店の両方をカバーしてる局でした。どっちとも言えません。', { scene: sc('oka') }]]; } });
@@ -637,12 +654,14 @@
   }
   async function interro(S) {
     const c = S.c; c.sess = c.sess || { A: 0, B: 0, C: 0, D: 0, E: 0 }; c.sess.E = c.sess.E || 0; c.leaks = c.leaks || [];
+    const lure = G.kit.lure(S); if (lure) await G.talk(lure);
     G.audio.ambient('interro'); G.drawScene(sc('kuzumi', 'interro', ks(S)));
+    if (c.rightsDay !== S.day) { if (!(await G.kit.rights(S, 'kuzumi'))) { G.audio.ambient(null); return false; } c.rightsDay = S.day; }
     if (c.confession) { const r = await afterConfession(S); G.audio.ambient(null); return r; }
     const total = c.sess.A + c.sess.B + c.sess.C + c.sess.D + c.sess.E;
     await G.talk(total === 0 ? [['', '（久住透。34歳。痩せている。）'], ['kuzumi', '……何回聞かれても、やってないです。']] : [['kuzumi', G.pick(['……また、ですか。', '……おはようございます。', '……'])]]);
     const k0 = await G.openPaper({ title: '取調べ', sub: c.arrest_kind === 'bekken' ? '拘束の理由は賭博。だが、聞くのは強盗のことだ。' : '', noClose: true, body: P('どう進めるか。', '（どの進め方が法的に許されるかは、「条文帳を開く」で、刑訴法198条・319条と判例を確かめられる。）'),
-      buttons: [{ label: '黙秘権を告げ、弁解を聴く', value: 'A', small: '言い分をそのまま聴き取る' },
+      buttons: [{ label: '弁解を聴く', value: 'A', small: '言い分をそのまま聴き取る' },
         { label: '証拠を示して追及する', value: 'B', small: c.leaks.length < 3 ? '現場の写真や、集めた証拠を突きつける' : '集めた証拠を突きつける' },
         { label: '休憩を入れて、夕方まで追及する', value: 'F', small: '朝9時から夕方まで。昼食と休憩をはさむ' },
         { label: '夜まで取調べを続ける', value: 'C', small: '朝9時から、話すまで' },
@@ -718,29 +737,35 @@
      c.target：'K'（久住を追う）／'M'（宮下を追う）。逮捕状の請求には、追う人物を決めておく必要がある。
      真相（c.truth）が 'I' の世界では、宮下が犯人。 */
   const has = id => !!K.doc(id);
+  // 札に並べる事情：[疑わしいか（true◯／false×／null・）, 文, 強さ 1〜3]。強さは、その事情だけで犯人と言える度合い
   C.people = S => {
     const c = S.c, out = [];
     if (S.fin.kandori) {
       const f = [];
-      f.push([true, '裏口の鍵の隠し場所を知っていた元店員（鑑取り）']);
-      if (has('register')) f.push([true, 'レジの不足金を疑われて辞めた。恨んでいたかもしれない']);
-      if (has('loan')) f.push([true, '事件の2日後、現金30万円を返済している']);
-      if (c.lineupRes === 'K') f.push([true, '被害者が写真8枚から選んだ']); else if (c.lineupRes === 'single') f.push([true, '被害者が写真1枚を見て「たぶん」']); else if (c.lineupRes) f.push([false, '写真8枚の面割りで、被害者は選ばなかった']);
-      if (has('printK')) f.push([true, '粘着テープの指紋と8点合致（同一の基準12点には届かない）']);
-      if (has('claim')) f.push([null, '弁解：「その夜は家で動画を見ていた」']);
-      if (has('neighborsK')) f.push([false, '隣人「あの夜も野球の音がしていた……たぶん」']);
-      if (has('phoneSeize')) f.push([false, '21:26〜22:14、スマホで動画アプリが動いていた']);
+      f.push([true, '裏口の鍵の隠し場所を知っていた元店員（知っていた者はほかにもいる）', 1]);
+      if (has('register')) f.push([true, 'レジの不足金を疑われて辞めた。恨んでいたかもしれない', 1]);
+      if (has('loan')) f.push([true, '事件の2日後、現金30万円を返済している', 1]);
+      if (c.lineupRes === 'K') f.push([true, '被害者が写真8枚から選んだ', c.lineupTaint ? 1 : 2]); else if (c.lineupRes === 'single') f.push([true, '被害者が写真1枚を見て「たぶん」', 1]); else if (c.lineupRes) f.push([false, '写真8枚の面割りで、被害者は選ばなかった', 1]);
+      if (has('printK')) f.push([true, '粘着テープの指紋と8点合致（同一の基準12点には届かない）', 1]);
+      if (has('claim')) f.push([null, '弁解：「その夜は家で動画を見ていた」', 0]);
+      if (has('neighborsK')) f.push([false, '隣人「あの夜も野球の音がしていた……たぶん」', 1]);
+      if (has('phoneSeize')) f.push([false, '21:26〜22:14、スマホで動画アプリが動いていた', 1]);
+      if (has('fiber')) f.push(c.truth === 'G' ? [true, 'ジャケットの袖口に、粘着テープの糊', 3] : [false, 'ジャケットに粘着剤などの付着はない', 1]);
+      if (has('camera3')) f.push(c.truth === 'G' ? [true, '22:09、灰色の上着の男が久住のアパートの向かいを通った', 3] : [false, 'カメラの男は北見橋を北へ渡った（久住の家とは逆の方角）', 3]);
+      if (has('video') && c.video && c.video.exists) f.push(c.truth === 'I' ? [false, '犯行時刻、久住の自宅の固定回線で動画が再生されていた', 3] : [null, '動画は携帯回線で再生。家にいたとも外にいたとも言えない', 0]);
       out.push({ id: 'K', who: 'kuzumi', name: '久住 透', sub: '34歳・元アルバイト店員', facts: f });
     }
     if (S.fin.teguchi) {
       const f = [];
-      f.push([true, '8年前、店主を粘着テープで縛る強盗の前歴。1年前に出所']);
-      if (has('printM')) f.push([true, '粘着テープの指紋と7点合致（同一の基準12点には届かない）']);
-      if (has('miyaAlibi')) f.push([true, 'その夜は「家で寝ていた」。裏付ける者はいない']);
-      if (has('customers')) f.push([true, '夏ごろ、宮下に似た男が裏口から店に入ってきたことがある']);
-      if (has('murai')) f.push([null, '身長168cm。村井さんは「背はそんなに高くなかった」']);
-      if (has('tailM')) f.push(c.truth === 'I' ? [true, '事件の後、パチンコ店で新しい1万円札を何枚も使っている'] : [false, '行動確認：日雇いの仕事に通うだけ。金回りの変化はない']);
-      if (S.fin.miyaTalk) f.push([null, '任意の聴取は拒んだ。「用があるなら令状を持ってこい」']);
+      f.push([true, '8年前、店主を粘着テープで縛る強盗の前歴。1年前に出所（前歴だけで犯人とは言えない）', 1]);
+      if (has('printM')) f.push([true, '粘着テープの指紋と7点合致（同一の基準12点には届かない）', 1]);
+      if (has('miyaAlibi')) f.push([true, 'その夜は「家で寝ていた」。裏付ける者はいない', 1]);
+      if (has('customers')) f.push([true, '夏ごろ、宮下に似た男が裏口から店に入ってきたことがある', 1]);
+      if (has('murai')) f.push([null, '身長168cm。村井さんは「背はそんなに高くなかった」', 0]);
+      if (has('tailM')) f.push(c.truth === 'I' ? [true, '事件の後、パチンコ店で新しい1万円札を何枚も使っている', 2] : [false, '行動確認：日雇いの仕事に通うだけ。金回りの変化はない', 1]);
+      if (S.fin.miyaTalk) f.push([null, '任意の聴取は拒んだ。「用があるなら令状を持ってこい」', 0]);
+      if (has('camera3')) f.push(c.truth === 'I' ? [true, '22:03、緑色の箱を抱えた男が北見橋を北へ（宮下の家の方角）', 3] : [false, 'カメラの男は久住のアパートの方へ向かった', 3]);
+      if (has('miyaNeighbors')) f.push(c.truth === 'I' ? [true, '事件の夜、いつもより遅い10時過ぎに帰宅', 2] : [false, '隣人：その夜は夕方から家にいた（いびきも聞こえた）', 3]);
       out.push({ id: 'M', who: 'miyashita', name: '宮下 剛', sub: '46歳・同じ手口の前歴者', facts: f });
     }
     return out;
@@ -759,6 +784,8 @@
     if (has('customers')) { p += 1; why.push('夏に裏口から入った似た男'); }
     if (has('tailM') && c.truth === 'I') { p += 1; why.push('事件後の金回り'); }
     if ((S.compared || {})['camera2|miyashita']) { p += .5; why.push('逃走方向が宮下の家に向かう'); }
+    if (has('camera3') && c.truth === 'I') { p += 1; why.push('金庫らしい物を抱えて北見橋を渡った男'); }
+    if (has('miyaNeighbors') && c.truth === 'I') { p += .5; why.push('事件の夜の遅い帰宅'); }
     return { p, why };
   }
   function elementsM(S) {
@@ -800,7 +827,7 @@
   const ICFG_M = {
     who: 'miyashita', guiltyKey: 'I', recorded: false,
     first: [['', '（宮下剛。46歳。取調室の椅子に、慣れた様子で腰を下ろした。）'], ['miyashita', '……前のときと、同じ部屋だな。']],
-    labels: { A: ['黙秘権を告げ、弁解を聴く', 'そのまま聴き取る'], B: ['証拠を示して追及する', '指紋、前歴、出入り'], D: ['「認めれば、刑が軽くなる」と言う', '取引を持ちかける'] },
+    labels: { A: ['弁解を聴く', 'そのまま聴き取る'], B: ['証拠を示して追及する', '指紋、前歴、出入り'], D: ['「認めれば、刑が軽くなる」と言う', '取引を持ちかける'] },
     inc: { A: { G: 3, I: 7 }, B: { G: 10, I: 17 }, C: { G: 26, I: 30 }, D: { G: 28, I: 30 }, E: { G: 24, I: 26 } },
     pools: {
       A: [S => [['you', '言いたくないことは、言わなくていい。'], ['miyashita', '言いたくないね。……前のときに、さんざん言わされた。']],
@@ -854,23 +881,27 @@
     weigh(S, ids, trial) {
       const c = S.c, h = id => ids.includes(id); let pos = 0, neg = 0; const pros = [], cons = [];
       const add = (v, why) => { if (v > 0) { pos += v; if (why) pros.push(why); } else if (v < 0) { neg -= v; if (why) cons.push(why); } };
+      // 被告人（宮下）の犯人性を強く示す事情があれば、「別の人にも可能性がある」という事情の重みは小さくなる
+      const strong = (h('camera3') && c.truth === 'I') || (h('searchM') && c.truth === 'I') || (c.safeFoundM && h('safeM'));
       if (h('printM')) add(h('printK') ? 0 : .7, h('printK') ? '' : '粘着テープの指紋は被告人のものと矛盾しない');
-      if (h('printM') && h('printK')) add(-.4, '粘着テープの指紋は、被告人とも別人とも同程度に合致し、犯人性の根拠とならない');
+      if (h('printM') && h('printK') && !strong) add(-.4, '粘着テープの指紋は、被告人とも別人とも同程度に合致し、犯人性の根拠とならない');
       if (h('customers')) add(.8, '被告人に似た男が、事件の数か月前、裏口から店に入ったことがある');
       if (h('miyaAlibi')) add(.2, '被告人には事件当夜のアリバイがない');
       if (h('tailM') && c.truth === 'I') add(.6, '被告人は事件の後、新しい1万円札を複数使っている');
       if (h('searchM')) add(c.truth === 'I' ? 1.5 : -.3, c.truth === 'I' ? '被告人方から、犯行に使われたものと同種の布製粘着テープと、封筒入りの現金12万円が発見された' : '被告人方からは、本件に関係する物が発見されていない');
       if (h('safeM')) add(c.safeFoundM ? 3 : -.2, c.safeFoundM ? '被告人の供述どおり、北見橋の下から被害品の金庫が発見された（秘密の暴露）' : '');
       if (h('confession') && c.confession) add(c.retract && trial ? 2 : 3.5, '被告人は捜査段階で犯行を認めた' + (c.retract && trial ? '。公判では撤回している' : ''));
-      if (h('kandori')) add(-.6, '裏口の鍵の隠し場所を知る者は、被告人のほかにもいた');
-      if (h('loan')) add(-.5, '事件直後に多額の現金を返済した別の人物がいる');
-      if (h('lineup') && (c.lineupRes === 'K' || c.lineupRes === 'single')) add(-1.2, '被害者は写真面割りで、被告人ではない別の人物を選んでいる');
+      if (h('kandori')) add(strong ? -.2 : -.6, strong ? '' : '裏口の鍵の隠し場所を知る者は、被告人のほかにもいた');
+      if (h('loan')) add(strong ? -.1 : -.5, strong ? '' : '事件直後に多額の現金を返済した別の人物がいる');
+      if (h('lineup') && (c.lineupRes === 'K' || c.lineupRes === 'single')) add(strong ? -.6 : -1.2, '被害者は写真面割りで、被告人ではない別の人物を選んでいる' + (strong ? '。もっとも、暗い店内で一瞬見た相手の識別であり、客観的な証拠を左右するものではない' : ''));
       if (h('camera')) add(-.3, '防犯カメラの男の推定身長（170〜180cm）は、被告人（168cm）とやや合わない');
       if (h('murai')) add(.2, '');
+      if (h('camera3')) add(c.truth === 'I' ? 1.5 : -1.2, c.truth === 'I' ? '犯行の約20分後、緑色の四角い物を抱えた男が、被告人方の方角へ北見橋を渡っている' : '防犯カメラの男は、被告人方とは逆の方角へ向かっている');
+      if (h('miyaNeighbors')) add(c.truth === 'I' ? .5 : -1, c.truth === 'I' ? '被告人は事件の夜、いつもより遅い時刻に帰宅している' : '隣人の供述によれば、被告人は事件の夜、夕方から自宅にいた');
       return { pos, neg, pros, cons };
     },
     admit(S, admit, drop) { const c = S.c; if (c.confession && (c.sess.C || c.sess.D || c.sess.E) && rnd() < .8) drop('confession', '自白は、長時間の取調べ、脅迫的な言動、利益の約束又は偽計の下でされたもので、任意性に疑いがある（刑訴法319条1項）'); },
-    decide(S, r) { return (r.pos - r.neg >= 4 && r.neg <= 1.5) ? { verdict: '有罪', main: '被告人を拘禁刑9年に処する。' } : { verdict: '無罪', main: '被告人は無罪。' }; },
+    decide(S, r) { return (r.pos - r.neg >= 4 && r.neg <= 2) ? { verdict: '有罪', main: '被告人を拘禁刑9年に処する。' } : { verdict: '無罪', main: '被告人は無罪。' }; },
     nothing: v => v.startsWith('有罪') ? '宮下剛は、二度目の服役をした。' : '宮下剛は、北見坂を離れたという。',
     finale: '前歴は、捜査の手がかりにはなる。だが、法廷で「前にもやったから、今度もやった」と推認することは、原則として許されない。',
     confirm: (S, guiltyV) => guiltyV ? ['<div class="big">2年後</div>', '<div class="doc-s"><h3>手紙</h3>服役中の宮下から、青柳静江さんに手紙が届いた。<br>「植木鉢の下の鍵のことは、誰にも言っていません。もう、誰も入りません」</div>']
@@ -894,7 +925,7 @@
     if (c.arrest != null || c.warrantPending || c.warrantReady) return null;   // 逮捕状の請求から先は、共通の説明
     const ps = C.people(S);
     if (!ps.length) return { goal: C.mission, why: '犯人の手がかりはまだない。部下に<b>地取り</b>（現場周辺の聞き込み）、<b>鑑取り</b>（被害者の人間関係）、<b>手口照会</b>（同じ手口の前歴者）などを指示して、候補となる人物を浮かび上がらせる。被害者本人から話を聴くのは、あなた自身の仕事。' };
-    if (!c.target) return { goal: '候補が浮かんだ。誰を被疑者として追うかを決める', why: '「被疑者の候補」の札に、分かったことが並ぶ。<b>◯</b>は疑わしい点、<b>×</b>は疑わしくない点。札は、記録が増えるたびに書き足される。<br>決めるのはあなた。決めた後も、逮捕状を請求するまでは変えられる。<br>どちらか一方に決めつける前に、両方の裏を取ることもできる。',
+    if (!c.target) return { goal: '候補が浮かんだ。誰を被疑者として追うかを決める', why: '「被疑者の候補」の札に、分かったことが並ぶ。<b>◯</b>は疑わしい点、<b>×</b>は疑わしくない点。◯や×の数は、その事情の強さ（前歴などは◯一つ、足取りや物証は◯◯◯）。<br>弱い◯がいくつ並んでも、犯人とは限らない。足取り（防犯カメラを先までたどる）や、その夜の様子（周辺の聞き込み）など、どちらか一方にしか当てはまらない事情を探すとよい。<br>決めるのはあなた。決めた後も、逮捕状を請求するまでは変えられる。<br>どちらか一方に決めつける前に、両方の裏を取ることもできる。',
       hints: ['「被疑者の候補」の札を見比べ、「この人物を被疑者として追う」を押す。'] };
     const sm = c.target === 'M' ? soumeiM(S) : soumei(S), nm = c.target === 'M' ? '宮下' : '久住';
     return { goal: nm + 'の逮捕状を取れるだけの材料をそろえる',

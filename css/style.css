@@ -375,9 +375,9 @@ button{font:inherit;color:inherit}
 .pc-h b{font-size:15px}.pc-h small{font-size:11px;color:#6a5a44}
 .pc-t{margin-left:auto;font-size:10.5px;background:#b23a2e;color:#fff;padding:0 6px;font-family:'DotGothic16',sans-serif}
 .pcard ul{list-style:none;margin:6px 0;padding:0;font-size:12.5px;line-height:1.6}
-.pcard li{padding-left:1.3em;text-indent:-1.3em}
-.pcard li::before{display:inline-block;width:1.3em;text-indent:0;font-weight:700}
-.pf-y::before{content:'◯';color:#b23a2e}.pf-n::before{content:'×';color:#3f6a8a}.pf-q::before{content:'・';color:#6a5a44}
+.pcard li{padding-left:3.2em;text-indent:-3.2em}
+.pcard li .pf-s{display:inline-block;min-width:3.2em;font-weight:700;letter-spacing:-.1em}
+.pf-y .pf-s{color:#b23a2e}.pf-n .pf-s{color:#3f6a8a}.pf-q .pf-s{color:#6a5a44}
 .pc-b{width:100%;background:#2a241c;color:#f4ecd6;border:none;padding:6px;font-size:12.5px;cursor:pointer;font-family:'DotGothic16',sans-serif}
 .pc-b:hover{background:#4a3e30}
 .pp-n{font-size:11.5px;color:#d8c9a8;margin-top:4px;line-height:1.6}
@@ -387,3 +387,5 @@ button{font:inherit;color:inherit}
 .tabletop > .row2{margin-top:12px}
 .art .plain{background:#efe3bf;border-left:4px solid #b8902a;padding:4px 8px;margin:4px 0 6px;font-size:13.5px;line-height:1.7;color:#2a241c}
 .art .plain span{display:inline-block;font-size:10.5px;background:#b8902a;color:#fff;padding:0 5px;margin-right:6px;font-family:'DotGothic16',sans-serif;vertical-align:1px}
+.paper-b .cn{border-left:4px solid #3f7a4e;padding-left:8px}
+.paper-b .cn.match{border-left-color:#8a7a5e}

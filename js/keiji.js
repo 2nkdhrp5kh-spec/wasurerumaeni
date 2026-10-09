@@ -19,7 +19,8 @@
     if (caseDef.compare && caseDef.pick && !caseDef.actions.some(a => a && a.id === 'rereadHint')) caseDef.actions.push({ id: 'rereadHint', who: 'staff', days: 1, once: false, label: '捜査記録を読み返してもらう', short: '記録の読み返し', sub: '見落としがないか。並べて読むべき記録を教えてくれる',
       cond: S2 => G.diff() !== 'hard' && S2.docs.length >= 3 && !S2.tasks.some(t => t.aid === 'rereadHint'),
       done: S2 => {
-        const open = Object.keys(caseDef.pick).filter(k => { const [x, y] = k.split('|'); return K.doc(x) && K.doc(y) && !(S2.compared || {})[k] && caseDef.compare(S2, x, y); });
+        const seen = new Set((S2.cmpNotes || []).map(n => n.title));
+        const open = Object.keys(caseDef.pick).filter(k => { const [x, y] = k.split('|'); if (!K.doc(x) || !K.doc(y) || (S2.compared || {})[k]) return false; const r = caseDef.compare(S2, x, y); return r && !(r.memo && seen.has(r.memo.title)); });
         if (!open.length) return [['oka', '記録を全部読み返しました。……いまのところ、並べて気になるところは見当たりません。', { scene: { bg: 'office', who: 'oka' } }]];
         const [x, y] = open[Math.floor(Math.random() * open.length)].split('|');
         S2.hl = [x, y];   // 机の上で、二つの記録を光らせる（並べるまで）
@@ -71,9 +72,9 @@
     if (!C.people) return '';
     const ps = C.people(S); if (!ps.length) return '';
     const can = !C.canTarget || C.canTarget(S);
-    return '<div class="people" id="people"><div class="ph"><span>被疑者の候補</span><span class="pp-h">◯疑わしい点　×疑わしくない点</span></div><div class="pcards">'
+    return '<div class="people" id="people"><div class="ph"><span>被疑者の候補</span><span class="pp-h">◯疑わしい点　×疑わしくない点（数が多いほど強い）</span></div><div class="pcards">'
       + ps.map(p => '<div class="pcard' + (S.c.target === p.id ? ' on' : '') + '"><div class="pc-h"><b>' + p.name + '</b><small>' + p.sub + '</small>' + (S.c.target === p.id ? '<span class="pc-t">追っている</span>' : '') + '</div>'
-        + '<ul>' + p.facts.map(f => '<li class="' + (f[0] === true ? 'pf-y' : f[0] === false ? 'pf-n' : 'pf-q') + '">' + f[1] + '</li>').join('') + '</ul>'
+        + '<ul>' + p.facts.map(f => '<li class="' + (f[0] === true ? 'pf-y' : f[0] === false ? 'pf-n' : 'pf-q') + '"><span class="pf-s">' + (f[0] == null ? '・' : (f[0] ? '◯' : '×').repeat(f[2] || 1)) + '</span>' + f[1] + '</li>').join('') + '</ul>'
         + (can && S.c.target !== p.id ? '<button class="pc-b" data-p="' + p.id + '">この人物を被疑者として追う</button>' : '') + '</div>').join('')
       + '</div>' + (!S.c.target && C.setTarget ? '<div class="pp-n">逮捕状を請求するには、追う人物を決める。決めた後も、逮捕状を請求するまでは変えられる。</div>' : '') + '</div>';
   }
@@ -118,6 +119,7 @@
   function renderDocs() {
     const el = G.$('#docs'); if (!el) return; el.innerHTML = '';
     S.deskOpen = S.deskOpen || { say: true, rep: true };
+    if (S.hl && (S.compared || {})[S.hl.slice().sort().join('|')]) S.hl = null;   // 並べ終えた組は光らせない
     const hl = S.hl || [];
     GROUPS.forEach(([gid, gname]) => {
       const ds = S.docs.filter(d => groupOf(d) === gid); if (!ds.length) return;
@@ -152,21 +154,37 @@
       };
       return b;
   }
+  /* 照らし合わせの記録：見つけたこと（食い違い・つながり・一致）を一冊のメモに書き足していく */
+  K.notes = () => (S.cmpNotes = S.cmpNotes || []);
+  function noteBook() {
+    const ns = K.notes(); if (!ns.length) return;
+    K.addDoc({ id: 'cmpbook', title: '照らし合わせの記録', kind: 'memo', body: () => K.notes().map((n, i) => '<p class="cn ' + n.kind + '"><b>' + (i + 1) + '．' + n.title + '</b><br>' + n.text + '</p>').join('') });
+  }
+  K.addNote = (title, text, kind) => { if (K.notes().some(n => n.title === title)) return false; K.notes().push({ title, text, kind: kind || 'hit' }); noteBook(); return true; };
+  // 記載の一致を見るための語（漢字・カタカナの語、数字と単位）。どの記録にも出るありふれた語は除く
+  const STOP = new Set(['被疑者', '被害者', '事件', '確認', '記録', '供述', '午前', '午後', '当日', '本件', '結果', '報告', '以下', '同人', '自分', '捜査', '警察', '男性', '女性']);
+  const toks = t => new Set((String(t).match(/[一-龥々]{2,}|[ァ-ヴー]{2,}|[0-9０-９]+(?:時|分|番|号|円|万円|日|月|年|cm|点|km|m|歳|枚|個|件)/g) || []).filter(w => !STOP.has(w)));
+  function overlap(p, q) {
+    const A = toks(p), B = toks(q), sh = [...A].filter(w => B.has(w) || [...B].some(v => v.length >= 3 && (v.includes(w) || w.includes(v)) && Math.min(v.length, w.length) >= 3));
+    const score = sh.reduce((n, w) => n + Math.min(w.length, 6), 0);
+    return { sh, ok: score >= 6 && sh.length >= 2 };
+  }
   async function compareWith(a, b) {
     S.compared = S.compared || {};
     const key = [a, b].sort().join('|');
     const r = await compareView(a, b);
     if (!r) { K.render(); return; }
-    // 外れた指摘も、捜査メモとして残る（課長や検事も目を通す）。やさしいでは残さない
-    if (G.diff() !== 'easy') (r.misses || []).forEach(m => {
-      S.c.missPoints = (S.c.missPoints || 0) + 1;
-      K.addDoc({ id: 'miss_' + S.c.missPoints, title: '捜査メモ：照合' + S.c.missPoints, kind: 'memo', body: G.P('「' + K.doc(a).title + '」の「' + m[0].slice(0, 60) + '」と、「' + K.doc(b).title + '」の「' + m[1].slice(0, 60) + '」を照らし合わせた。') });
-    });
+    if (r.misses) S.c.missPoints = (S.c.missPoints || 0) + r.misses.length;   // 数えるだけ（記録には残さない）
     if (r.miss) { K.render(); return; }
+    if (r.match) {
+      await G.talk([['oka', '「' + r.match.slice(0, 3).join('」「') + '」。……どちらの記録でも、記載が一致しますね。', { scene: { bg: 'office', who: 'oka' } }]]);
+      K.addNote('記載の一致：「' + K.doc(a).title + '」と「' + K.doc(b).title + '」', '「' + r.picks[0].slice(0, 50) + '」と「' + r.picks[1].slice(0, 50) + '」。' + r.match.slice(0, 3).join('・') + 'の記載が一致する。', 'match');
+      K.render(); return;
+    }
     S.compared[key] = true;
-    if (S.hl && S.hl.length && [a, b].sort().join('|') === S.hl.slice().sort().join('|')) S.hl = null;
     await G.talk(r.lines);
-    if (r.memo) K.addDoc({ id: 'memo_' + key, title: '捜査メモ：' + r.memo.title, kind: 'memo', body: G.P(r.memo.text) });
+    const memo = r.memo || { title: '「' + K.doc(a).title + '」と「' + K.doc(b).title + '」', text: r.lines.filter(l => !l[0]).map(l => l[1].replace(/^（|）$/g, '')).join(' ') };
+    K.addNote(memo.title, memo.text, 'hit');
     if (r.then) r.then(S);
     K.render();
   }
@@ -186,7 +204,9 @@
       pp.querySelectorAll('.paper-b p, .paper-b td, .paper-b li').forEach(u => {
         if (u.querySelector('p, td, li')) return;
         u.classList.add('u'); if (cand[i].some(r => r.test(u.textContent))) u.classList.add('cand');
-        u.onclick = () => { pp.querySelectorAll('.u.pick').forEach(x => x.classList.remove('pick')); u.classList.add('pick'); picks[i] = u.textContent; G.audio.sfx('click'); G.$('#cmpgo').disabled = !(picks[0] && picks[1]); };
+        // 表の一行は、見出しと中身をあわせて一つの記載として読む
+        const text = () => { const tr = u.closest('tr'); return tr ? tr.textContent : u.textContent; };
+        u.onclick = () => { pp.querySelectorAll('.u.pick').forEach(x => x.classList.remove('pick')); u.classList.add('pick'); picks[i] = text(); G.audio.sfx('click'); G.$('#cmpgo').disabled = !(picks[0] && picks[1]); };
       });
     });
     ov.onclick = null; ov.hidden = false; ov.scrollTop = 0; G.audio.sfx('paper');
@@ -197,12 +217,15 @@
         const r = C.compare(S, a, b), msg = G.$('#cmpmsg');
         const pk = r && (r.pick || (C.pick || {})[key]);
         const hit = r && (!pk || (pk[0].test(picks[0]) && pk[1].test(picks[1])) || (pk[0].test(picks[1]) && pk[1].test(picks[0])));
-        if (hit && S.compared[key]) { msg.textContent = '（この二つは、もう照らし合わせた。捜査メモに残っている。）'; return; }
+        const clear = () => { ov.querySelectorAll('.u.pick').forEach(x => x.classList.remove('pick')); picks[0] = picks[1] = null; G.$('#cmpgo').disabled = true; };
+        if (hit && S.compared[key]) { msg.innerHTML = '<span class="cmpok">記録済み</span>この二つは、もう照らし合わせた（「照らし合わせの記録」にある）。'; clear(); return; }
         if (!hit) {
-          // 外れ：その場で伝える。続けて選び直すこともできる
+          // 文面の上で明らかにつながる記載（同じ場所・番号・物など）は、一致として認める
+          const ov2 = overlap(picks[0], picks[1]);
+          if (ov2.ok) { G.audio.sfx('stamp'); msg.innerHTML = '<span class="cmpok">一致</span>「' + ov2.sh.slice(0, 3).join('」「') + '」の記載が一致する。'; const pk2 = picks.slice(); setTimeout(() => { G.closePaper(); done({ match: ov2.sh, picks: pk2, misses }); }, 900); return; }
           G.audio.sfx('type'); misses.push(picks.slice());
-          msg.innerHTML = '<span class="cmpno">つながらない</span>この二か所からは、何も見えてこない。' + (G.diff() === 'easy' ? '別の一文を選び直してみる。' : '（捜査メモに残した。課長も目を通す）別の一文を選び直してもよい。');
-          ov.querySelectorAll('.u.pick').forEach(x => x.classList.remove('pick')); picks[0] = picks[1] = null; G.$('#cmpgo').disabled = true; return;
+          msg.innerHTML = '<span class="cmpno">つながらない</span>この二か所からは、何も見えてこない。別の一文を選び直してもよい。';
+          clear(); return;
         }
         G.audio.sfx('stamp'); msg.innerHTML = '<span class="cmpok">つながった</span>' + (r.memo ? r.memo.title : '気づいたことがある。');
         setTimeout(() => { G.closePaper(); done(Object.assign({}, r, { misses })); }, 900);
@@ -246,7 +269,7 @@
   K.doAction = async function (a) {
     if (G.ui.talking || G.ui.busy) return;
     G.ui.busy = true;
-    try { await doAction(a); } finally { G.ui.busy = false; }
+    try { await doAction(a); if (!S._ended) { const l = lures(); if (l.length) { await G.talk(l); K.render(); } } } finally { G.ui.busy = false; }
     K.idle();
   };
   async function doAction(a) {
@@ -371,7 +394,19 @@
       (ls || []).forEach(l => lines.push(l));
     }
     const m = C.morning(S, first) || [];
-    return m.concat(lines).concat(C.after ? (C.after(S) || []) : []);
+    return m.concat(lines).concat(C.after ? (C.after(S) || []) : []).concat(lures());
+  }
+  // 危うい手段が選べるようになったら、その朝に誰かが「近道」をささやく（選ぶ前に聞かされる）
+  const WHO = { 白井: 'shirai', 課長: 'todo', 岡: 'oka', 野口: 'noguchi', 検事: 'kenji' };
+  function lures() {
+    S.lured = S.lured || {}; const out = [];
+    C.actions.forEach(a => {
+      if (!a || !a.risk || S.lured[a.id] || (a.once !== false && S.done[a.id]) || (a.cond && !a.cond(S))) return;
+      const r = typeof a.risk === 'function' ? a.risk(S) : a.risk, m = (r && r.lure || '').match(/^(白井|課長|岡|野口|検事)「(.*)」$/);
+      if (!m) return; S.lured[a.id] = true;
+      out.push([WHO[m[1]], m[2], { scene: { bg: 'office', who: WHO[m[1]] } }]);
+    });
+    return out;
   }
   // 事件が終わったあとは、この画面を描き直さない（次の画面＝検察・公判を上書きしないように）
   K.abort = () => { if (S) { S._ended = true; S._closed = true; S._finish = null; } if (C) C.actsOverride = null; };

@@ -147,10 +147,12 @@ G.talk = function (lines, opt) {
     const aw = $('#acts-wrap');
     G.ui.talking = true; if (aw) aw.classList.add('wait');
     // 台詞欄が画面の外にあれば、見える位置まで動かす（終わったら元の位置に戻す）
+    // 続けて別の台詞が始まるなら、戻らずにそのまま（戻るのは、最後の台詞が終わってから）
     let backTo = null;
+    if (G._scrollBack) { clearTimeout(G._scrollBack.t); backTo = G._scrollBack.y; G._scrollBack = null; }
     const r0 = box.getBoundingClientRect();
     if (r0.top < 0 || r0.bottom > window.innerHeight) {
-      backTo = window.scrollY;
+      if (backTo == null) backTo = window.scrollY;
       const sc = box.closest('.scene') || box;
       window.scrollTo({ top: Math.max(0, window.scrollY + sc.getBoundingClientRect().top - 8), behavior: 'smooth' });
     }
@@ -162,7 +164,12 @@ G.talk = function (lines, opt) {
       if (typing) { finishType(); return; }
       if (i >= lines.length) {
         box.onclick = null; document.removeEventListener('click', anyTap, true); const m = box.querySelector('.more'); if (m) m.remove();
-        if (backTo != null && !lines.noReturn) window.scrollTo({ top: backTo, behavior: 'smooth' });
+        if (backTo != null && !lines.noReturn) {
+          const y = backTo;
+          // 書類が開いている間や説明の間は待ち、閉じてから戻る。その前に次の台詞が始まれば、そちらに引き継ぐ
+          const tryBack = () => { const ov = $('#overlay'); if (G.ui.talking) return; if ((ov && !ov.hidden) || document.querySelector('.coach') || $('#curtain.on')) { G._scrollBack = { y, t: setTimeout(tryBack, 400) }; return; } G._scrollBack = null; if ($('#acts-wrap')) window.scrollTo({ top: y, behavior: 'smooth' }); };
+          G._scrollBack = { y, t: setTimeout(tryBack, 450) };
+        }
         G.ui.talking = false; G.anim.speaking = null; if (aw) aw.classList.remove('wait'); resolve(); return;
       }
       const L = lines[i++];
@@ -316,15 +323,8 @@ G.showWarning = (first) => G.openPaper({ title: '注意', sub: 'はじめに、�
 // 違法かどうかは、プレイヤーが条文から判断する。印も確認もしない（「やさしい」のときだけ、確認の付箋を出す）
 // 誘い文句（lure）は、台詞として聞こえる
 G.confirmRisk = function (risk) {
-  if (G.diff() !== 'easy') {
-    const m = (risk.lure || '').match(/^(白井|課長|岡|野口|検事)「(.*)」$/);
-    const who = m ? { 白井: 'shirai', 課長: 'todo', 岡: 'oka', 野口: 'noguchi', 検事: 'kenji' }[m[1]] : '';
-    G.meta['risk_' + risk.id] = true;
-    // 誘いの一言：その場に声の主を映し、言い終えたら元の場面に戻す
-    const prev = G.lastScene ? Object.assign({}, G.lastScene) : null;
-    const line = who && prev ? [who, m[2], { scene: Object.assign({}, prev, { who }) }] : [who, m ? m[2] : risk.lure];
-    return (risk.lure ? G.talk([line]) : Promise.resolve()).then(() => { if (prev && who) G.drawScene(prev); return true; });
-  }
+  // ふつう・むずかしい：確認も誘いの台詞もなく、そのまま実行される（誘いは、選ぶ前に聞かされる）
+  if (G.diff() !== 'easy') { G.meta['risk_' + risk.id] = true; return Promise.resolve(true); }
   return G.confirmRiskBox(risk);
 };
 G.confirmRiskBox = function (risk) {

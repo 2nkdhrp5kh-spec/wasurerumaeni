@@ -42,7 +42,7 @@
           ['todo', '痴漢だ。7時16分発の快速、2両目。被害者は大学生。本人が男の手首を掴んで、次の駅で駅員に突き出した。', { scene: sc('todo') }],
           ['todo', '男は佐伯修（さえき おさむ）、45歳。北見坂精機の課長。「やってない」の一点張りだ。'],
           ['todo', '私人による現行犯逮捕だ（刑訴法213条）。駅員から身柄を受け取った。ここから48時間だぞ。'],
-          ['', '（署の相談室で、森川美咲は、両手でスマートフォンを握りしめていた。）', { scene: sc('misaki', 'office') }],
+          ['', '（署の相談室で、森川美咲は、両手でスマートフォンを握りしめていた。）', { scene: sc('misaki', 'soudan') }],
           ['misaki', '……毎朝、同じ電車なんです。明日から、どうやって乗ればいいのか。'],
           ['todo', '泣き寝入りする被害者が、どれだけいると思う。声を上げた子だ。……無駄にするなよ。', { scene: sc('todo') }],
           ['todo', 'だがな。満員電車で掴んだ手が、本当に触った手かどうか。そこを詰めるのも、俺たちの仕事だ。'],
@@ -96,18 +96,18 @@
   A.push({ id: 'swab', who: 'staff', days: 0, label: '佐伯の手指から微物を採取する', short: '微物の採取', sub: '手を洗われる前に', cond: S => S.day === 0,
     done: S => { S.c.swabbed = true; return [['noguchi', '両手の指先から、テープで採取しました。科捜研に回します。結果は1週間ほど。', { scene: sc('noguchi') }]]; } });
   A.push({ id: 'fiberRes', who: 'staff', days: 7, label: '微物（繊維）の鑑定を急がせる', short: '繊維鑑定', cond: S => S.c.swabbed,
-    done: S => { const c = S.c; c.fiber = c.truth === 'G' ? rnd() < .7 : rnd() < .15;
+    done: S => { const c = S.c; c.fiber = c.truth === 'G' ? rnd() < .85 : rnd() < .15;
       K.addDoc({ id: 'fiber', title: '微物鑑定書', kind: 'neu', evid: true, body: c.fiber ? P('佐伯の左手中指・薬指から、被害者のスカート（ポリエステル・紺色）と色調・材質が<b>同種の繊維</b>を検出した。', '同種の生地は広く流通している。') : P('佐伯の両手指から、被害者のスカートと同種の繊維は<b>検出されなかった</b>。') });
       return [['oka', c.fiber ? '繊維、出ました。左手の指から、スカートと同じ種類のが。' : '繊維は……出ませんでした。', { scene: sc('oka') }]]; } });
   A.push({ id: 'victimTalk', who: 'self', label: '被害者から話を聴く', sub: '女性警察官が同席する', cond: S => !S.fin.victimTalk, run: async S => {
-    G.drawScene(sc('misaki', 'office'));
+    G.drawScene(sc('misaki', 'soudan'));
     await G.talk([['misaki', '駅を出てすぐ、お尻を触られて……最初は、混んでるからかと思ったんです。でも、ずっと。'], ['misaki', '怖くて、振り向いて、すぐ後ろにいた人の手首を掴みました。'], ['misaki', '……ごめんなさい、ちゃんと見たわけじゃないんです。触ってる手を、見たわけじゃ。']]);
     K.addDoc({ id: 'victim', title: '被害者の供述調書', kind: 'neu', evid: true, body: P('（森川美咲・20歳）', '7時16分に北見坂駅を出てすぐ、着衣の上から臀部を触られた。数分間続いた。', '振り向いて、すぐ後ろにいた男の手首を掴んだ。触っている手そのものを見たわけではない。') });
   } });
   A.push({ id: 'victimConfirm', who: 'self', label: '被害者に「触っている手を掴んだんですね」と確かめる', sub: '供述をはっきりさせる', cond: S => S.fin.victimTalk,
     risk: { id: 'chikanLead', lure: '課長「『たぶん』じゃ、公判がもたん。はっきりさせておけ」', title: '答えを含んだ問いで、被害者の供述を固める', law: '禁止規定はない。供述の信用性の問題', effects: ['被害者の記憶が、問いに合わせて変わるおそれがある', '弁護人は、供述が変わった経緯を必ず問う', '被害者自身が、後で苦しむことになるかもしれない'] },
     run: async S => {
-      G.drawScene(sc('misaki', 'office'));
+      G.drawScene(sc('misaki', 'soudan'));
       await G.talk([['you', '確認ですが……触っている手を、掴んだんですね。'], ['misaki', '……え。'], ['misaki', '……はい。たぶん、そうだと思います。……はい。']]);
       K.addDoc({ id: 'victim2', title: '被害者の供述調書（2通目）', kind: 'neu', evid: true, body: P('（森川美咲）', '私は、自分の臀部を触っている手を掴みました。その手は、佐伯さんの左手でした。') });
     } });
@@ -132,6 +132,13 @@
   A.push({ id: 'reenact', who: 'staff', days: 2, label: '車内の位置を再現して確かめる', short: '再現見分', cond: S => S.fin.claimTalk,
     done: S => { K.addDoc({ id: 'reenact', title: '再現見分調書', kind: 'neu', evid: true, body: P('同型車両で、被害者（158cm）と佐伯（168cm）の位置を再現した。', '佐伯の弁解する姿勢（右手で吊り革、左手で鞄を胸の前）のまま左手を下ろすと、被害者の臀部に届く。ただし鞄を持ったままでは不自然な姿勢となる。', (S.fin.passenger || S.fin.stationCam ? '被害者の斜め後ろ（灰色のコートの男がいた位置）からも、手は届く。' : '被害者の斜め後ろの位置からも、手は届く。')) });
       return [['oka', '佐伯の位置からも、斜め後ろからも、届くことは届きます。', { scene: sc('oka') }]]; } });
+  // 真相によって結果が変わる捜査：江藤のその朝の動き
+  A.push({ id: 'etoMove', who: 'staff', days: 2, label: '江藤のその朝の動きを確かめる', short: '江藤の動き', sub: '勤務先・ICカードの履歴・乗り換え駅のカメラ', cond: S => S.fin.icCard,
+    done: S => { const I = S.c.truth === 'I';
+      K.addDoc({ id: 'etoMove', title: '江藤の行動の確認結果', kind: 'neu', evid: true, body: I
+        ? P('江藤の勤務先は終点の北見坂中央駅前。ICカードの履歴では、平日は毎朝終点まで乗っている。', '6月10日だけ、途中の駅で降り、<b>2分後の次の電車に乗り直して</b>終点で出場している。')
+        : P('江藤の勤務先は、事件の次の停車駅の近く。ICカードの履歴では、平日は毎朝この駅で降りている。', '6月10日の降車も、いつもどおり。乗り換え駅のカメラでは、改札を出て勤務先の方向へ歩いている。') });
+      return [['oka', I ? '江藤、いつもは終点まで乗るのに、あの日だけ途中で降りて、次の電車に乗り直してます。' : '江藤は毎朝、あの駅で降りてます。勤務先があるんです。あの日も、いつもどおりでした。', { scene: sc('oka') }]]; } });
   A.push({ id: 'trainCam', who: 'staff', days: 2, label: '車内の防犯カメラを確かめる', short: '車内カメラ', cond: S => true,
     done: S => { K.addDoc({ id: 'trainCam', title: '鉄道会社の回答（車内カメラ）', kind: 'neu', body: P('当該車両（旧型）には車内防犯カメラが設置されていない。') });
       return [['oka', '2両目は古い車両で、車内カメラがありませんでした。', { scene: sc('oka') }]]; } });
@@ -144,7 +151,7 @@
   const ICFG = {
     who: 'saeki', guiltyKey: 'G', recorded: false,
     first: [['', '（佐伯修。45歳。ネクタイを外された首元を、何度も触っている。）'], ['saeki', '……会社には、連絡がいってるんでしょうか。']],
-    labels: { A: ['黙秘権を告げ、弁解を聴く', 'そのまま聴き取る'], B: ['被害者の話を突きつける', '「あなたの手を掴んだと言っている」'], D: ['「認めれば略式の罰金で、今日帰れる」と言う', '実際に、そうなることが多い'] },
+    labels: { A: ['弁解を聴く', 'そのまま聴き取る'], B: ['被害者の話を突きつける', '「あなたの手を掴んだと言っている」'], D: ['「認めれば略式の罰金で、今日帰れる」と言う', '実際に、そうなることが多い'] },
     inc: { A: { G: 8, I: 4 }, B: { G: 16, I: 12 }, C: { G: 28, I: 26 }, D: { G: 40, I: 38 }, E: { G: 24, I: 22 } },
     pools: {
       A: [S => [['you', '言いたくないことは、言わなくていい。'], ['saeki', '触ってません。右手は吊り革、左手は鞄です。']],
@@ -188,21 +195,23 @@
     weigh(S, ids, trial) {
       const c = S.c, has = id => ids.includes(id); let pos = 0, neg = 0; const pros = [], cons = [];
       const add = (v, why) => { if (v > 0) { pos += v; if (why) pros.push(why); } else if (v < 0) { neg -= v; if (why) cons.push(why); } };
+      const etoOut = has('etoMove') && c.truth === 'G';
       if (has('victim2')) add(trial && has('victim') ? 1.5 : 2.5, trial && has('victim') ? '被害者は、触っている手を掴んだと述べる。もっとも、当初の供述では「すぐ後ろにいた人の手首を掴んだ」と述べており、供述には変遷がある' : '被害者は、自分を触っている手を掴んだと述べている');
       else if (has('victim')) add(1.5, '被害者は、振り向いてすぐ後ろにいた被告人の手首を掴んだと述べている');
       if (has('handover')) add(.5, '');
       if (has('misakiMsg')) add(.3, '被害者は被害の最中、友人に「痴漢されてる　後ろ」と送信している');
       if (has('fiber') && c.fiber) add(2.5, '被告人の左手指から、被害者のスカートと同種の繊維が検出された');
       if (has('fiber') && c.fiber === false) add(-1, '被告人の手指からは、被害者のスカートの繊維が検出されていない');
-      if (has('passenger')) { add(.5, '同じ車両の乗客は、被告人の手が被害者の近くにあったのを見ている'); add(-.8, '同乗客は、被告人の背後に灰色のコートの男もいたと述べている'); }
-      if (has('stationCam')) add(-.8, '防犯カメラには、被害者の斜め後ろに別の男が乗車し、次の駅で足早に降車する様子が写っている');
-      if (has('eto')) add(-.8, 'その男には同種の前歴がある');
+      if (has('passenger')) { add(.5, '同じ車両の乗客は、被告人の手が被害者の近くにあったのを見ている'); add(etoOut ? -.2 : -.8, etoOut ? '' : '同乗客は、被告人の背後に灰色のコートの男もいたと述べている'); }
+      if (has('etoMove')) add(c.truth === 'I' ? -1.5 : .5, c.truth === 'I' ? 'その男は事件の日に限って途中の駅で降り、次の電車に乗り直している' : '斜め後ろにいた男は、毎朝その駅で降りており、事件の日の行動も普段どおりだった');
+      if (has('stationCam')) add(etoOut ? -.2 : -.8, etoOut ? '' : '防犯カメラには、被害者の斜め後ろに別の男が乗車し、次の駅で足早に降車する様子が写っている');
+      if (has('eto')) add(etoOut ? -.2 : -.8, etoOut ? '' : 'その男には同種の前歴がある');
       if (has('reenact')) add(-.4, '被告人の弁解する姿勢でも手は届くが、不自然な姿勢となる。被害者の斜め後ろからも手は届く');
       if (has('confession') && c.confession) add(c.retract && trial ? 1.5 : 3, '被告人は捜査段階で犯行を認めた' + (c.retract && trial ? 'が、公判では「早く帰りたかった」と撤回している' : ''));
       return { pos, neg, pros, cons };
     },
     admit(S, admit, drop) { const c = S.c; if (c.confession && (c.sess.C || c.sess.D || c.sess.E) && rnd() < .7) drop('confession', '自白は、長時間の取調べ、脅迫的な言動又は利益の約束の下でされたもので、任意性に疑いがある（刑訴法319条1項）'); },
-    decide(S, r) { return (r.pos - r.neg >= 3.5 && r.neg <= 1.2) ? { verdict: '有罪', main: '被告人を罰金40万円に処する。' } : { verdict: '無罪', main: '被告人は無罪。' }; },
+    decide(S, r) { return (r.pos - r.neg >= 3.5 && r.neg <= 2) ? { verdict: '有罪', main: '被告人を罰金40万円に処する。' } : { verdict: '無罪', main: '被告人は無罪。' }; },
     nothing: v => v.startsWith('有罪') || v.startsWith('略式') ? '佐伯修は会社を辞め、家族と別の町に越したという。' : '佐伯修が会社に戻れたのかどうかは、分からない。',
     finale: '痴漢事件は、取調べの録音・録画の義務の対象ではない。<br>否認すれば勾留が続き、認めれば罰金で帰れる。この構造は「人質司法」と呼ばれ、批判されてきた。',
     async reveal(S, verdict) {
@@ -237,6 +246,7 @@
     if (has('eto')) { const g = [[true, '痴漢の前歴2件'], [true, '佐伯のすぐ後ろにいた灰色のコートの男']];
       if (has('stationCam')) g.push([true, '次の駅で、急ぐように降りた']);
       if (S.fin.etoTalk) g.push([null, '任意の聴取：「何もしてない」']);
+      if (has('etoMove')) g.push(S.c.truth === 'I' ? [true, 'あの日だけ途中で降り、次の電車に乗り直している'] : [false, '毎朝その駅で降りている。あの日も普段どおり']);
       out.push({ id: 'eto', name: '江藤 浩二', sub: '同じ車両にいた男', facts: g }); }
     return out;
   };

@@ -20,7 +20,11 @@
       const d = cf.det; if (!d.tape || !d.safe || !d.light) add(-1.5, '自白には、現場の客観的状況と食い違う部分がある');
     }
     if (has('routeCam') && c.qRoute === 'main') add(-.7, '自白で述べられた帰り道の防犯カメラに、被告人は映っていない');
-    if (has('customers')) add(-.5, '裏口の鍵の所在を知りえた者は少なくとも14人に及ぶ');
+    // 犯人性を強く示す事情があるか（あれば、「ほかにも可能性のある人がいる」という事情の重みは小さくなる）
+    const strong = (has('camera3') && c.truth === 'G') || (has('fiber') && c.truth === 'G') || (has('lineup') && c.lineupRes === 'K' && !c.lineupTaint) || (c.safeFound && has('safe'));
+    // 別人（宮下）について、事件の夜は自宅にいたことが裏付けられたか
+    const miyaOut = has('miyaNeighbors') && c.truth === 'G';
+    if (has('customers')) add(strong ? -.2 : -.5, strong ? '' : '裏口の鍵の所在を知りえた者は少なくとも14人に及ぶ');
     if (c.safeFound && has('safe')) add(3, '自白に基づき、捜査機関の知らなかった金庫の所在が判明した（秘密の暴露）');
     else if (has('safe')) add(-.5, '自白どおりの場所から金庫は発見されていない');
     if (has('lineup')) {
@@ -30,19 +34,22 @@
       else if (c.lineupRes === 'filler') add(-1, '被害者は写真面割りで無関係の人物を選んだ');
     } else if (has('victim2')) add(.4, '');
     if (has('printK')) add(has('printM') ? 0 : .7, has('printM') ? '指紋は被告人とも別人とも同程度に合致し、犯人性の根拠とならない' : '指紋は被告人のものと矛盾しない');
-    if (has('printM')) add(-.5, '');
+    if (has('printM')) add(miyaOut ? 0 : -.5, '');
     if (has('camera')) add(.5, '');
-    if (has('fiber')) add(.5, '');
+    if (has('camera3')) add(S.c.truth === 'G' ? 1.5 : -1.2, S.c.truth === 'G' ? '犯行の約30分後、灰色の上着の男が被告人方の向かいを通っている' : '防犯カメラの男は、被告人方とは逆の方角へ、北見橋を渡っている');
+    if (has('miyaNeighbors') && S.c.truth === 'I') add(-.6, '同種前歴を有する別人が、事件の夜、普段より遅く帰宅している');
+    if (has('fiber')) add(c.truth === 'G' ? 1.5 : .5, c.truth === 'G' ? '押収したジャケットの袖口から、犯行に使われた布製粘着テープと同じ成分の粘着剤が検出されている' : '');
     if (has('jacket')) add(.3, '');
     if (has('loan')) add(.7, '被告人は事件の2日後、まとまった現金で借金を返済している');
     if (has('bank')) add(1, has('mother') ? '返済金の出所について、被告人と母は虚偽の説明をしていた' : '');
     else if (has('mother')) add(-.3, '');
     if (has('kandori')) add(.5, '');
     if (has('hikiatari')) add(.3, '');
-    if (has('murai')) add(-1, '近隣住民は、犯人の背は高くなかったと述べている');
-    if (has('regular')) add(-.7, '裏口の鍵の所在を知る者は他にも複数いた');
-    if (has('miyashita')) add(-.5, '同種前歴を有する別人の存在が示されている');
-    if (has('miyaAlibi')) add(-.3, '');
+    if (has('murai')) add(has('murai2') ? -.3 : -1, has('murai2') ? '' : '近隣住民は、犯人の背は高くなかったと述べている');
+    if (has('regular')) add(strong ? -.2 : -.7, strong ? '' : '裏口の鍵の所在を知る者は他にも複数いた');
+    if (has('miyashita')) add(miyaOut ? 0 : -.5, miyaOut ? '' : '同種前歴を有する別人の存在が示されている');
+    if (has('miyaAlibi')) add(miyaOut ? 0 : -.3, '');
+    if (miyaOut) add(.5, '同種前歴を有する別人については、事件の夜、自宅にいたことを示す隣人の供述がある');
     if (has('video') && c.video && c.video.exists) add(c.truth === 'I' ? -8 : .3, c.truth === 'I' ? '犯行時刻、被告人の自宅の固定回線で動画が再生され続けていた' : '');
     return { w, pos, neg, pros, cons, notes: notes.filter(Boolean) };
   }
@@ -51,7 +58,7 @@
   function convict(S, r, admit) {
     const c = S.c;
     if (c.safeFound && admit.includes('safe') && admit.includes('confession') && r.neg <= 2.5) return true;
-    return r.pos - r.neg >= 4 && r.neg <= 1.2;
+    return r.pos - r.neg >= 4 && r.neg <= 2;
   }
   E.estimate = S => { const ids = S.docs.filter(d => d.evid).map(d => d.id); const r = weigh(S, ids, false); return { w: r.pos - r.neg, neg: r.neg, ok: convict(S, r, ids) }; };
   const list = a => a.map(x => '<p class="qa">・' + x + '。</p>').join('');
