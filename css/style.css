@@ -310,3 +310,78 @@ button{font:inherit;color:inherit}
 .procrev .pr-ng{border-color:#b23a2e}.procrev .pr-ng b{background:#b23a2e}
 .procrev .pr-mid{border-color:#a08030}.procrev .pr-mid b{background:#a08030}
 .devreset{margin-top:18px;font-size:11px;opacity:.55;background:none;border:1px dashed #777;color:#aaa;padding:4px 10px;cursor:pointer}
+/* ---------- 手引き：いまの目的 ---------- */
+.goal{background:#f4ecd6;color:#2a241c;border:none;box-shadow:2px 3px 0 #0008;padding:10px 12px 8px;margin-bottom:10px;position:relative;border-left:6px solid #b23a2e;font-family:'Noto Serif JP',serif}
+.goal .gh{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#8a3a2e;letter-spacing:.2em;font-family:'DotGothic16',sans-serif}
+.goal .gq{background:none;border:1px solid #8a7a5e;color:#5a4a34;font-size:11px;padding:1px 8px;cursor:pointer;letter-spacing:0;font-family:inherit}
+.goal .gg{font-size:16px;font-weight:700;line-height:1.55;margin:4px 0 6px}
+.goal .gwhy{font-size:12.5px;line-height:1.75;color:#4a3e30;background:#ebe1c6;padding:6px 8px;margin-top:6px}
+.goal .gn{margin:6px 0 0;padding:0 0 0 1.1em;font-size:12.5px;line-height:1.7;color:#3a3024}
+.goal .gn li{margin:2px 0}
+.goal .gn li::marker{color:#b23a2e}
+.road{display:flex;align-items:center;flex-wrap:wrap;gap:2px;margin:4px 0 2px}
+.road .rs{font-size:11px;padding:2px 7px;border:1px solid #a89878;background:#ebe2ca;color:#8a7a5e;cursor:pointer;font-family:'DotGothic16',sans-serif}
+.road .rs.done{color:#5a4a34;background:#ddd2b4}
+.road .rs.on{background:#b23a2e;color:#fff;border-color:#7a2a20;box-shadow:0 0 0 2px #b23a2e44}
+.road .ra{color:#a89878;font-size:12px}
+.gm{display:flex;align-items:center;gap:6px;font-size:12px;margin:2px 0 4px}
+.gm .gml{color:#5a4a34}.gm .gmv{color:#8a3a2e;font-weight:700}
+.gm .gmb{display:flex;gap:2px}.gm .gmb i{width:22px;height:8px;background:#d6cbb0;border:1px solid #8a7a5e}.gm .gmb i.on{background:#b8902a}
+.gmw{font-size:11.5px;color:#6a5a44;line-height:1.6;margin-bottom:4px}
+.newb{display:inline-block;background:var(--shu);color:#fff;font-size:10px;padding:0 3px;line-height:1.4;font-family:'DotGothic16',sans-serif;vertical-align:1px}
+/* 机の上の記録：束 */
+.dgrp{margin-top:6px}
+.dgh{display:flex;justify-content:space-between;width:100%;background:#00000030;border:none;border-bottom:1px solid #00000060;color:#e0cfa8;font-size:12px;padding:4px 6px;cursor:pointer;font-family:'DotGothic16',sans-serif;text-align:left}
+.dgh:hover{background:#00000048}
+.dgrp .docs{padding:2px 2px 4px}
+.desk .ph .dh{font-size:11px;color:#c9b48a}
+.tabletop .desk .ph{display:flex;justify-content:space-between}
+.doc.hl{animation:hlpulse 1.2s ease-in-out infinite;outline:3px solid #f0c040;outline-offset:2px;z-index:1}
+.doc.hl::after{content:'並べて読む';position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:#f0c040;color:#2a241c;font-size:9.5px;padding:0 4px;white-space:nowrap;border:1px solid #000;font-family:'DotGothic16',sans-serif}
+@keyframes hlpulse{0%,100%{box-shadow:0 0 0 0 #f0c04000,2px 2px 0 #0008}50%{box-shadow:0 0 14px 4px #f0c040cc,2px 2px 0 #0008}}
+/* 行動と？ */
+.actw{position:relative;display:block}
+.actw .act{width:100%;padding-right:38px}
+.actw .q{position:absolute;right:6px;bottom:6px;width:26px;height:26px;border-radius:50%;border:1px solid #7a6a4e;background:#e7dcc0;color:#5a4a34;font-size:13px;line-height:22px;cursor:pointer;padding:0;font-family:'DotGothic16',sans-serif;z-index:2}
+.actw .q:hover{background:#f6edd4}
+.acts.wait .actw .q{pointer-events:none}
+.help p{margin:0 0 10px;line-height:1.8}
+.help b{display:inline-block;font-size:12px;padding:0 6px;margin-right:6px;background:#5a4a34;color:#fff;font-family:'DotGothic16',sans-serif}
+.help .hp b{background:#3f7a4e}.help .hm b{background:#b23a2e}.help .hw b{background:#4a5a7a}
+/* 用語集 */
+.gl{padding:6px 0;border-bottom:1px dotted #a89878}
+.gl b{font-size:15px}.gl p{margin:2px 0 0;line-height:1.75;font-size:13.5px}
+.gl.on{background:#f0e2b0}
+/* 照合の結果 */
+.cmpok,.cmpno{display:inline-block;font-weight:700;padding:1px 8px;margin-right:8px;color:#fff;font-family:'DotGothic16',sans-serif}
+.cmpok{background:#3f7a4e;animation:stampin .25s ease-out}.cmpno{background:#7a5a4a}
+/* 指し示す説明（コーチ） */
+.coach{position:fixed;inset:0;z-index:9000}
+.coach .ch-hole{position:fixed;border-radius:6px;box-shadow:0 0 0 9999px rgba(8,6,4,.78);outline:2px solid #f0c040;transition:all .2s ease;pointer-events:none}
+.coach .ch-bub{position:fixed;width:min(460px,calc(100vw - 16px));background:#f4ecd6;color:#2a241c;border:2px solid #000;box-shadow:3px 3px 0 #000;padding:10px 12px;font-family:'Noto Serif JP',serif;font-size:14px;line-height:1.75}
+.coach .ch-t{display:flex;justify-content:space-between;font-weight:700;color:#8a3a2e;margin-bottom:4px}
+.coach .ch-t span{font-size:11px;color:#8a7a5e;font-weight:400}
+.coach .ch-f{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}
+.coach .ch-b{background:#e2d6b8;border:2px solid #2a241c;padding:4px 14px;cursor:pointer;font-family:'DotGothic16',sans-serif;font-size:13px}
+.coach .ch-n{background:#2a241c;color:#f4ecd6}
+/* 被疑者の候補 */
+.people{margin-bottom:10px}
+.people .ph{display:flex;justify-content:space-between;color:#e0cfa8;font-size:12px;text-shadow:0 1px 0 #000;margin-bottom:4px}
+.people .pp-h{font-size:11px;color:#c9b48a}
+.pcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px}
+.pcard{background:#efe6cf;color:#2a241c;box-shadow:2px 3px 0 #0008;padding:8px 10px;border-top:4px solid #8a7a5e;font-family:'Noto Serif JP',serif}
+.pcard.on{border-top-color:#b23a2e;background:#f6ecd2}
+.pc-h{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.pc-h b{font-size:15px}.pc-h small{font-size:11px;color:#6a5a44}
+.pc-t{margin-left:auto;font-size:10.5px;background:#b23a2e;color:#fff;padding:0 6px;font-family:'DotGothic16',sans-serif}
+.pcard ul{list-style:none;margin:6px 0;padding:0;font-size:12.5px;line-height:1.6}
+.pcard li{padding-left:1.3em;text-indent:-1.3em}
+.pcard li::before{display:inline-block;width:1.3em;text-indent:0;font-weight:700}
+.pf-y::before{content:'◯';color:#b23a2e}.pf-n::before{content:'×';color:#3f6a8a}.pf-q::before{content:'・';color:#6a5a44}
+.pc-b{width:100%;background:#2a241c;color:#f4ecd6;border:none;padding:6px;font-size:12.5px;cursor:pointer;font-family:'DotGothic16',sans-serif}
+.pc-b:hover{background:#4a3e30}
+.pp-n{font-size:11.5px;color:#d8c9a8;margin-top:4px;line-height:1.6}
+.sstrip{display:flex;flex-wrap:wrap;gap:4px;margin:10px 0 6px;font-size:11.5px;font-family:'DotGothic16',sans-serif}
+.sstrip span{padding:1px 7px;border:1px solid #0006;background:#00000030;color:#d8c9a8}
+.sstrip .f{background:#3f6a4e;color:#fff}.sstrip .b{color:#e0cfa8}.sstrip .g{opacity:.45;text-decoration:line-through}
+.tabletop > .row2{margin-top:12px}

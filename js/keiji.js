@@ -22,7 +22,17 @@
         const open = Object.keys(caseDef.pick).filter(k => { const [x, y] = k.split('|'); return K.doc(x) && K.doc(y) && !(S2.compared || {})[k] && caseDef.compare(S2, x, y); });
         if (!open.length) return [['oka', '記録を全部読み返しました。……いまのところ、並べて気になるところは見当たりません。', { scene: { bg: 'office', who: 'oka' } }]];
         const [x, y] = open[Math.floor(Math.random() * open.length)].split('|');
+        S2.hl = [x, y];   // 机の上で、二つの記録を光らせる（並べるまで）
         return [['oka', '記録を読み返しました。「' + K.doc(x).title + '」と「' + K.doc(y).title + '」。並べて読んでみてください。', { scene: { bg: 'office', who: 'oka' } }], ['oka', 'どこが、とまでは言えないんですが……どこか、引っかかるんです。']];
+      } });
+    // 満期を待たずに、記録を送って捜査を終える
+    if (caseDef.finishNow && !caseDef.actions.some(a => a && a.id === 'sendNow')) caseDef.actions.push({ id: 'sendNow', who: 'self', once: false, label: '捜査を切り上げ、記録を検察官に送る', sub: '満期を待たずに、起訴するかどうかの判断を求める',
+      cond: S2 => G.kit.inCustody(S2) && G.kit.custodyDay(S2) >= 3,
+      run: async S2 => {
+        const v = await G.openPaper({ title: '記録を検察官に送る', sub: '捜査を終える', noClose: true, body: G.P('ここで捜査を切り上げ、集めた記録を検察官に送る。送った後は、もう捜査はできない。', '満期まで、あと' + (G.kit.LIMIT - G.kit.custodyDay(S2)) + '日ある。') + (caseDef.gauge && G.diff() !== 'hard' ? caseDef.gauge(S2) : ''),
+          buttons: [{ label: '送る', value: true, cls: 'green' }, { label: 'まだ続ける', value: false }] });
+        if (!v) return false;
+        await caseDef.finishNow(S2); return false;
       } });
     if (caseDef.charges && !caseDef.actions.some(a => a && a.id === 'chargeSel')) caseDef.actions.unshift({ id: 'chargeSel', who: 'self', once: false, label: '罪名を決める', sub: '一日は使わない。決めると「立証すべき事実」が出る', cond: S2 => !S2.c.charge,
       run: async S2 => { await G.kit.chooseCharge(S2, caseDef, 'memo'); K.render(); return false; } });
@@ -56,6 +66,24 @@
     }).join('') + '<div class="staff' + (S.selfUsed ? '' : ' free') + '"><span class="nm">あなた</span><span class="st">' + (S.selfUsed ? '今日の行動は済んだ' : '動ける') + '</span></div>';
   }
   K.C = () => C;
+  // 被疑者の候補：浮かんだ人物と、分かったこと（◯疑わしい点／×疑わしくない点）。追う人物を自分で決める
+  function peoplePanel() {
+    if (!C.people) return '';
+    const ps = C.people(S); if (!ps.length) return '';
+    const can = !C.canTarget || C.canTarget(S);
+    return '<div class="people" id="people"><div class="ph"><span>被疑者の候補</span><span class="pp-h">◯疑わしい点　×疑わしくない点</span></div><div class="pcards">'
+      + ps.map(p => '<div class="pcard' + (S.c.target === p.id ? ' on' : '') + '"><div class="pc-h"><b>' + p.name + '</b><small>' + p.sub + '</small>' + (S.c.target === p.id ? '<span class="pc-t">追っている</span>' : '') + '</div>'
+        + '<ul>' + p.facts.map(f => '<li class="' + (f[0] === true ? 'pf-y' : f[0] === false ? 'pf-n' : 'pf-q') + '">' + f[1] + '</li>').join('') + '</ul>'
+        + (can && S.c.target !== p.id ? '<button class="pc-b" data-p="' + p.id + '">この人物を被疑者として追う</button>' : '') + '</div>').join('')
+      + '</div>' + (!S.c.target && C.setTarget ? '<div class="pp-n">逮捕状を請求するには、追う人物を決める。決めた後も、逮捕状を請求するまでは変えられる。</div>' : '') + '</div>';
+  }
+  function bindPeople() {
+    document.querySelectorAll('.pc-b').forEach(b => b.onclick = async () => {
+      if (G.ui.talking || G.ui.busy) return; G.ui.busy = true; G.audio.sfx('select');
+      try { await C.setTarget(S, b.dataset.p); } finally { G.ui.busy = false; }
+      K.render(); K.idle();
+    });
+  }
   function elemPanel() {
     if (C.charges && !S.c.charge) return (C.gauge && G.diff() !== 'hard' ? C.gauge(S) : '') + '<div class="elem" style="color:#8c8578;font-size:12px;line-height:1.6">（罪名がまだ決まっていない。逮捕状を請求するとき、または送致するときに、罪名を決める。立証すべき事実は、罪名によって変わる。）</div>';
     const chs = C.charges && C.charges.find(x => x.id === S.c.charge);
@@ -72,43 +100,71 @@
     if (C && C.scene && (C.scene(S) || {}).bg === 'office' && G.audio.ambientKind && G.audio.ambientKind() !== 'office') G.audio.ambient('office');
     const info = C.info(S);
     G.layout({ role: C.role, date: K.date(), info: info.text, clock: info.clock, scene: C.scene(S), hint: hint || '（今日の指示を出す。）',
-      body: '<div class="row2"><div class="panel"><div class="ph"><span>捜査員</span></div>' + staffPanel() + '</div>'
-        + '<div class="panel"><div class="ph"><span>' + (C.elemTitle || '立証すべき事実') + '</span><span>■=証拠 <span style="color:#b23a2e">■</span>=自白</span></div>' + elemPanel() + '</div></div>'
-        + '<div class="desk"><div class="ph"><span>捜査記録　' + S.docs.length + '綴</span></div><div class="docs" id="docs"></div></div>' });
-    renderDocs(); acts();
+      body: '<div id="goal-wrap">' + G.guide.panel(S, C) + '</div>'
+        + '<div id="people-wrap">' + peoplePanel() + '</div>'
+        + '<div class="desk" id="desk"><div class="ph"><span>捜査記録　' + S.docs.length + '綴</span><span class="dh">タップで開く</span></div><div id="docs"></div></div>',
+      after: '<div class="row2"><div class="panel" id="p-staff"><div class="ph"><span>捜査員</span></div>' + staffPanel() + '</div>'
+        + '<div class="panel" id="p-elem"><div class="ph"><span>' + (C.elemTitle || '立証すべき事実') + '</span><span>■=証拠 <span style="color:#b23a2e">■</span>=自白</span></div>' + elemPanel() + '</div></div>' });
+    G.guide.bindPanel(); bindPeople(); renderDocs(); acts();
   };
+  // 机の上の記録：種類ごとの束に分ける（束は開け閉めできる。未読や光っている記録がある束は開く）
+  const GROUPS = [
+    ['say', '供述・弁解', d => /供述|弁解|話|証言|メッセージ/.test(d.title) && d.kind !== 'memo'],
+    ['rep', '捜査報告・鑑定', d => d.kind !== 'memo' && !/令状|許可状|勾留状|請求書|逮捕状/.test(d.title)],
+    ['form', '令状・請求書', d => /令状|許可状|勾留状|請求書|逮捕状/.test(d.title)],
+    ['memo', 'メモ・資料', d => true]
+  ];
+  const groupOf = d => GROUPS.find(g => g[2](d))[0];
   function renderDocs() {
     const el = G.$('#docs'); if (!el) return; el.innerHTML = '';
-    S.docs.forEach(d => {
+    S.deskOpen = S.deskOpen || { say: true, rep: true };
+    const hl = S.hl || [];
+    GROUPS.forEach(([gid, gname]) => {
+      const ds = S.docs.filter(d => groupOf(d) === gid); if (!ds.length) return;
+      const hot = ds.some(d => d.isNew || hl.includes(d.id));
+      const open = S.deskOpen[gid] || hot;
+      const sec = document.createElement('div'); sec.className = 'dgrp' + (open ? ' open' : '');
+      sec.innerHTML = '<button class="dgh"><span>' + (open ? '▾' : '▸') + ' ' + gname + '</span><span>' + ds.length + '綴' + (ds.some(d => d.isNew) ? '　<span class="newb">新</span>' : '') + '</span></button><div class="docs"></div>';
+      sec.querySelector('.dgh').onclick = () => { S.deskOpen[gid] = !open; G.audio.sfx('click'); renderDocs(); };
+      el.appendChild(sec);
+      if (!open) return;
+      const box = sec.querySelector('.docs');
+      ds.forEach(d => box.appendChild(docButton(d, hl)));
+    });
+  }
+  function docButton(d, hl) {
       const b = document.createElement('button');
-      b.className = 'doc' + (d.isNew ? ' new' : '') + (d.fresh ? ' arrive' : '') + (d.kind === 'memo' ? ' memo' : '') ; d.fresh = false;
+      b.className = 'doc' + (d.isNew ? ' new' : '') + (d.fresh ? ' arrive' : '') + (d.kind === 'memo' ? ' memo' : '') + (hl.includes(d.id) ? ' hl' : ''); d.fresh = false;
       b.textContent = d.title;
       b.onclick = async () => {
         if (G.ui.talking) return;
         d.isNew = false; b.classList.remove('new');
-        if (C.compare) G.meta.tips = G.meta.tips || {}, (!G.meta.tips.docs && (G.meta.tips.docs = true, G.saveMeta(), G.toast('記録の下の「横に並べる」で、別の記録と見比べられる')));
         const others = S.docs.filter(x => x.id !== d.id);
-        const v = await G.openPaper({ title: d.title, sub: d.sub, body: typeof d.body === 'function' ? d.body(S) : d.body, stamps: d.stamps,
-          buttons: C.compare && others.length ? [{ label: '横に並べる', value: 'cmp', small: '別の記録と見比べる' }] : [] });
-        if (v !== 'cmp') return;
+        const partner = hl.includes(d.id) ? hl.find(x => x !== d.id) : null;
+        const btns = [];
+        if (C.compare && partner && K.doc(partner)) btns.push({ label: '「' + K.doc(partner).title + '」と並べる', value: 'hl', cls: 'green', small: '岡が言っていた組み合わせ' });
+        if (C.compare && others.length) btns.push({ label: '横に並べる', value: 'cmp', small: '別の記録と見比べる（照らし合わせ）' });
+        const v = await G.openPaper({ title: d.title, sub: d.sub, body: typeof d.body === 'function' ? d.body(S) : d.body, stamps: d.stamps, buttons: btns });
+        if (!v) { K.refresh(); return; }
+        if (v === 'hl') { compareWith(d.id, partner); return; }
         const o = await G.openPaper({ title: '並べる記録を選ぶ', sub: '「' + d.title + '」の横に置く', body: '', buttons: others.map(x => ({ label: x.title, value: x.id })) });
-        if (o) compareWith(d.id, o);
+        if (o) compareWith(d.id, o); else K.refresh();
       };
-      el.appendChild(b);
-    });
+      return b;
   }
   async function compareWith(a, b) {
     S.compared = S.compared || {};
     const key = [a, b].sort().join('|');
     const r = await compareView(a, b);
     if (!r) { K.render(); return; }
-    if (r.miss) {
-      // 外れた指摘も、捜査メモとして残る（課長や検事も目を通す）
+    // 外れた指摘も、捜査メモとして残る（課長や検事も目を通す）。やさしいでは残さない
+    if (G.diff() !== 'easy') (r.misses || []).forEach(m => {
       S.c.missPoints = (S.c.missPoints || 0) + 1;
-      K.addDoc({ id: 'miss_' + S.c.missPoints, title: '捜査メモ：照合' + S.c.missPoints, kind: 'memo', body: G.P('「' + K.doc(a).title + '」の「' + r.miss[0].slice(0, 60) + '」と、「' + K.doc(b).title + '」の「' + r.miss[1].slice(0, 60) + '」を照らし合わせた。') });
-      K.render(); return;
-    }
+      K.addDoc({ id: 'miss_' + S.c.missPoints, title: '捜査メモ：照合' + S.c.missPoints, kind: 'memo', body: G.P('「' + K.doc(a).title + '」の「' + m[0].slice(0, 60) + '」と、「' + K.doc(b).title + '」の「' + m[1].slice(0, 60) + '」を照らし合わせた。') });
+    });
+    if (r.miss) { K.render(); return; }
     S.compared[key] = true;
+    if (S.hl && S.hl.length && [a, b].sort().join('|') === S.hl.slice().sort().join('|')) S.hl = null;
     await G.talk(r.lines);
     if (r.memo) K.addDoc({ id: 'memo_' + key, title: '捜査メモ：' + r.memo.title, kind: 'memo', body: G.P(r.memo.text) });
     if (r.then) r.then(S);
@@ -121,7 +177,7 @@
     const key = [a, b].sort().join('|');
     ov.innerHTML = '<div class="cmpv"><div class="cmpp">' + [da, db].map((d, i) => '<div class="paper" data-i="' + i + '"><div class="paper-h">' + d.title + '</div><div class="paper-b">' + body(d) + '</div></div>').join('') + '</div>'
       + '<div class="cmpbar"><div class="cmpmsg" id="cmpmsg">それぞれの記録から、照らし合わせたい記載を一か所ずつ選ぶ。</div><div class="paper-f"><button class="pbtn green" id="cmpgo" disabled>食い違い・つながりとして記録する</button><button class="pbtn" id="cmpx">閉じる</button></div></div></div>';
-    const picks = [null, null];
+    const picks = [null, null], misses = [];
     // 照らし合わせる価値のある記載に、うすく下線を引く（どれとどれが対になるかは、自分で見つける）
     const res = id => { const out = []; Object.entries(C.pick || {}).forEach(([k, rr]) => { const [x, y] = k.split('|'); if ((x === id || y === id) && K.doc(x) && K.doc(y)) out.push(...rr); }); return out; };
     const cand = G.diff() === 'hard' ? [[], []] : [res(a), res(b)];
@@ -134,15 +190,22 @@
       });
     });
     ov.onclick = null; ov.hidden = false; ov.scrollTop = 0; G.audio.sfx('paper');
+    setTimeout(() => G.guide.compareView(), 60);
     return new Promise(done => {
-      G.$('#cmpx').onclick = () => { G.closePaper(); done(null); };
+      G.$('#cmpx').onclick = () => { G.closePaper(); done(misses.length ? { miss: misses[misses.length - 1], misses } : null); };
       G.$('#cmpgo').onclick = () => {
         const r = C.compare(S, a, b), msg = G.$('#cmpmsg');
         const pk = r && (r.pick || (C.pick || {})[key]);
         const hit = r && (!pk || (pk[0].test(picks[0]) && pk[1].test(picks[1])) || (pk[0].test(picks[1]) && pk[1].test(picks[0])));
         if (hit && S.compared[key]) { msg.textContent = '（この二つは、もう照らし合わせた。捜査メモに残っている。）'; return; }
-        if (!hit) { G.audio.sfx('type'); G.closePaper(); done({ miss: picks.slice() }); return; }
-        G.audio.sfx('stamp'); G.closePaper(); done(r);
+        if (!hit) {
+          // 外れ：その場で伝える。続けて選び直すこともできる
+          G.audio.sfx('type'); misses.push(picks.slice());
+          msg.innerHTML = '<span class="cmpno">つながらない</span>この二か所からは、何も見えてこない。' + (G.diff() === 'easy' ? '別の一文を選び直してみる。' : '（捜査メモに残した。課長も目を通す）別の一文を選び直してもよい。');
+          ov.querySelectorAll('.u.pick').forEach(x => x.classList.remove('pick')); picks[0] = picks[1] = null; G.$('#cmpgo').disabled = true; return;
+        }
+        G.audio.sfx('stamp'); msg.innerHTML = '<span class="cmpok">つながった</span>' + (r.memo ? r.memo.title : '気づいたことがある。');
+        setTimeout(() => { G.closePaper(); done(Object.assign({}, r, { misses })); }, 900);
       };
     });
   }
@@ -150,9 +213,9 @@
     if (S && S._closed) return;
     const wrap = G.$('#acts-wrap'); if (!wrap) return;
     const tab = G.ui.tab;
-    wrap.innerHTML = '<div class="tabs"><button class="tab' + (tab === 'staff' ? ' on' : '') + '" data-t="staff">部下に指示する</button><button class="tab' + (tab === 'self' ? ' on' : '') + '" data-t="self">自分で動く</button></div><div class="acts" id="acts"></div>'
+    wrap.innerHTML = '<div class="sstrip">' + C.staff.map(st => { const t = S.tasks.find(x => x.staff === st.id), gone = S.staffGone[st.id]; return '<span class="' + (gone ? 'g' : t ? 'b' : 'f') + '">' + st.name + '：' + (gone ? '不在' : t ? 'あと' + Math.max(0, t.doneDay - S.day) + '日' : '待機') + '</span>'; }).join('') + '<span class="' + (S.selfUsed ? 'b' : 'f') + '">あなた：' + (S.selfUsed ? '済' : '動ける') + '</span></div><div class="tabs"><button class="tab' + (tab === 'staff' ? ' on' : '') + '" data-t="staff">部下に指示する</button><button class="tab' + (tab === 'self' ? ' on' : '') + '" data-t="self">自分で動く</button></div><div class="acts" id="acts"></div>'
       + '<button class="endday" id="endday">一日を終える<span class="s">' + C.endHint(S) + '</span></button>'
-      + (nextReport() ? '<button class="endday skip" id="skip">' + skipLabel() + '<span class="s">' + nextReport() + '日後。その間に起きたことがあれば、そこで止まる</span></button>' : '');
+      + (nextReport() ? '<button class="endday skip" id="skip">' + skipLabel() + '<span class="s">' + nextReport() + '日後まで一気に進む。その間、あなたは動けない（途中で何か起きれば止まる）</span></button>' : '');
     wrap.querySelectorAll('.tab').forEach(t => t.onclick = () => { G.ui.tab = t.dataset.t; G.audio.sfx('click'); renderActs(); });
     const acts = G.$('#acts');
     const list = C.actions.filter(a => a.who === tab && (!a.cond || a.cond(S)) && !(a.once !== false && S.done[a.id]));
@@ -164,22 +227,27 @@
       const days = typeof a.days === 'function' ? a.days(S) : a.days;
       const running = K.busy(a.id);
       let dis = running || (tab === 'staff' && !free) || (tab === 'self' && S.selfUsed && !a.free);
-      b.innerHTML = '<span class="l">' + a.label + (a.risk && G.diff() === 'easy' ? '<span class="risk">注意</span>' : '') + '</span><span class="s">' + (running ? '進行中' : (typeof a.sub === 'function' ? a.sub(S) : a.sub) || '') + '</span>'
+      b.innerHTML = '<span class="l">' + (typeof a.label === 'function' ? a.label(S) : a.label) + (a.risk && G.diff() === 'easy' ? '<span class="risk">注意</span>' : '') + '</span><span class="s">' + (running ? '進行中' : (typeof a.sub === 'function' ? a.sub(S) : a.sub) || '') + '</span>'
         + (days != null && tab === 'staff' ? '<span class="d">' + (days === 0 ? '即日' : days + '日') + '</span>' : '');
       b.disabled = dis;
       b.onclick = () => K.doAction(a);
-      acts.appendChild(b);
+      // ？：この行動の説明（押せない行動でも読める）
+      const w = document.createElement('div'); w.className = 'actw';
+      const q = document.createElement('button'); q.className = 'q'; q.textContent = '？'; q.title = '説明';
+      q.onclick = e => { e.stopPropagation(); if (G.ui.talking) return; G.audio.sfx('click'); G.guide.help(a, S, C); };
+      w.appendChild(b); w.appendChild(q); acts.appendChild(w);
     });
     G.$('#endday').onclick = () => K.endDay();
     if (G.$('#skip')) G.$('#skip').onclick = () => K.skip();
   }
   const acts = () => { if (C.actsOverride && C.actsOverride(S, G.$('#acts-wrap'))) return; renderActs(); };
-  K.refresh = () => { if (S && S._closed) return; renderDocs(); acts(); const p = document.querySelectorAll('.panel'); if (p[0]) p[0].innerHTML = '<div class="ph"><span>捜査員</span></div>' + staffPanel(); if (p[1]) { p[1].innerHTML = '<div class="ph"><span>' + (C.elemTitle || '立証すべき事実') + '</span><span>■=証拠 <span style="color:#b23a2e">■</span>=自白</span></div>' + elemPanel(); } };
+  K.refresh = () => { if (S && S._closed) return; const gw = G.$('#goal-wrap'); if (gw) { gw.innerHTML = G.guide.panel(S, C); G.guide.bindPanel(); } const pw = G.$('#people-wrap'); if (pw) { pw.innerHTML = peoplePanel(); bindPeople(); } renderDocs(); acts(); const p = [G.$('#p-staff'), G.$('#p-elem')]; if (p[0]) p[0].innerHTML = '<div class="ph"><span>捜査員</span></div>' + staffPanel(); if (p[1]) { p[1].innerHTML = '<div class="ph"><span>' + (C.elemTitle || '立証すべき事実') + '</span><span>■=証拠 <span style="color:#b23a2e">■</span>=自白</span></div>' + elemPanel(); } };
 
   K.doAction = async function (a) {
     if (G.ui.talking || G.ui.busy) return;
     G.ui.busy = true;
     try { await doAction(a); } finally { G.ui.busy = false; }
+    K.idle();
   };
   async function doAction(a) {
     if (a.risk && !(await G.confirmRisk(typeof a.risk === 'function' ? a.risk(S) : a.risk))) return;
@@ -245,6 +313,7 @@
       if (C.check) { const r = await C.check(S); if (r === 'end') return; }
       K.render();
     } finally { G.ui.busy = false; }
+    K.idle();
   };
   K.endDay = async function () {
     if (G.ui.talking || G.ui.busy) return;
@@ -258,6 +327,23 @@
   K.morning = async function (first) {
     G.ui.busy = true;
     try { await morning(first); } finally { G.ui.busy = false; }
+    K.idle();
+  };
+  // 手が空いたとき：はじめての画面・機能を指し示して説明する（一度だけ）
+  let coaching = false;
+  K.idle = async function () {
+    if (coaching || !S || S._ended || S._closed || G.ui.talking || G.ui.busy || C.noCoach) return;
+    const ov = G.$('#overlay'); if (ov && !ov.hidden) return;
+    coaching = true; G.ui.busy = true;
+    try {
+      const U = G.guide;
+      await U.mainDesk();
+      if (G.$('#skip')) await U.skipBtn();
+      if (G.$('#people')) await U.peopleBoard();
+      if (S.docs.length >= 3 && C.compare) await U.firstDocs();
+      if (S.c.warrantReady) { G.ui.tab = 'self'; renderActs(); await U.warrantReady(); }
+      if (G.kit && G.kit.inCustody(S)) await U.arrested();
+    } finally { coaching = false; G.ui.busy = false; }
   };
   async function morning(first) {
     G.clock = { h: 8, m: 30 };

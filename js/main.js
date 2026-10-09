@@ -91,7 +91,8 @@
     const cm = caseMeta(id); cm.started++; G.saveMeta();
     G.lastOutcome = null;
     const S = await G.cases[id].run();
-    if (id === 'aoyagi') await G.ending.run(S);
+    if (id === 'aoyagi' && S.c.target === 'M') { await G.trial.run(S, G.cases.aoyagi.trialM); if (G.lastOutcome) G.lastOutcome.truthG = S.c.truth === 'G'; }   // 宮下を追った道：記録庫の真相は「久住が犯人だったか」で数える
+    else if (id === 'aoyagi') await G.ending.run(S);
     else await G.trial.run(S, G.cases[id].trial);
     if (G.lastOutcome) { cm.finished++; cm.results[G.lastOutcome.verdict] = (cm.results[G.lastOutcome.verdict] || 0) + 1; if (G.lastOutcome.reveal) cm.reveals[G.lastOutcome.reveal] = 1; G.saveMeta();
       G.archive.announce(G.archive.afterCase(id, G.lastOutcome, cm, CASES.find(k => k.id === id))); }

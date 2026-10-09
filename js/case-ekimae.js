@@ -63,7 +63,7 @@
           '・記録を開いて「横に並べる」と、二枚を見比べられる。食い違いやつながりに気づけば、捜査の糸口になる。') });
         return L;
       }
-      if (S.day === 1) { c.dead = true; L.push(['', '（午前10時12分。樋口和也が、搬送先の病院で死亡した。急性硬膜下血腫。）', { sfx: 'bell' }], ['todo', '……人が死んだ。何の罪で、どう扱うか。逮捕状を取るなら、今日明日だぞ。', { scene: sc('todo') }]); }
+      if (S.day === 1) { c.dead = true; L.push(['', '（午前10時12分。樋口和也が、搬送先の病院で死亡した。急性硬膜下血腫。）', { sfx: 'bell' }], ['', '（病院の廊下で、樋口の母親が、息子の革靴を胸に抱いて座り込んでいた。「来月、結婚するはずだったんです」。）'], ['todo', '……人が死んだ。28歳だ。何の罪で、どう扱うか。逮捕状を取るなら、今日明日だぞ。何の罪で、どう扱うか。逮捕状を取るなら、今日明日だぞ。', { scene: sc('todo') }]); }
       if (c.warrantPending && S.day > c.warrantPending) { c.warrantPending = null; c.warrantReady = true; kit.forms.issued(S, C); L.push(['todo', '逮捕状が出た。', { scene: sc('todo') }]); }
       if (inC(S)) {
         L.push(...kit.custodyMorning(S, { name: '戸田', kenji2: '……正当防衛の主張は、崩せそうですか。', wantConfession: '「先に手を出した」と認めたか、とな。' }));
@@ -323,6 +323,16 @@
   function has(a, id) { return a.includes(id); }
 
   G.cases = G.cases || {};
+  // いまの目的（手引きの欄）
+  C.mission = '樋口和也さんは、なぜ死んだのか。何が起きたのかを明らかにする';
+  C.goal = S => {
+    const c = S.c;
+    if (c.arrest != null || c.warrantPending || c.warrantReady) return null;
+    return { goal: c.dead ? '戸田が先に手を出したのか、身を守っただけなのか。確かめたうえで、逮捕するか決める' : C.mission,
+      why: '争点は「誰が」ではなく「何が起きたか」。相手が先に殴りかかってきたのなら、正当防衛として罪にならないこともある（刑法36条）。<br>目撃者、防犯カメラ、ドライブレコーダー、解剖の結果を集めて、二人のどちらが先に手を出したのかを確かめる。<br>逮捕すれば取調べは録画される。逮捕せずに<b>在宅のまま送致</b>することもできる。',
+      hints: c.dead ? [] : ['被害者はまだ病院にいる。まずは現場の記録と、戸田の言い分を確かめる。'] };
+  };
+  C.finishNow = S => finish(S, 'soutchi');
   G.cases.ekimae = {
     title: '北見坂駅前事件', sub: '傷害致死・正当防衛は成立するか', trial: TRIAL,
     run: async function () {

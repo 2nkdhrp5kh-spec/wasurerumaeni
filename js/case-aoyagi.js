@@ -16,7 +16,7 @@
     G.lawTools = {
       k197: { label: '通信履歴を消さないよう求める', avail: () => !S._ended && c.claim && c.preserveDay == null,
         run: wrap(async () => { c.preserveDay = S.day; await G.talk([['', '（刑訴法197条3項。動画配信事業者と携帯電話会社に、通信履歴を消去しないよう書面で求めた。最大60日。）', { sfx: 'type' }], ['oka', '……そんな手がありましたか。動画の会社の記録、普通は30日で消えるそうですから。', { scene: sc('oka') }]]); }) },
-      k220: { label: '逮捕のとき、その現場を捜索する', avail: () => !S._ended && S.fin.kandori && c.arrest == null && !c.use220,
+      k220: { label: '逮捕のとき、その現場を捜索する', avail: () => !S._ended && c.target === 'K' && c.arrest == null && !c.use220,
         run: wrap(async () => { c.use220 = true; await G.talk([['', '（逮捕状を執行するとき、久住の部屋で逮捕すれば、その現場は令状なしで捜索できる（刑訴法220条1項2号・3項）。）'], ['shirai', '朝、部屋で押さえましょう。それなら捜索も一緒にできる。', { scene: sc('shirai') }]]); }) },
       k226: { label: '宮下の証人尋問を検事に頼む', avail: () => !S._ended && S.fin.miyaTalk && !c.asked226,
         run: wrap(async () => { c.asked226 = true; await G.talk([['kenji', '226条ですか。……宮下が、事件について「欠くことのできない知識」を持っていると、明らかに言えますか。', { scene: sc('kenji', 'pros') }], ['kenji', '前歴があって、アリバイがない。それは「知識」ではなく「疑い」です。疑いのある人間を証人として呼べば、黙秘権の問題にもなる。'], ['kenji', '請求はできません。'], ['', '（宮下は、被疑者として扱うだけの理由もなく、証人として呼ぶ理由もない。）']]); }) }
@@ -41,7 +41,7 @@
   const C = {
     id: 'aoyagi', role: '捜査官', base: { m: 10, d: 3 }, dayCard: true,
     staff: [{ id: 'shirai', name: '白井' }, { id: 'oka', name: '岡' }, { id: 'noguchi', name: '野口' }],
-    suspect: { name: '久住　透', kana: 'くずみ とおる', age: '34歳', job: '物流会社契約社員', addr: '北見坂市北見坂二丁目9番5号 コーポ北見202号室' },
+    get suspect() { const S = K.state(); return S && S.c && S.c.target === 'M' ? { name: '宮下　剛', kana: 'みやした つよし', age: '46歳', job: '無職（日雇い）', addr: '北見坂市川北三丁目2番8号 第二川北荘105号室' } : { name: '久住　透', kana: 'くずみ とおる', age: '34歳', job: '物流会社契約社員', addr: '北見坂市北見坂二丁目9番5号 コーポ北見202号室' }; },
     koryuGrounds: [2, 3],
     factsOf: (S, bekken) => {
       if (bekken) return '被疑者は、9月中、北見坂市北見坂二丁目9番5号コーポ北見202号室の被疑者方において、インターネットを介して海外のオンラインカジノに接続し、金銭を賭けて賭博をしたものである。';
@@ -70,6 +70,7 @@
     stopSkip: S => (inCustody(S) && (custodyDay(S) >= LIMIT || (custodyDay(S) >= 16 && !S.c.confession && !S.c.takeoverAsked))) || (S.c.arrest == null && S.day >= 28),
     endHint: S => inCustody(S) ? '満期までに記録を固める' : (S.tasks.length ? '部下の報告は日をまたいで届く' : ''),
     gauge: S => {
+      if (S.c.target === 'M') return G.trial.gauge(S, TRIAL_M);
       if (!G.ending || !G.ending.estimate) return '';
       const e = G.ending.estimate(S), w = e.w, c = S.c;
       let lv = w < 1 ? 1 : w < 3 ? 2 : w < 4 ? 3 : w < 6 ? 4 : 5;
@@ -79,6 +80,7 @@
       return '<div class="gauge"><div class="gt">' + who + '（集めた記録を、すべて証拠にできると仮定した場合）</div><div class="gb">' + [1, 2, 3, 4, 5].map(i => '<span class="' + (i <= lv ? 'on' : '') + '"></span>').join('') + '</div><div class="gw">「' + words[lv] + '」</div></div>';
     },
     elements: S => {
+      if (S.c.target === 'M') return elementsM(S);
       const c = S.c, d = id => !!K.doc(id);
       let who = 0, src = [];
       if (c.safeFound) { who = 3; src.push('金庫'); }
@@ -104,9 +106,16 @@
       if (first) {
         L.push(['', '（10月3日。午前0時を少し過ぎたころ、刑事課の電話が鳴った。）', { sfx: 'phone' }],
           ['todo', '本町の古書店に強盗だ。店主のばあさんが縛られた。金庫を持っていかれてる。', { scene: sc('todo') }],
-          ['todo', '主任はお前だ。白井、岡、野口をつける。'],
+          ['', '（午前1時。青柳書房。帳場の明かりの下で、店主の青柳静江が、毛布にくるまって座っていた。）', { scene: sc('aoyagi', 'shop') }],
+          ['aoyagi', '……ごめんなさいね。手が、まだ震えて。'],
+          ['aoyagi', 'あのお金は、主人が遺したこの店を、年を越して続けるための……。'],
+          ['', '（細い手首に、粘着テープの跡が赤く残っていた。68歳。店の奥で、一人で暮らしている。）'],
+          ['todo', '……見ただろう。年寄りを縛り上げて、金を持っていく。そういう奴が、この町を歩いてる。', { scene: sc('todo') }],
+          ['todo', '「検挙に勝る防犯なし」だ。挙げなきゃ、次がある。……主任はお前だ。白井、岡、野口をつける。'],
+          ['todo', 'ただし、挙げるのは*犯人*だ。間違った奴を挙げたら、本物は今夜もどこかで寝てる。それを忘れるな。'],
           ['shirai', '主任、現場の実況見分は夜のうちに済ませました。記録は机の上です。', { scene: sc('shirai') }],
-          ['shirai', '今回は時間に縛られます。逮捕すれば、そこから満期まで最大23日。逮捕の時機は、よく考えてください。']);
+          ['shirai', '一つだけ。逮捕すれば、そこから満期まで最大23日です。その間に起訴できるだけの証拠がそろわなければ、検事は起訴できず、釈放するしかない。'],
+          ['shirai', '早く逮捕しすぎると、時間切れになる。遅すぎると、逃げられたり、証拠を捨てられたりする。……逮捕の時機は、よく考えてください。']);
         K.addDoc({ id: 'scene', title: '実況見分調書', kind: 'neu', evid: true, body: P('北見坂市本町一丁目、古書店「青柳書房」（店舗兼住宅）。10月2日午後9時40分ころ被害。',
           '被害者・青柳静江（あおやぎ しずえ・68歳）は帳場付近で、両手首を<b>布製の粘着テープ</b>で巻かれた状態で、通報により駆けつけた警察官に発見された。',
           '裏口は施錠されていなかった。帳場の<b>緑色の手提げ金庫</b>（現金約38万円在中）が持ち去られている。事件当時、店内は<b>奥の照明1灯のみ</b>が点灯していた（被害者の指示説明による）。',
@@ -129,6 +138,7 @@
         if (w.kind === 'search') { c.searchWarrant = true; const fd = G.kit.forms.data(S, C); K.addDoc({ id: 'searchWarrant', title: '捜索差押許可状', kind: 'neu', body: G.forms.search(Object.assign(fd, { place: '北見坂市北見坂二丁目9番5号 コーポ北見202号室（被疑者方居室）', items: '灰色の上着、白色マスク、刃物、布製粘着テープ、手提げ金庫（緑色）、現金、金銭の出入りを記録した帳簿・メモ類、携帯電話機その他本件に関係する通信の記録' })) }); L.push(['', '（捜索差押許可状が発付された。）']); }
         else { c.warrantReady = w.kind; G.kit.forms.issued(S, C, w.kind === 'bekken'); L.push(['todo', w.kind === 'bekken' ? '賭博で逮捕状が出た。……分かってるな。本命は強盗だ。' : '逮捕状が出た。行ってこい。', { scene: sc('todo') }]); }
       }
+      if (inCustody(S) && c.target === 'M') return morningM(S, L);
       if (inCustody(S)) {
         const d = custodyDay(S);
         if (d === 1) {
@@ -167,7 +177,7 @@
     },
     check: async S => {
       const c = S.c;
-      if (inCustody(S) && custodyDay(S) >= 16 && !c.confession && !c.takeoverAsked && !(c.sess.C || c.sess.D || c.sess.E)) {
+      if (inCustody(S) && c.target !== 'M' && custodyDay(S) >= 16 && !c.confession && !c.takeoverAsked && !(c.sess.C || c.sess.D || c.sess.E)) {
         c.takeoverAsked = true;
         await G.talk([['todo', '……お前のやり方じゃ、埒があかん。', { scene: sc('todo') }], ['todo', '今夜は俺が調べる。昔のやり方でな。']]);
         const v = await G.openPaper({ title: '東堂課長', body: P('課長が、自分で久住を取り調べると言っている。'), noClose: true,
@@ -236,7 +246,7 @@
       ? { lines: [['', '（久住は「家で動画を見ていた」。回答は「自宅の固定回線から再生」。）'], ['oka', '……主任。これ、家にいたってことじゃないですか。', { scene: sc('oka') }]], memo: { title: '動画の接続元', text: '犯行時刻、久住の自宅の固定回線で動画が再生され続けていた。久住の弁解と合う。' } }
       : { lines: [['', '（回答は「携帯電話回線から再生」。家の中でも、外でも見られる。）'], ['oka', '家にいたとも、外にいたとも言えませんね。', { scene: sc('oka') }]], memo: { title: '動画の接続元', text: '再生は携帯電話回線。場所は分からない。' } };
     if (any('confession', ['scene', 'victim'])) {
-      const cf = c.confession; if (!cf) return null;
+      const cf = c.confession; if (!cf || !cf.det) return null;
       const bad = []; if (!cf.det.tape) bad.push('縛ったもの（調書：ビニールひも／現場：布の粘着テープ）'); if (!cf.det.safe) bad.push('金庫の色（調書：黒っぽい／現場：緑）'); if (!cf.det.light) bad.push('店の明るさ（調書：明るかった／現場：奥の1灯のみ）');
       if (bad.length) return { lines: [['', '（自白と現場の記録を並べる。合わないところがある。）'], ['', '（' + bad.join('、') + '）'], ['shirai', '……思い違いですかね。それとも。', { scene: sc('shirai') }]], memo: { title: '自白と現場の食い違い', text: '自白の内容が現場の状況と合わない点：' + bad.join('、') + '。' } };
       return { lines: [['', '（自白と現場の記録は、よく合っている。）']].concat(c.leaks.length ? [['', '（……取調べで現場の写真を見せたことを、除けば。）']] : []), memo: { title: '自白と現場', text: '自白は現場の状況とよく合う。' + (c.leaks.length ? 'ただし、自白の前に取調べで現場の写真を示している（' + c.leaks.map(x => ({ tape: '粘着テープ', safe: '金庫', light: '照明' })[x]).join('、') + '）。' : '') } };
@@ -292,7 +302,7 @@
   A.push({ id: 'printDB', who: 'staff', days: 5, label: '粘着テープの指紋を照合する', short: '指紋の照合', sub: '前歴者のデータベースと',
     done: S => { K.addDoc({ id: 'printDB', title: '指紋照合結果', kind: 'neu', evid: true, body: P('粘着テープの粘着面から採取した指紋1個は不鮮明で、データベースの自動照合では該当者なし。', '特定の人物の指紋との個別の対照は可能。') });
       return [['oka', '自動照合では出ませんでした。不鮮明すぎるそうです。特定の人間となら、個別に対照できます。', { scene: sc('oka') }]]; } });
-  A.push({ id: 'printK', who: 'staff', days: 3, label: '久住の指紋と対照する', short: '指紋の対照（久住）', cond: S => S.fin.printDB && (S.c.consentPrints || S.c.arrest != null),
+  A.push({ id: 'printK', who: 'staff', days: 3, label: '久住の指紋と対照する', short: '指紋の対照（久住）', cond: S => S.fin.printDB && (S.c.consentPrints || (S.c.arrest != null && S.c.target !== 'M')),
     done: S => { K.addDoc({ id: 'printK', title: '指紋鑑定書（久住）', kind: 'inc', evid: true, body: P('粘着テープの指紋と、久住透の左手中指の指紋は、<b>特徴点8点で合致</b>する。相違点は認められない。', '同一と判断する基準（12点）には達しない。', '結論：同一人のものと断定することはできない。') });
       return [['oka', '久住と8点合致。相違点なし。ただ、基準の12点には届きません。', { scene: sc('oka') }]]; } });
   A.push({ id: 'printM', who: 'staff', days: 3, label: '宮下の指紋と対照する', short: '指紋の対照（宮下）', cond: S => S.fin.printDB && S.fin.teguchi,
@@ -454,9 +464,10 @@
     return { p, why };
   }
   A.push({ id: 'warrant', who: 'self', once: false, label: '逮捕状の請求を課長に上げる', sub: '罪名を決め、疎明資料をそろえて', primary: true,
-    cond: S => S.fin.kandori && !S.c.warrantPending && S.c.warrantReady !== 'honken' && (S.c.arrest == null || S.c.arrest_kind === 'bekken' || S.c.released) && !S.c.honkenArrested, run: async S => {
+    cond: S => !!S.c.target && !S.c.warrantPending && S.c.warrantReady !== 'honken' && (S.c.arrest == null || S.c.arrest_kind === 'bekken' || S.c.released) && !S.c.honkenArrested, run: async S => {
       G.drawScene(sc('todo'));
-      const s = soumei(S);
+      const s = S.c.target === 'M' ? soumeiM(S) : soumei(S);
+      if (S.c.target === 'M' && s.p >= 3) await G.talk([['todo', '宮下か。……前がある男だ。だが、前があるだけじゃ令状は出んぞ。']]);
       if (s.p < 3) { await G.talk([['todo', '……これで裁判官を説得できると思うか。'], ['todo', s.why.length ? s.why.join('、') + '。それだけじゃ弱い。' : '何もないじゃないか。'], ['todo', 'もう少し固めてこい。']]); return false; }
       const ch = await G.kit.chooseCharge(S, C, 'warrant'); if (!ch) return false;
       G.kit.forms.request(S, C);
@@ -473,7 +484,8 @@
       await G.talk([['todo', 'カジノか。……賭博で引っ張れるな。'], ['todo', '形式は整う。あとは取調室で、本命を聞けばいい。'], ['', '（賭博の逮捕状は翌日発付される。）']]);
       S.c.warrantPending = { kind: 'bekken', day: S.day };
     } });
-  A.push({ id: 'arrestAct', who: 'self', once: false, label: '久住を逮捕する', sub: '逮捕状を執行する', primary: true, cond: S => !!S.c.warrantReady, run: async S => {
+  A.push({ id: 'arrestAct', who: 'self', once: false, label: S => S.c.target === 'M' && S.c.warrantReady === 'honken' ? '宮下を逮捕する' : '久住を逮捕する', sub: '逮捕状を執行する', primary: true, cond: S => !!S.c.warrantReady, run: async S => {
+    if (S.c.target === 'M' && S.c.warrantReady === 'honken') return arrestM(S);
     const c = S.c, kind = c.warrantReady; c.warrantReady = null;
     G.audio.sfx('door'); G.drawScene(sc('kuzumi', 'street', 0));
     await G.talk([['you', '久住透さん。' + (kind === 'bekken' ? '賭博' : (G.kit.charge(S) || { label: '強盗' }).label) + 'の容疑で、逮捕状が出ています。'], ['kuzumi', '……え。'], ['kuzumi', 'やってません。僕は、やってません。'], ['', '（午前7時03分、通常逮捕。）', { sfx: 'metal' }]]);
@@ -491,7 +503,7 @@
 
   /* ---------- 逮捕後 ---------- */
   // 釈放の進言（共通の部品は case-kit.js。読み込み順のため、実行時に取り出す）
-  { let rel = null; const R = () => rel || (rel = G.kit.releaseAction(S => G.ending.estimate(S), (S, how) => finishCase(S, how)));
+  { let rel = null; const R = () => rel || (rel = G.kit.releaseAction(S => S.c.target === 'M' ? G.trial.estimate(S, TRIAL_M) : G.ending.estimate(S), (S, how) => finishCase(S, how)));
     A.push({ id: 'release', who: 'self', get label() { return R().label; }, get sub() { return R().sub; }, cond: S => R().cond(S), run: S => R().run(S) }); }
   A.push({ id: 'interro', who: 'self', once: false, label: '久住を取り調べる', sub: S => S.c.confession ? '自白の内容を確かめる' : '取調室で', primary: true, cond: S => inCustody(S), run: async S => interro(S) });
   A.push({ id: 'searchW', who: 'self', label: '捜索差押許可状を請求する', sub: '久住の部屋', cond: S => S.c.arrest != null && !S.c.search && !S.c.searchWarrant && !S.c.warrantPending, run: async S => {
@@ -701,6 +713,195 @@
       + qa('金庫はどうした。', disp) + note('問いの中に、取調官の側から示された事実が含まれている。');
   }
 
+  /* ---------- 被疑者を絞る：候補の札と、宮下を追う道 ----------
+     c.target：'K'（久住を追う）／'M'（宮下を追う）。逮捕状の請求には、追う人物を決めておく必要がある。
+     真相（c.truth）が 'I' の世界では、宮下が犯人。 */
+  const has = id => !!K.doc(id);
+  C.people = S => {
+    const c = S.c, out = [];
+    if (S.fin.kandori) {
+      const f = [];
+      f.push([true, '裏口の鍵の隠し場所を知っていた元店員（鑑取り）']);
+      if (has('register')) f.push([true, 'レジの不足金を疑われて辞めた。恨んでいたかもしれない']);
+      if (has('loan')) f.push([true, '事件の2日後、現金30万円を返済している']);
+      if (c.lineupRes === 'K') f.push([true, '被害者が写真8枚から選んだ']); else if (c.lineupRes === 'single') f.push([true, '被害者が写真1枚を見て「たぶん」']); else if (c.lineupRes) f.push([false, '写真8枚の面割りで、被害者は選ばなかった']);
+      if (has('printK')) f.push([true, '粘着テープの指紋と8点合致（同一の基準12点には届かない）']);
+      if (has('claim')) f.push([null, '弁解：「その夜は家で動画を見ていた」']);
+      if (has('neighborsK')) f.push([false, '隣人「あの夜も野球の音がしていた……たぶん」']);
+      if (has('phoneSeize')) f.push([false, '21:26〜22:14、スマホで動画アプリが動いていた']);
+      out.push({ id: 'K', who: 'kuzumi', name: '久住 透', sub: '34歳・元アルバイト店員', facts: f });
+    }
+    if (S.fin.teguchi) {
+      const f = [];
+      f.push([true, '8年前、店主を粘着テープで縛る強盗の前歴。1年前に出所']);
+      if (has('printM')) f.push([true, '粘着テープの指紋と7点合致（同一の基準12点には届かない）']);
+      if (has('miyaAlibi')) f.push([true, 'その夜は「家で寝ていた」。裏付ける者はいない']);
+      if (has('customers')) f.push([true, '夏ごろ、宮下に似た男が裏口から店に入ってきたことがある']);
+      if (has('murai')) f.push([null, '身長168cm。村井さんは「背はそんなに高くなかった」']);
+      if (has('tailM')) f.push(c.truth === 'I' ? [true, '事件の後、パチンコ店で新しい1万円札を何枚も使っている'] : [false, '行動確認：日雇いの仕事に通うだけ。金回りの変化はない']);
+      if (S.fin.miyaTalk) f.push([null, '任意の聴取は拒んだ。「用があるなら令状を持ってこい」']);
+      out.push({ id: 'M', who: 'miyashita', name: '宮下 剛', sub: '46歳・同じ手口の前歴者', facts: f });
+    }
+    return out;
+  };
+  C.canTarget = S => S.c.arrest == null && !S.c.warrantPending && !S.c.warrantReady;
+  C.setTarget = async (S, id) => {
+    S.c.target = id;
+    await G.talk([id === 'M' ? ['shirai', '宮下ですか。……課長は久住で決まりだと思ってますよ。まあ、主任が決めることだ。', { scene: sc('shirai') }]
+      : ['shirai', '久住ですね。了解です。', { scene: sc('shirai') }]]);
+  };
+  function soumeiM(S) {
+    const c = S.c; let p = 0; const why = [];
+    if (has('miyashita')) { p += .5; why.push('同じ手口の前歴'); }
+    if (has('printM')) { p += 1; why.push('指紋7点合致'); }
+    if (has('miyaAlibi')) { p += .5; why.push('アリバイがない'); }
+    if (has('customers')) { p += 1; why.push('夏に裏口から入った似た男'); }
+    if (has('tailM') && c.truth === 'I') { p += 1; why.push('事件後の金回り'); }
+    if ((S.compared || {})['camera2|miyashita']) { p += .5; why.push('逃走方向が宮下の家に向かう'); }
+    return { p, why };
+  }
+  function elementsM(S) {
+    const c = S.c, conf = !!c.confession;
+    let who = (has('printM') ? 1 : 0) + (has('customers') ? 1 : 0) + (has('searchM') && c.truth === 'I' ? 1 : 0) + (c.safeFoundM ? 2 : 0) + (has('tailM') && c.truth === 'I' ? .5 : 0);
+    return [
+      { k: '犯人性', v: conf ? 3 : Math.min(3, Math.floor(who)), conf: conf && !c.safeFoundM, src: [has('printM') && '指紋', has('customers') && '出入り', c.safeFoundM && '金庫'].filter(Boolean).join('・') },
+      { k: '犯行態様', v: conf ? 3 : has('victim') ? 2 : 1, conf },
+      { k: '被害', v: c.safeFoundM ? 3 : has('victim') ? 2 : 1 },
+      { k: '動機', v: Math.min(3, (has('tailM') ? 1 : 0) + (conf ? 1 : 0)) }
+    ];
+  }
+  // 久住を追うときだけの捜査
+  const KUZ_ONLY = 'ninni tail warrantB interro searchW searchLegal searchIllegal fiber phoneSeize phoneBase safeSearch hikiatari'.split(' ');
+  A.forEach(a => { if (!a || !KUZ_ONLY.includes(a.id)) return; const old = a.cond; a.cond = S => S.c.target !== 'M' && (!old || old(S)); });
+  A.push({ id: 'tailM', who: 'staff', days: 3, label: '宮下の行動確認', short: '行動確認（宮下）', sub: '金回りや、出入りする場所', cond: S => S.c.target === 'M' && S.c.arrest == null,
+    done: S => { const I = S.c.truth === 'I';
+      K.addDoc({ id: 'tailM', title: '宮下の行動確認報告', kind: I ? 'inc' : 'exc', evid: true, body: I ? P('宮下は日中、駅前のパチンコ店に通っている。10月5日、6日、店内で<b>新しい1万円札</b>を計9枚、玉に替えた。', '日雇いの仕事には、事件の後、一度も出ていない。') : P('宮下は毎朝6時に家を出て、市内の建設現場で日雇いの仕事をしている。夜は自宅に戻る。', '金回りに目立った変化はない。') });
+      return I ? [['noguchi', '宮下、事件のあと仕事に出てません。パチンコ屋で新札をばらまいてます。', { scene: sc('noguchi') }]] : [['noguchi', '宮下は毎朝現場に出てます。……真面目なもんですよ。', { scene: sc('noguchi') }]]; } });
+  async function arrestM(S) {
+    const c = S.c; c.warrantReady = null;
+    G.audio.sfx('door'); G.drawScene(sc('miyashita', 'street'));
+    await G.talk([['you', '宮下剛さん。' + (G.kit.charge(S) || { label: '強盗' }).label + 'の容疑で、逮捕状が出ています。'], ['miyashita', '……やっぱり、こうなるか。'], ['miyashita', '前があるってのは、こういうことだ。'], ['', '（午前6時10分、通常逮捕。）', { sfx: 'metal' }]]);
+    c.arrest = S.day; c.arrest_kind = 'honken'; c.honkenArrested = true; c.released = false;
+    G.audio.cue('arrest');
+  }
+  function morningM(S, L) {
+    const c = S.c, d = custodyDay(S);
+    if (d === 1) { K.addDoc({ id: 'news', title: '新聞記事', kind: 'memo', body: P('<b>古書店強盗　46歳の男を逮捕　同種の前歴</b>', '北見坂署は、北見坂市本町の古書店で店主の女性（68歳）を粘着テープで縛り、現金約38万円を奪ったとして、無職宮下剛容疑者（46歳）を逮捕した。同容疑者は8年前にも同種の事件で服役している。') });
+      L.push(['', '（朝刊に、宮下の名前と前歴が載った。）', { scene: { bg: 'office' } }], ['todo', '……宮下で行くと決めたのはお前だ。外したら、久住も取り逃がすぞ。', { scene: sc('todo') }]); }
+    if (d === 2) L.push(['', '（48時間。宮下は検察官に送致された。）'], ['kenji', '担当の検事です。勾留を請求します。……前歴だけで引っ張った、とは言わせないでくださいよ。', { scene: sc('kenji', 'pros') }]);
+    if (d === 3) { L.push(['', '（裁判官は勾留を認めた。10日間。勾留状が届いた。）']); G.kit.forms.koryu(S, C); }
+    if (d === 5 && !S.staffGone.noguchi) { K.loseStaff('noguchi'); L.push(['todo', '野口は窃盗の応援に回す。', { scene: sc('todo') }]); }
+    if (d === 8 && !c.confession) L.push(['todo', '検事が電話してきた。宮下はまだ吐かんのか、とな。', { scene: sc('todo') }]);
+    if (d === 13) { L.push(['', '（勾留延長。あと10日。）']); G.kit.forms.ext(S, C); if (!S.staffGone.oka) { K.loseStaff('oka'); L.push(['todo', '岡も外す。', { scene: sc('todo') }]); } }
+    if (d === 20) L.push(['shirai', '主任、満期まであと3日です。', { scene: sc('shirai') }]);
+    return L;
+  }
+  const ICFG_M = {
+    who: 'miyashita', guiltyKey: 'I', recorded: false,
+    first: [['', '（宮下剛。46歳。取調室の椅子に、慣れた様子で腰を下ろした。）'], ['miyashita', '……前のときと、同じ部屋だな。']],
+    labels: { A: ['黙秘権を告げ、弁解を聴く', 'そのまま聴き取る'], B: ['証拠を示して追及する', '指紋、前歴、出入り'], D: ['「認めれば、刑が軽くなる」と言う', '取引を持ちかける'] },
+    inc: { A: { G: 3, I: 7 }, B: { G: 10, I: 17 }, C: { G: 26, I: 30 }, D: { G: 28, I: 30 }, E: { G: 24, I: 26 } },
+    pools: {
+      A: [S => [['you', '言いたくないことは、言わなくていい。'], ['miyashita', '言いたくないね。……前のときに、さんざん言わされた。']],
+        S => [['miyashita', '出てきて1年だ。保護司のおっさんにも、真面目にやってると言われてた。']],
+        S => [['miyashita', 'あの古本屋？ ……前を通ったことくらいはある。']]],
+      B: [S => K.doc('printM') ? [['you', 'テープの指紋が、お前の指紋と7点合っている。'], ['miyashita', '7点？ 12点じゃねえんだろ。前のときに教わったよ。']] : null,
+        S => K.doc('customers') ? [['you', '夏に、裏口から店に入ったな。'], ['miyashita', '……本を見に行っただけだ。入口が分からなかった。']] : null,
+        S => (K.doc('tailM') && S.c.truth === 'I') ? [['you', 'パチンコ屋で使った新札は、どこから出た。'], ['miyashita', '……拾ったんだよ。']] : null,
+        S => [['you', '前と同じやり方だ。偶然とは言わせない。'], ['miyashita', 'だから俺だってのか。……便利なもんだな、前科ってのは。']]],
+      C: [S => [['', '（午後10時。）'], ['miyashita', '……前のときも、こうだった。']], S => [['', '（14時間目。）'], ['miyashita', '……好きに書けよ。']]],
+      D: [S => [['you', '認めれば、検事に口をきいてやる。'], ['miyashita', '……前もそう言われた。で、懲役6年だ。']]],
+      E: [S => [['you', '年寄りを縛って、金を奪ったんだぞ！', { sfx: 'thud' }], ['miyashita', '……怒鳴りゃ、吐くと思ってんのか。']]]
+    },
+    confess: confessM,
+    afterConfession: S => G.kit.afterConfession(S, {
+      who: 'miyashita', guiltyKey: 'I',
+      topics: [
+        { k: 'safeM', label: '金庫をどこに捨てたか聞く', run: async S => { await G.talk(S.c.truth === 'I' ? [['miyashita', '北見橋の下だ。橋脚の、上流側。……空にして、放り込んだ。']] : [['miyashita', '……川だよ。どこかの。……覚えてねえ。']]); } },
+        { k: 'keyM', label: '裏口の鍵をどう知ったか聞く', run: async S => { await G.talk(S.c.truth === 'I' ? [['miyashita', '夏に客で入ったとき、ばあさんが植木鉢の下から鍵を出すのを見た。']] : [['miyashita', '……開いてたんだよ。たまたまな。']]); } },
+        { k: 'moneyM', label: '奪った金の使い道を聞く', run: async S => { await G.talk(S.c.truth === 'I' ? [['miyashita', 'パチンコと、飲み屋のツケ。……もう、ほとんど残ってねえ。']] : [['miyashita', '……使ったよ。全部。何にって……忘れた。']]); } }
+      ],
+      chat: [S => [['miyashita', '刑務所の図書室で、古い本ばかり読んでた。……古本屋なんか、嫌いじゃねえんだ。']], S => [['miyashita', 'おふくろの墓、まだ行けてねえ。']]]
+    })
+  };
+  async function confessM(S, voluntary, opt) {
+    const c = S.c; opt = opt || {};
+    const I = c.truth === 'I';
+    await G.talk(I ? [['miyashita', '…………'], ['miyashita', '俺だよ。あの古本屋は、俺だ。'], ['miyashita', '金庫は、北見橋の下に捨てた。']] : [['miyashita', '……もういい。俺がやったことにしろ。'], ['miyashita', '金庫？ ……川に捨てたよ。どこかの川に。']]);
+    c.confession = { voluntary, by: opt.by || 'you', day: S.day, place: I ? 'bridge' : 'none' };
+    K.addDoc({ id: 'confession', title: '宮下の供述調書（自白）', kind: 'neu', evid: true, body: P('私は、10月2日午後9時40分ころ、青柳書房の裏口から入り、店主の女性に刃物を見せて金を出せと言い、布のテープで手を縛って、緑色の手提げ金庫を持ち去りました。', I ? '金庫は、中の現金を抜いてから、北見橋の下の川に捨てました。' : '金庫は、川に捨てました。場所は覚えていません。') });
+    await G.talk([['', '（調書が作られ、宮下は署名した。）', { sfx: 'pen' }]]);
+  }
+  A.push({ id: 'interroM', who: 'self', once: false, label: '宮下を取り調べる', sub: S => S.c.confession ? '自白の内容を確かめる' : '取調室で', primary: true, cond: S => S.c.target === 'M' && inCustody(S), run: async S => G.kit.interro(S, ICFG_M) });
+  A.push({ id: 'searchWM', who: 'self', label: '宮下の部屋の捜索差押許可状を請求する', sub: '北見川の北のアパート', cond: S => S.c.target === 'M' && S.c.arrest != null && !S.c.searchMW && !S.c.warrantPending, run: async S => {
+    S.c.searchMW = S.day; await G.talk([['', '（請求書を書き、裁判所へ送った。発付は翌日。）', { sfx: 'type' }]]); } });
+  A.push({ id: 'searchM', who: 'staff', days: 1, label: '宮下の部屋を捜索する', short: '捜索（宮下の部屋）', sub: '捜索差押許可状あり', cond: S => S.c.target === 'M' && S.c.searchMW != null && S.day > S.c.searchMW,
+    done: S => { const I = S.c.truth === 'I';
+      K.addDoc({ id: 'searchM', title: '捜索差押調書（宮下方）', kind: I ? 'inc' : 'exc', evid: true, body: I ? P('押入れの紙袋から、<b>布製粘着テープ（灰色、使いかけ）</b>1巻、台所の引出しから<b>1万円札12枚</b>（封筒入り）を差し押さえた。', '刃物様の物は発見されなかった。') : P('居室を捜索したが、本件に関係する物は発見されなかった。粘着テープ、刃物様の物、まとまった現金はない。') });
+      return I ? [['oka', '宮下の部屋から、灰色の布テープと、封筒に入った1万円札が12枚。', { scene: sc('oka') }]] : [['oka', '宮下の部屋、何も出ません。テープもない。', { scene: sc('oka') }]]; } });
+  A.push({ id: 'safeSearchM', who: 'staff', days: 2, label: '自白どおりに金庫を捜す', short: '金庫の捜索（北見橋）', cond: S => S.c.target === 'M' && S.c.confession && S.c.confession.place === 'bridge' && !S.c.safeFoundM && !S.done.safeSearchM,
+    done: S => { const found = S.c.truth === 'I' && rnd() < .75; S.c.safeFoundM = found;
+      K.addDoc({ id: 'safeM', title: '金庫の捜索結果報告（北見橋）', kind: found ? 'inc' : 'exc', evid: true, stamps: found ? [{ t: '秘密の暴露', c: 'red' }] : [],
+        body: found ? P('北見橋の上流側橋脚付近の川底から、<b>緑色の手提げ金庫（空）</b>を発見した。被害者が自店のものと確認した。', '金庫の所在は、捜査側が把握していなかった事実である。') : P('北見橋の周辺を2日間捜索したが、金庫は発見されなかった。') });
+      return found ? [['', '（白井が、川底から緑色の箱を引き上げた。）', { scene: { bg: 'street' } }], ['shirai', '……ありました。宮下の言ったとおりだ。']] : [['shirai', '……出ません。流されたか。', { scene: sc('shirai') }]]; } });
+  const TRIAL_M = {
+    isGuilty: S => S.c.truth === 'I',
+    accusedName: '宮下剛', name: '青柳書房事件', court: '北見坂地方裁判所', truthText: '久住が犯人だった世界か、宮下が犯人だった世界か。',
+    issue: { pro: '被告人が犯人であることを示す事情', yes: '以上によれば、被告人が本件の犯人であると認められる。', no: '以上によれば、被告人が本件の犯人であることについて、合理的な疑いが残る。' },
+    retract(S) { const c = S.c; if (c.confession) c.retract = c.confession.voluntary ? false : c.truth !== 'I' ? rnd() < .85 : rnd() < (c.sess.C || c.sess.D || c.sess.E ? .5 : .25); },
+    lines(S, charge) { const c = S.c; return [['kenji', c.confession ? (c.retract ? '宮下は検事調べで自白を撤回しました。' : '宮下は、私の前でも認めています。') : '宮下は否認しています。'], ['kenji', charge ? '起訴します。' : '……前歴と指紋7点では、公判は持ちません。嫌疑不十分で、不起訴とします。'], ['', charge ? '（宮下剛は、住居侵入・強盗で起訴された。）' : '（宮下剛は釈放された。）']]; },
+    weigh(S, ids, trial) {
+      const c = S.c, h = id => ids.includes(id); let pos = 0, neg = 0; const pros = [], cons = [];
+      const add = (v, why) => { if (v > 0) { pos += v; if (why) pros.push(why); } else if (v < 0) { neg -= v; if (why) cons.push(why); } };
+      if (h('printM')) add(h('printK') ? 0 : .7, h('printK') ? '' : '粘着テープの指紋は被告人のものと矛盾しない');
+      if (h('printM') && h('printK')) add(-.4, '粘着テープの指紋は、被告人とも別人とも同程度に合致し、犯人性の根拠とならない');
+      if (h('customers')) add(.8, '被告人に似た男が、事件の数か月前、裏口から店に入ったことがある');
+      if (h('miyaAlibi')) add(.2, '被告人には事件当夜のアリバイがない');
+      if (h('tailM') && c.truth === 'I') add(.6, '被告人は事件の後、新しい1万円札を複数使っている');
+      if (h('searchM')) add(c.truth === 'I' ? 1.5 : -.3, c.truth === 'I' ? '被告人方から、犯行に使われたものと同種の布製粘着テープと、封筒入りの現金12万円が発見された' : '被告人方からは、本件に関係する物が発見されていない');
+      if (h('safeM')) add(c.safeFoundM ? 3 : -.2, c.safeFoundM ? '被告人の供述どおり、北見橋の下から被害品の金庫が発見された（秘密の暴露）' : '');
+      if (h('confession') && c.confession) add(c.retract && trial ? 2 : 3.5, '被告人は捜査段階で犯行を認めた' + (c.retract && trial ? '。公判では撤回している' : ''));
+      if (h('kandori')) add(-.6, '裏口の鍵の隠し場所を知る者は、被告人のほかにもいた');
+      if (h('loan')) add(-.5, '事件直後に多額の現金を返済した別の人物がいる');
+      if (h('lineup') && (c.lineupRes === 'K' || c.lineupRes === 'single')) add(-1.2, '被害者は写真面割りで、被告人ではない別の人物を選んでいる');
+      if (h('camera')) add(-.3, '防犯カメラの男の推定身長（170〜180cm）は、被告人（168cm）とやや合わない');
+      if (h('murai')) add(.2, '');
+      return { pos, neg, pros, cons };
+    },
+    admit(S, admit, drop) { const c = S.c; if (c.confession && (c.sess.C || c.sess.D || c.sess.E) && rnd() < .8) drop('confession', '自白は、長時間の取調べ、脅迫的な言動、利益の約束又は偽計の下でされたもので、任意性に疑いがある（刑訴法319条1項）'); },
+    decide(S, r) { return (r.pos - r.neg >= 4 && r.neg <= 1.5) ? { verdict: '有罪', main: '被告人を拘禁刑9年に処する。' } : { verdict: '無罪', main: '被告人は無罪。' }; },
+    nothing: v => v.startsWith('有罪') ? '宮下剛は、二度目の服役をした。' : '宮下剛は、北見坂を離れたという。',
+    finale: '前歴は、捜査の手がかりにはなる。だが、法廷で「前にもやったから、今度もやった」と推認することは、原則として許されない。',
+    confirm: (S, guiltyV) => guiltyV ? ['<div class="big">2年後</div>', '<div class="doc-s"><h3>手紙</h3>服役中の宮下から、青柳静江さんに手紙が届いた。<br>「植木鉢の下の鍵のことは、誰にも言っていません。もう、誰も入りません」</div>']
+      : ['<div class="big">4年後</div>', '<div class="doc-s"><h3>別の事件</h3>久住透が、別の強盗事件で逮捕された。録画された取調べで、彼は青柳書房の事件も自分だと述べた。</div>'],
+    async reveal(S, verdict) {
+      const c = S.c, guilty = verdict.startsWith('有罪');
+      if (guilty && c.truth === 'G' && rnd() < .55) {
+        await G.curtain([{ html: '<div class="big">4年後</div>', wait: 1200 },
+          { html: '<div class="doc-s"><h3>別の事件</h3>久住透が、別の強盗事件で逮捕された。取調べは録画されていた。<br>「古本屋も、おれです。金庫は裏の用水路に投げた」<br>用水路の泥の中から、緑色の金庫が見つかった。</div>', wait: 3000 },
+          { html: '<div class="doc-s"><h3>再審</h3>宮下剛は、再審で無罪となった。<br>「前があるってのは、こういうことだ」――逮捕の朝、彼はそう言った。</div>', wait: 3000 }]);
+        return true;
+      }
+      return false;
+    }
+  };
+
+  // いまの目的（手引きの欄）
+  C.mission = '青柳静江さんを縛り、金庫を奪った犯人を突き止める';
+  C.goal = S => {
+    const c = S.c;
+    if (c.arrest != null || c.warrantPending || c.warrantReady) return null;   // 逮捕状の請求から先は、共通の説明
+    const ps = C.people(S);
+    if (!ps.length) return { goal: C.mission, why: '犯人の手がかりはまだない。部下に<b>地取り</b>（現場周辺の聞き込み）、<b>鑑取り</b>（被害者の人間関係）、<b>手口照会</b>（同じ手口の前歴者）などを指示して、候補となる人物を浮かび上がらせる。被害者本人から話を聴くのは、あなた自身の仕事。' };
+    if (!c.target) return { goal: '候補が浮かんだ。誰を被疑者として追うかを決める', why: '「被疑者の候補」の札に、分かったことが並ぶ。<b>◯</b>は疑わしい点、<b>×</b>は疑わしくない点。札は、記録が増えるたびに書き足される。<br>決めるのはあなた。決めた後も、逮捕状を請求するまでは変えられる。<br>どちらか一方に決めつける前に、両方の裏を取ることもできる。',
+      hints: ['「被疑者の候補」の札を見比べ、「この人物を被疑者として追う」を押す。'] };
+    const sm = c.target === 'M' ? soumeiM(S) : soumei(S), nm = c.target === 'M' ? '宮下' : '久住';
+    return { goal: nm + 'の逮捕状を取れるだけの材料をそろえる',
+      why: '逮捕状には「罪を犯したと疑うに足りる<b>相当な理由</b>」が要る。課長はそれを、集めた記録で判断する。下の目盛りが埋まれば、課長は請求を通す（「自分で動く」→「逮捕状の請求を課長に上げる」）。<br>ただし、逮捕すると満期（最長23日）までの時計が動く。逮捕の前に集められるものは、集めておくとよい。',
+      meter: G.diff() === 'hard' ? null : { label: '逮捕状の材料', v: Math.floor(sm.p), max: 3, why: sm.why.length ? '材料：' + sm.why.join('、') : '' },
+      hints: sm.p >= 3 ? ['材料はそろった。「自分で動く」から逮捕状を請求できる。'] : [] };
+  };
+
   /* ---------- 終わり：送致記録 ---------- */
   async function finishCase(S, how) {
     const c = S.c; S._ended = true;
@@ -733,12 +934,14 @@
   }
 
   G.cases = G.cases || {};
+  C.finishNow = S => finishCase(S, 'soutchi');
   G.cases.aoyagi = {
+    trialM: TRIAL_M,
     run: async function () {
       const S = { c: { truth: rnd() < .5 ? 'G' : 'I', leaks: [], sess: { A: 0, B: 0, C: 0, D: 0, E: 0 } } };
       G.audio.cue('main'); G.audio.ambient('office');
       await G.curtain(['<div class="big">本章</div><div class="small">青柳書房事件</div>']);
-      setLawTools(S); G.auditCtx = { suspect: 'kuzumi', inCustody: () => inCustody(S) };
+      setLawTools(S); G.auditCtx = { get suspect() { return S.c.target === 'M' ? 'miyashita' : 'kuzumi'; }, inCustody: () => inCustody(S) };
       const how = await K.start(C, S);
       G.lawTools = null;
       G.audio.ambient(null);

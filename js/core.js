@@ -101,12 +101,13 @@ G.layout = function (o) {
   app.innerHTML =
     '<header class="bar"><span class="role">' + o.role + '</span><span class="date">' + (o.date || '') + '</span>'
     + '<span class="info">' + (o.info || '') + '</span>'
-    + '<button class="bbtn" id="b-law">条文帳</button><button class="bbtn" id="b-quit">中断</button><button class="bbtn" id="b-snd">' + (G.meta.muted ? '音：切' : '音：入') + '</button>'
+    + '<button class="bbtn" id="b-law">条文帳</button>' + (G.guide ? '<button class="bbtn" id="b-gl">用語</button>' : '') + '<button class="bbtn" id="b-quit">中断</button><button class="bbtn" id="b-snd">' + (G.meta.muted ? '音：切' : '音：入') + '</button>'
     + (o.clock ? '<div class="clock">' + o.clock + '</div>' : '') + '</header>'
     + '<section class="scene"><canvas id="cv" width="480" height="210"></canvas><div class="dlg" id="dlg"><div class="who"></div><div class="say nar">' + (o.hint || '') + '</div></div></section>'
     + '<div class="tabletop">' + (o.body || '')
-    + '<div id="acts-wrap"></div></div>';
+    + '<div id="acts-wrap"></div>' + (o.after || '') + '</div>';
   $('#b-law').onclick = () => G.openLaw();
+  if ($('#b-gl')) $('#b-gl').onclick = () => G.guide.openGlossary();
   $('#b-quit').onclick = async () => {
     const ok = await G.openPaper({ title: '中断する', body: G.P('この事件をここでやめて、タイトルに戻る。途中の記録は残らない。', 'つらいと感じたら、いつでもやめてかまわない。'), noClose: true,
       buttons: [{ label: 'やめてタイトルに戻る', value: true, cls: 'red' }, { label: '続ける', value: false }] });
@@ -145,6 +146,14 @@ G.talk = function (lines, opt) {
     const box = $('#dlg'); if (!box) { resolve(); return; }
     const aw = $('#acts-wrap');
     G.ui.talking = true; if (aw) aw.classList.add('wait');
+    // 台詞欄が画面の外にあれば、見える位置まで動かす（終わったら元の位置に戻す）
+    let backTo = null;
+    const r0 = box.getBoundingClientRect();
+    if (r0.top < 0 || r0.bottom > window.innerHeight) {
+      backTo = window.scrollY;
+      const sc = box.closest('.scene') || box;
+      window.scrollTo({ top: Math.max(0, window.scrollY + sc.getBoundingClientRect().top - 8), behavior: 'smooth' });
+    }
     let i = 0, typing = null, full = '', waitArrive = null, startType = null;
     let marked = [];
     const finishType = () => { if (typing) { clearInterval(typing); typing = null; box.querySelector('.say').innerHTML = G.renderMarked(marked, marked.length); G.anim.speaking = null; } };
@@ -152,7 +161,8 @@ G.talk = function (lines, opt) {
       if (waitArrive) { clearTimeout(waitArrive); waitArrive = null; G.portraits.skipArrival(); startType(); return; }
       if (typing) { finishType(); return; }
       if (i >= lines.length) {
-        box.onclick = null; const m = box.querySelector('.more'); if (m) m.remove();
+        box.onclick = null; document.removeEventListener('click', anyTap, true); const m = box.querySelector('.more'); if (m) m.remove();
+        if (backTo != null && !lines.noReturn) window.scrollTo({ top: backTo, behavior: 'smooth' });
         G.ui.talking = false; G.anim.speaking = null; if (aw) aw.classList.remove('wait'); resolve(); return;
       }
       const L = lines[i++];
@@ -189,7 +199,14 @@ G.talk = function (lines, opt) {
       if (left > 0) { G.anim.speaking = null; box.innerHTML = '<div class="who"></div><div class="say nar"></div>'; full = ''; waitArrive = setTimeout(startType, left + 120); }
       else startType();
     };
-    box.onclick = () => { G.audio.unlock(); next(); };
+    // 画面のどこを押しても進む（書類・暗転・上の帯のボタン・説明の吹き出しは除く）
+    const anyTap = e => {
+      const t = e.target;
+      if (t.closest && (t.closest('#overlay:not([hidden])') || t.closest('#curtain.on') || t.closest('.bar') || t.closest('.coach'))) return;
+      const ov = $('#overlay'); if (ov && !ov.hidden) return;
+      e.preventDefault(); e.stopPropagation(); G.audio.unlock(); next();
+    };
+    document.addEventListener('click', anyTap, true);
     next();
   });
 };
@@ -201,7 +218,11 @@ G.openPaper = function (o) {
   ov.innerHTML = '<div class="paper' + (o.red ? ' red' : '') + '"><div class="stamps" id="stamps">' + stamps + '</div><div class="paper-h">' + o.title + '</div>'
     + (o.sub ? '<div class="paper-sub">' + o.sub + '</div>' : '') + '<div class="paper-b">' + o.body + '</div><div class="paper-f" id="pf"></div></div>';
   const pf = $('#pf');
-  return new Promise(resolve => {
+  // 前の紙が開いたままなら、閉じたものとして終わらせる（待っている処理が止まらないように）
+  if (G._paperDone) { const d = G._paperDone; G._paperDone = null; d(null); }
+  return new Promise(resolve0 => {
+    let fin = false; const resolve = v => { if (fin) return; fin = true; if (G._paperDone === resolve) G._paperDone = null; resolve0(v); };
+    G._paperDone = resolve;
     (o.buttons || []).forEach(b => {
       const e = document.createElement('button'); e.className = 'pbtn ' + (b.cls || '');
       e.innerHTML = b.label + (b.small ? '<small>' + b.small + '</small>' : '');
@@ -217,7 +238,7 @@ G.openPaper = function (o) {
     ov.hidden = false; ov.scrollTop = 0; G.audio.sfx('paper');
   });
 };
-G.closePaper = () => { const ov = $('#overlay'); ov.hidden = true; ov.innerHTML = ''; };
+G.closePaper = () => { const ov = $('#overlay'); ov.hidden = true; ov.innerHTML = ''; if (G._paperDone) { const d = G._paperDone; G._paperDone = null; d(null); } };
 G.stampOn = function (t, c, round) {
   const st = $('#stamps'); if (!st) return;
   // 判子は紙の上のほうに押す。スマホで下までスクロールしていても見えるように、上へ戻す
@@ -266,7 +287,7 @@ G.toast = function (t) {
 
 /* 違法・不適切な行動の確認（赤い付箋） */
 /* 難しさ：easy（やさしい）／normal（ふつう）／hard（むずかしい） */
-G.diff = () => (G.meta && G.meta.diff) || 'normal';
+G.diff = () => (G.meta && G.meta.diff) || 'easy';   // はじめての人は「やさしい」から
 G.DIFF_LABEL = { easy: 'やさしい', normal: 'ふつう', hard: 'むずかしい' };
 
 /* 初めてのときだけの説明 */
