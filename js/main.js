@@ -24,8 +24,10 @@
       const sv = G.meta.hanjiSave;
       const v = await G.openPaper({ title: '判事編', sub: '北見坂地方裁判所　刑事部', body: G.P('どちらから始めるか。'),
         buttons: (sv ? [{ label: '令状当番：続きから', value: 'resume', cls: 'green', small: '第' + ['', '二', '三'][sv.night] + '夜から' }] : [])
+          .concat((G.meta.hanjiMemos || []).length ? [{ label: '部総括判事からのメモを見返す', value: 'memos', small: (G.meta.hanjiMemos || []).length + '通' }] : [])
           .concat([{ label: '令状当番', value: 'duty', small: '三夜。夜ごとに記録が残る' + (sv ? '（続きの記録は消える）' : '') }, { label: '公判', value: 'trials', small: '記録だけを読んで裁く。二件' }]), closeLabel: '戻る' });
       if (!v) return;
+      if (v === 'memos') { await G.openMemos(); return; }
       G.audio.sfx('select');
       if (v === 'duty' && sv) delete G.meta.hanjiSave;
       G.inMode = true;

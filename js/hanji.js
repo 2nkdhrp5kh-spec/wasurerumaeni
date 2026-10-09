@@ -689,7 +689,7 @@
     const R = cur(), n = NIGHTS[S.night];
     if (!hint) hint = R ? '（' + KIND[R.kind].label + '。' + R.sus[0] + '、' + R.def.charge + '。書類は' + R.docs.length + '綴。）' : '（' + hm(S.t) + '。裁判官室は静かだ。）';
     G.layout({ role: '令状当番', date: dayOf(S.t), info: '北見坂地方裁判所　' + n.name, clock: clockHtml(), scene: { bg: BG_CHAMBERS }, hint, body: deskHtml(R) });
-    const bl = G.$('#b-law'); if (bl) bl.onclick = lawBook;
+    const bl = G.$('#b-law'); if (bl) { bl.onclick = lawBook; memoButton(bl); }
     const aw = G.$('#acts-wrap'); if (aw) aw.innerHTML = decHtml(R);
     const st = G.$('#hj-stack');
     if (st) st.querySelectorAll('.hj-card').forEach(c => c.onclick = () => act(() => readDoc(R, R.docs[+c.dataset.i])));
@@ -862,14 +862,30 @@
   async function memoFor(n) {
     const step = S.steps ? S.steps[n - 1] : 10;
     if (step <= (G.meta.hanjiMaxStep || 0)) return;
-    G.meta.hanjiMaxStep = step; G.saveMeta();
+    G.meta.hanjiMaxStep = step; G.meta.hanjiMemos = (G.meta.hanjiMemos || []).filter(x => x !== step).concat([step]); G.saveMeta();
     const cur = step <= 9 ? G.hanjiGen.CURRICULUM[step] : null;
-    const lines = cur ? cur.memo : ['今夜の当番は、これまでの総まとめになる。', '請求の形式が整っていても、その*目的*を読むこと。軽い罪での逮捕・勾留が、実は重い別の事件の取調べのためではないか（いわゆる*別件逮捕*。適法かどうかの考え方は分かれている）。', '勾留中の取調べが、*余罪*の追及に偏っていないか。被害者の面通しが、写真1枚だけ、本人1人だけを見せる方法で行われていないか。'];
     const laws = step <= 9 ? cur.laws.map(k => (G.LAW_HANJI.find(r => r[0].startsWith(k)) || G.LAW.find(r => r[0].startsWith(k)) || [k])[0]) : ['すべての条文'];
     await G.openPaper({ title: '部総括判事からのメモ', sub: NIGHTS[n].name + 'の前に、机の上に置いてあった', noClose: true,
-      body: lines.map(l => '<p>' + l.replace(/\*([^*]+)\*/g, '<b class="kwp">$1</b>') + '</p>').join('') + (laws.length ? G.note('条文帳に加わった：' + laws.join('、')) : ''),
+      body: memoHtml(step) + G.note('このメモは、上の「メモ」からいつでも見返せる。') + (laws.length ? G.note('条文帳に加わった：' + laws.join('、')) : ''),
       buttons: [{ label: '読んだ', value: 1 }] });
   }
+  // メモの本文（段階ごと）
+  function memoHtml(step) {
+    const cur = step <= 9 ? G.hanjiGen.CURRICULUM[step] : null;
+    const lines = cur ? cur.memo : ['今夜の当番は、これまでの総まとめになる。', '請求の形式が整っていても、その*目的*を読むこと。軽い罪での逮捕・勾留が、実は重い別の事件の取調べのためではないか（いわゆる*別件逮捕*。適法かどうかの考え方は分かれている）。', '勾留中の取調べが、*余罪*の追及に偏っていないか。被害者の面通しが、写真1枚だけ、本人1人だけを見せる方法で行われていないか。'];
+    return lines.map(l => '<p>' + l.replace(/\*([^*]+)\*/g, '<b class="kwp">$1</b>') + '</p>').join('');
+  }
+  // これまでに受け取ったメモを見返す
+  function memoButton(after) {
+    if (!(G.meta.hanjiMemos || []).length || G.$('#b-memo')) return;
+    const b = document.createElement('button'); b.className = 'bbtn'; b.id = 'b-memo'; b.textContent = 'メモ';
+    after.insertAdjacentElement('afterend', b);
+    b.onclick = () => G.openMemos();
+  }
+  G.openMemos = () => {
+    const list = (G.meta.hanjiMemos || []).slice().reverse();
+    return G.openPaper({ title: '部総括判事からのメモ', sub: 'これまでに受け取ったもの（新しい順）', body: list.length ? list.map(st => '<h4>' + (st <= 9 ? '第' + (Math.floor((st - 1) / 3) + 1) + '回　' + ['第一夜', '第二夜', '第三夜'][(st - 1) % 3] : '総まとめ') + '</h4>' + memoHtml(st)).join('<hr>') : G.P('まだ、メモは受け取っていない。') });
+  };
   async function tutorial() {
     await G.talk([
       ['', '（北見坂地方裁判所。午後9時。庁舎の明かりは、裁判官室と書記官室だけになった。）'],

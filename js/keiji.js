@@ -15,6 +15,15 @@
   K.state = () => S;
 
   K.start = function (caseDef, state) {
+    // 行き詰まったとき：部下に記録を読み返してもらう（どの二つを並べるとよいか、だけを教えてくれる）
+    if (caseDef.compare && caseDef.pick && !caseDef.actions.some(a => a && a.id === 'rereadHint')) caseDef.actions.push({ id: 'rereadHint', who: 'staff', days: 1, once: false, label: '捜査記録を読み返してもらう', short: '記録の読み返し', sub: '見落としがないか。並べて読むべき記録を教えてくれる',
+      cond: S2 => S2.docs.length >= 3 && !S2.tasks.some(t => t.aid === 'rereadHint'),
+      done: S2 => {
+        const open = Object.keys(caseDef.pick).filter(k => { const [x, y] = k.split('|'); return K.doc(x) && K.doc(y) && !(S2.compared || {})[k] && caseDef.compare(S2, x, y); });
+        if (!open.length) return [['oka', '記録を全部読み返しました。……いまのところ、並べて気になるところは見当たりません。', { scene: { bg: 'office', who: 'oka' } }]];
+        const [x, y] = open[Math.floor(Math.random() * open.length)].split('|');
+        return [['oka', '記録を読み返しました。「' + K.doc(x).title + '」と「' + K.doc(y).title + '」。並べて読んでみてください。', { scene: { bg: 'office', who: 'oka' } }], ['oka', 'どこが、とまでは言えないんですが……どこか、引っかかるんです。']];
+      } });
     if (caseDef.charges && !caseDef.actions.some(a => a && a.id === 'chargeSel')) caseDef.actions.unshift({ id: 'chargeSel', who: 'self', once: false, label: '罪名を決める', sub: '一日は使わない。決めると「立証すべき事実」が出る', cond: S2 => !S2.c.charge,
       run: async S2 => { await G.kit.chooseCharge(S2, caseDef, 'memo'); K.render(); return false; } });
     C = caseDef; S = state;
@@ -112,11 +121,14 @@
     ov.innerHTML = '<div class="cmpv"><div class="cmpp">' + [da, db].map((d, i) => '<div class="paper" data-i="' + i + '"><div class="paper-h">' + d.title + '</div><div class="paper-b">' + body(d) + '</div></div>').join('') + '</div>'
       + '<div class="cmpbar"><div class="cmpmsg" id="cmpmsg">それぞれの記録から、照らし合わせたい記載を一か所ずつ選ぶ。</div><div class="paper-f"><button class="pbtn green" id="cmpgo" disabled>食い違い・つながりとして記録する</button><button class="pbtn" id="cmpx">閉じる</button></div></div></div>';
     const picks = [null, null];
+    // 照らし合わせる価値のある記載に、うすく下線を引く（どれとどれが対になるかは、自分で見つける）
+    const res = id => { const out = []; Object.entries(C.pick || {}).forEach(([k, rr]) => { const [x, y] = k.split('|'); if ((x === id || y === id) && K.doc(x) && K.doc(y)) out.push(...rr); }); return out; };
+    const cand = [res(a), res(b)];
     ov.querySelectorAll('.cmpp .paper').forEach(pp => {
       const i = +pp.dataset.i;
       pp.querySelectorAll('.paper-b p, .paper-b td, .paper-b li').forEach(u => {
         if (u.querySelector('p, td, li')) return;
-        u.classList.add('u');
+        u.classList.add('u'); if (cand[i].some(r => r.test(u.textContent))) u.classList.add('cand');
         u.onclick = () => { pp.querySelectorAll('.u.pick').forEach(x => x.classList.remove('pick')); u.classList.add('pick'); picks[i] = u.textContent; G.audio.sfx('click'); G.$('#cmpgo').disabled = !(picks[0] && picks[1]); };
       });
     });

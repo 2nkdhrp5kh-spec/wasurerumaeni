@@ -290,3 +290,4 @@ button{font:inherit;color:inherit}
 @keyframes handoff{to{transform:translate(70vw,-30px) rotate(14deg);opacity:0}}
 .paper.handoff{animation:handoff .65s ease-in forwards}
 .kwp{color:#b23a2e}
+.cmpp .u.cand{text-decoration:underline dotted #8a6a2a;text-underline-offset:3px}

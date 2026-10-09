@@ -210,7 +210,7 @@
     const mism = c.chargeMismatch ? 1 : 0;
     const base = { '有罪': 4, '有罪（減軽）': 3, '略式命令（罰金）': 3, '無罪': -2, '不起訴': 0, '釈放（不起訴）': -1, '未解決': -2 }[verdict] ?? 0;
     const miss = c.missPoints || 0;
-    let sc = base - (miss >= 4 ? 1 : 0) + (c.confession ? 1 : 0) - (c.excludedIllegal || 0) * 2 - (c.releaseRejected ? 1 : 0) - mism;
+    let sc = base - (miss >= 6 ? 1 : 0) + (c.confession ? 1 : 0) - (c.excludedIllegal || 0) * 2 - (c.releaseRejected ? 1 : 0) - mism;
     const grade = sc >= 4 ? 'A' : sc >= 2 ? 'B' : sc >= 0 ? 'C' : 'D';
     const word = { A: '「よくやった。次の異動、悪いようにはせん」（東堂課長）', B: '「まあ、及第点だ」（東堂課長）', C: '「署長が渋い顔をしてたぞ」（東堂課長）', D: '「本部長賞は、別の係に行った」（東堂課長）' }[grade];
     const proc = (c.sess ? (c.sess.C ? 1 : 0) + (c.sess.D ? 1 : 0) + (c.sess.E ? 1 : 0) : 0) + (c.illegalCount || 0) + (c.search === 'illegal' ? 1 : 0) + (c.arrest_kind === 'bekken' ? 1 : 0);
@@ -218,7 +218,7 @@
     if (revealed === 'wrong') after = '<br><br>数年後、再審無罪が報じられた日、県警本部は「当時の捜査は適正に行われた」とのコメントを出した。<br>あなたの人事記録の評価は、変わらなかった。';
     if (revealed === 'free') after = '<br><br>数年後、事件が報じられた日、県警本部は「当時の判断に問題はなかった」とのコメントを出した。';
     return '<div class="doc-s"><h3>本部の評価　' + grade + '</h3>' + word + '<br><br>結果：' + verdict + (c.confession ? '　／　自白：あり' : '') + (c.charge ? '<br>送致罪名：' + (kit.charge(S) || {}).label + (mism ? '（検察官が罪名を改めた）' : '') : '')
-      + (miss >= 4 ? '<br>「捜査メモに、思いつきの書き込みが多すぎる」（東堂課長）' : '') + '<br><br><span style="color:#aaa">手続の記録：注意の付いた行動 ' + proc + '件　／　送らなかった記録 ' + (c.withheld || []).length + '件</span>' + after + '</div>';
+      + (miss >= 6 ? '<br>「捜査メモに、思いつきの書き込みが多すぎる」（東堂課長）' : '') + '<br><br><span style="color:#aaa">手続の記録：注意の付いた行動 ' + proc + '件　／　送らなかった記録 ' + (c.withheld || []).length + '件</span>' + after + '</div>';
   };
 
   // 送致書（目録）の画面
