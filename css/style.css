@@ -291,3 +291,12 @@ button{font:inherit;color:inherit}
 .paper.handoff{animation:handoff .65s ease-in forwards}
 .kwp{color:#b23a2e}
 .cmpp .u.cand{text-decoration:underline dotted #8a6a2a;text-underline-offset:3px}
+/* 記録庫 */
+.arc{border:1px solid var(--paper3);padding:6px 8px;margin:0 0 8px}
+.arh{font-weight:700}.arh span{font-weight:400;font-size:11px;color:var(--ink2);margin-left:8px}
+.arr{font-size:12px;margin-top:3px;line-height:1.9}.arr b{display:inline-block;min-width:4em;font-weight:400;color:var(--ink2)}
+.arr span{display:inline-block;border:1px solid #b8ab8e;padding:0 5px;margin:0 4px 2px 0;color:#9a8e74}.arr span.on{border-color:var(--ink);color:var(--ink);background:#efe6cf}
+.badges{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.bdg{border:1px dashed #b8ab8e;padding:5px 7px;font-size:12px;line-height:1.5;color:#9a8e74}.bdg b{display:block;font-size:13px}
+.bdg.on{border:2px solid #b23a2e;color:var(--ink);background:#f3e9d2}.bdg.on b{color:#b23a2e}
+.bdg small{font-size:11px}

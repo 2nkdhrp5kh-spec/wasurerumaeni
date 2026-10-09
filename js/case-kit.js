@@ -159,6 +159,15 @@
     }
   };
 
+  // 事件の終わりに、経歴・記章・記録庫のために残すこと
+  kit.outcomeExtra = function (S, C) {
+    const c = S.c, sess = c.sess || {};
+    const pairs = C && C.pick ? Object.keys(C.pick).filter(k => { const [x, y] = k.split('|'); return S.docs.some(d => d.id === x) && S.docs.some(d => d.id === y) && C.compare(S, x, y); }) : [];
+    return { grade: c.grade || 'C', confession: !!c.confession, voluntary: !!(c.confession && c.confession.voluntary), retract: !!c.retract,
+      proc: { C: sess.C || 0, D: sess.D || 0, E: sess.E || 0, illegal: c.illegalCount || 0, search: c.search || null, bekken: c.arrest_kind === 'bekken', leaks: (c.leaks || []).length, todoTook: !!c.todoTook, recorded: !!c.recorded, recordedAbuse: c.recordedAbuse || 0 },
+      found: Object.keys(S.compared || {}).length, pairs: pairs.length, misses: c.missPoints || 0, secret: !!c.safeFound, released: c.how === 'release', charge: c.charge || null, chargeMismatch: !!c.chargeMismatch };
+  };
+
   // 罪名を選ぶ（逮捕状の請求、または送致のとき）
   kit.charge = S => S.c.charge && (G.keiji.C().charges || []).find(x => x.id === S.c.charge);
   kit.title = (S, name) => { const ch = kit.charge(S); return name + (ch ? '（' + ch.label + '）' : ''); };
@@ -210,8 +219,8 @@
     const mism = c.chargeMismatch ? 1 : 0;
     const base = { '有罪': 4, '有罪（減軽）': 3, '略式命令（罰金）': 3, '無罪': -2, '不起訴': 0, '釈放（不起訴）': -1, '未解決': -2 }[verdict] ?? 0;
     const miss = c.missPoints || 0;
-    let sc = base - (miss >= 6 ? 1 : 0) + (c.confession ? 1 : 0) - (c.excludedIllegal || 0) * 2 - (c.releaseRejected ? 1 : 0) - mism;
-    const grade = sc >= 4 ? 'A' : sc >= 2 ? 'B' : sc >= 0 ? 'C' : 'D';
+    let sc = base - (miss >= 6 && G.diff() !== 'easy' ? 1 : 0) + (c.confession ? 1 : 0) - (c.excludedIllegal || 0) * 2 - (c.releaseRejected ? 1 : 0) - mism;
+    const grade = sc >= 4 ? 'A' : sc >= 2 ? 'B' : sc >= 0 ? 'C' : 'D'; c.grade = grade;
     const word = { A: '「よくやった。次の異動、悪いようにはせん」（東堂課長）', B: '「まあ、及第点だ」（東堂課長）', C: '「署長が渋い顔をしてたぞ」（東堂課長）', D: '「本部長賞は、別の係に行った」（東堂課長）' }[grade];
     const proc = (c.sess ? (c.sess.C ? 1 : 0) + (c.sess.D ? 1 : 0) + (c.sess.E ? 1 : 0) : 0) + (c.illegalCount || 0) + (c.search === 'illegal' ? 1 : 0) + (c.arrest_kind === 'bekken' ? 1 : 0);
     let after = '';

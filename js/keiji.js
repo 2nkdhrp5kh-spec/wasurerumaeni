@@ -17,7 +17,7 @@
   K.start = function (caseDef, state) {
     // 行き詰まったとき：部下に記録を読み返してもらう（どの二つを並べるとよいか、だけを教えてくれる）
     if (caseDef.compare && caseDef.pick && !caseDef.actions.some(a => a && a.id === 'rereadHint')) caseDef.actions.push({ id: 'rereadHint', who: 'staff', days: 1, once: false, label: '捜査記録を読み返してもらう', short: '記録の読み返し', sub: '見落としがないか。並べて読むべき記録を教えてくれる',
-      cond: S2 => S2.docs.length >= 3 && !S2.tasks.some(t => t.aid === 'rereadHint'),
+      cond: S2 => G.diff() !== 'hard' && S2.docs.length >= 3 && !S2.tasks.some(t => t.aid === 'rereadHint'),
       done: S2 => {
         const open = Object.keys(caseDef.pick).filter(k => { const [x, y] = k.split('|'); return K.doc(x) && K.doc(y) && !(S2.compared || {})[k] && caseDef.compare(S2, x, y); });
         if (!open.length) return [['oka', '記録を全部読み返しました。……いまのところ、並べて気になるところは見当たりません。', { scene: { bg: 'office', who: 'oka' } }]];
@@ -27,6 +27,7 @@
     if (caseDef.charges && !caseDef.actions.some(a => a && a.id === 'chargeSel')) caseDef.actions.unshift({ id: 'chargeSel', who: 'self', once: false, label: '罪名を決める', sub: '一日は使わない。決めると「立証すべき事実」が出る', cond: S2 => !S2.c.charge,
       run: async S2 => { await G.kit.chooseCharge(S2, caseDef, 'memo'); K.render(); return false; } });
     C = caseDef; S = state;
+    if (G.diff() === 'hard' && !state.staffGone) state.staffGone = { noguchi: true };   // むずかしい：部下が一人少ない
     S.day = S.day || 0; S.tasks = S.tasks || []; S.docs = S.docs || []; S.done = S.done || {}; S.selfUsed = false;
     S.staffGone = S.staffGone || {}; S.flags = S.flags || {}; S.fin = S.fin || {};
     G.ui.tab = 'staff';
@@ -56,10 +57,10 @@
   }
   K.C = () => C;
   function elemPanel() {
-    if (C.charges && !S.c.charge) return (C.gauge ? C.gauge(S) : '') + '<div class="elem" style="color:#8c8578;font-size:12px;line-height:1.6">（罪名がまだ決まっていない。逮捕状を請求するとき、または送致するときに、罪名を決める。立証すべき事実は、罪名によって変わる。）</div>';
+    if (C.charges && !S.c.charge) return (C.gauge && G.diff() !== 'hard' ? C.gauge(S) : '') + '<div class="elem" style="color:#8c8578;font-size:12px;line-height:1.6">（罪名がまだ決まっていない。逮捕状を請求するとき、または送致するときに、罪名を決める。立証すべき事実は、罪名によって変わる。）</div>';
     const chs = C.charges && C.charges.find(x => x.id === S.c.charge);
     const els = chs && chs.els ? chs.els(S, C.elements(S)) : C.elements(S);
-    const gz = C.gauge ? C.gauge(S) : '';
+    const gz = C.gauge && G.diff() !== 'hard' ? C.gauge(S) : '';
     return gz + els.map(e => '<div class="elem"><span class="k">' + e.k + '</span><span class="boxes">'
       + [1, 2, 3].map(i => '<span class="bx' + (e.v >= i ? (e.conf ? ' conf' : ' on') : '') + '"></span>').join('')
       + '</span><span class="src">' + (e.src || '') + '</span></div>').join('');
@@ -123,7 +124,7 @@
     const picks = [null, null];
     // 照らし合わせる価値のある記載に、うすく下線を引く（どれとどれが対になるかは、自分で見つける）
     const res = id => { const out = []; Object.entries(C.pick || {}).forEach(([k, rr]) => { const [x, y] = k.split('|'); if ((x === id || y === id) && K.doc(x) && K.doc(y)) out.push(...rr); }); return out; };
-    const cand = [res(a), res(b)];
+    const cand = G.diff() === 'hard' ? [[], []] : [res(a), res(b)];
     ov.querySelectorAll('.cmpp .paper').forEach(pp => {
       const i = +pp.dataset.i;
       pp.querySelectorAll('.paper-b p, .paper-b td, .paper-b li').forEach(u => {

@@ -14,9 +14,11 @@
       + '<button class="act" id="t-hanji"><span class="l">判事編</span><span class="s">令状当番の夜　（刑事編のあとがおすすめ）</span></button>'
       + '<button class="act" id="t-kyumon" disabled><span class="l">糾問編</span><span class="s">' + (done ? '準備中' : '刑事編と判事編のあとで') + '</span></button>'
       + '<button class="act ghost" id="t-rec"><span class="l">記録</span></button>'
+      + '<button class="act ghost" id="t-arc"><span class="l">記録庫</span><span class="s">結末・真相・記章　' + G.archive.BADGES.filter(x => (G.meta.badges || {})[x[0]]).length + '／' + G.archive.BADGES.length + '</span></button>'
       + '<button class="act ghost" id="t-law"><span class="l">条文帳</span></button>'
       + '<button class="act ghost" id="t-cr"><span class="l">クレジット</span></button>'
-      + '<button class="act ghost" id="t-warn"><span class="l">注意事項</span></button></div>'
+      + '<button class="act ghost" id="t-warn"><span class="l">注意事項</span></button>'
+      + '<button class="act ghost" id="t-diff"><span class="l">難しさ：' + G.DIFF_LABEL[G.diff()] + '</span><span class="s">押すと切り替わる</span></button></div>'
       + '<div class="foot">本作はフィクションです。登場する人物・団体・地名は架空のものです。<br>暴力的な描写を含みます。<br>手続は現行法に基づいていますが、ゲームとして日数や手順を簡略化しています。</div></div>';
     $('#t-keiji').onclick = () => { G.audio.unlock(); G.audio.sfx('select'); keiji(); };
     $('#t-hanji').onclick = async () => {
@@ -31,10 +33,12 @@
       G.audio.sfx('select');
       if (v === 'duty' && sv) delete G.meta.hanjiSave;
       G.inMode = true;
-      if (v === 'trials') await G.hanji.trials(); else await G.hanji.duty(v === 'resume');
+      if (v === 'trials') { await G.hanji.trials(); G.archive.announce(G.archive.afterTrials(G.hanji._S)); }
+      else { await G.hanji.duty(v === 'resume'); G.archive.announce(G.archive.afterDuty(G.hanji._S)); }
       record();
     };
     $('#t-rec').onclick = record;
+    $('#t-arc').onclick = () => G.archive.open(CASES);
     $('#t-law').onclick = async () => {
       const v = await G.openPaper({ title: '条文帳', sub: 'どちらの本を開くか。', body: G.P('刑事編と判事編では、使う条文が違う。'),
         buttons: [{ label: '捜査（刑事編）', value: 'keiji', small: '刑法の罪名、捜査の手続、自白、違法収集証拠' }, { label: '令状・公判（判事編）', value: 'hanji', small: '逮捕・勾留・延長・捜索差押えの要件、訴因変更' }], closeLabel: '戻る' });
@@ -43,6 +47,8 @@
     };
     $('#t-cr').onclick = credits;
     $('#t-warn').onclick = () => G.showWarning(false);
+    $('#t-diff').onclick = () => { const order = ['easy', 'normal', 'hard'], i = order.indexOf(G.diff()); G.meta.diff = order[(i + 1) % 3]; G.saveMeta(); G.audio.sfx('click');
+      G.toast({ easy: 'やさしい：思いつきの書き込みで評価が下がらない。令状当番の書類が早く読める', normal: 'ふつう', hard: 'むずかしい：部下が一人少ない。手がかりの下線・読み返し・見立てがない。令状当番の書類を読むのに時間がかかる' }[G.meta.diff]); title(); };
   }
 
   async function keiji() {
@@ -50,26 +56,41 @@
     G.audio.cue('law1');
     await G.curtain([{ html: '<div class="big">刑事編</div>', wait: 1000 }, { html: G.QUOTES.law1a, wait: 3000 },
       { html: '<div class="law">北見坂警察署　刑事課　強行犯係。<br>巡査部長。<br><br>それが、あなただ。</div>', wait: 1800 }]);
-    let skip = false;
-    if (G.meta.prologueDone) skip = await G.openPaper({ title: '序章', body: G.P('序章（操作の練習を兼ねた短い事件）を、もう一度遊ぶか。'), noClose: true,
-      buttons: [{ label: '序章から', value: false }, { label: '本章から', value: true }] });
-    if (!skip) {
-      await G.curtain([{ html: '<div class="big">序章</div><div class="small">空き巣</div>', wait: 1000 }]);
-      await G.cases.akisu.run();
+    // 経歴（物語）か、事件を選ぶか
+    const cr = G.meta.career;
+    const mode = await G.openPaper({ title: '刑事編', sub: 'どう遊ぶか', noClose: true, body: G.P('「経歴」は、一人の刑事の数年間を、四つの事件で順に歩む物語。「事件を選ぶ」は、好きな事件を一つ遊ぶ。'),
+      buttons: (cr && !cr.done && cr.step > 0 ? [{ label: '経歴：続きから', value: 'resume', cls: 'green', small: (cr.step + 1) + '件目から（' + ['巡査部長', '警部補', '警部'][cr.rank] + '）' }] : [])
+        .concat([{ label: '経歴（物語）', value: 'career', small: cr && cr.step > 0 && !cr.done ? 'はじめから（続きの記録は消える）' : '四つの事件を、年を追って' }, { label: '事件を選ぶ', value: 'free', small: '一つの事件を自由に' }]) });
+    let skip = !!G.meta.prologueDone;
+    if (mode !== 'resume') {
+      if (G.meta.prologueDone) skip = await G.openPaper({ title: '序章', body: G.P('序章（操作の練習を兼ねた短い事件）を、もう一度遊ぶか。'), noClose: true,
+        buttons: [{ label: '序章から', value: false }, { label: '本章から', value: true }] });
+      if (!skip) {
+        await G.curtain([{ html: '<div class="big">序章</div><div class="small">空き巣</div>', wait: 1000 }]);
+        await G.cases.akisu.run();
+      }
     }
-    return keiji2();
+    if (mode === 'free') return keiji2();
+    await G.career.run(mode === 'resume', playCase);
+    record();
   }
-  async function keiji2() {
-    backfill();
-    const id = await G.openPaper({ title: '事件を選ぶ', sub: '刑事課の机に、四つの事件記録がある。', noClose: true, body: G.P('どの事件の主任になるか。') + G.note('結末の数は、この事件で起こりうる捜査の結果と、数年後に起こりうる出来事の数。見た結末だけ名前が出る。'),
-      buttons: CASES.map(k => ({ label: k.label + stampOf(k), value: k.id, cls: 'case', small: k.small + progressOf(k) })) });
+  // 一つの事件を遊ぶ（自由に選んだときも、経歴の中でも）
+  async function playCase(id) {
     G.audio.sfx('select');
     const cm = caseMeta(id); cm.started++; G.saveMeta();
     G.lastOutcome = null;
     const S = await G.cases[id].run();
     if (id === 'aoyagi') await G.ending.run(S);
     else await G.trial.run(S, G.cases[id].trial);
-    if (G.lastOutcome) { cm.finished++; cm.results[G.lastOutcome.verdict] = (cm.results[G.lastOutcome.verdict] || 0) + 1; if (G.lastOutcome.reveal) cm.reveals[G.lastOutcome.reveal] = 1; G.saveMeta(); }
+    if (G.lastOutcome) { cm.finished++; cm.results[G.lastOutcome.verdict] = (cm.results[G.lastOutcome.verdict] || 0) + 1; if (G.lastOutcome.reveal) cm.reveals[G.lastOutcome.reveal] = 1; G.saveMeta();
+      G.archive.announce(G.archive.afterCase(id, G.lastOutcome, cm, CASES.find(k => k.id === id))); }
+    return G.lastOutcome;
+  }
+  async function keiji2() {
+    backfill();
+    const id = await G.openPaper({ title: '事件を選ぶ', sub: '刑事課の机に、四つの事件記録がある。', noClose: true, body: G.P('どの事件の主任になるか。') + G.note('結末の数は、この事件で起こりうる捜査の結果と、数年後に起こりうる出来事の数。見た結末だけ名前が出る。'),
+      buttons: CASES.map(k => ({ label: k.label + stampOf(k), value: k.id, cls: 'case', small: k.small + progressOf(k) })) });
+    await playCase(id);
     record();
   }
 

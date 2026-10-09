@@ -727,7 +727,7 @@
   async function readDoc(R, d) {
     if (!d) return;
     const first = !R.read[d.id];
-    if (first) { R.read[d.id] = true; advance(d.t || 0); }
+    if (first) { R.read[d.id] = true; advance(Math.round((d.t || 0) * ({ easy: .8, normal: 1, hard: 1.3 })[G.diff()] / 5) * 5); }
     d.isNew = false;
     await G.openPaper({ title: d.title, sub: R.sus[0] + '　' + KIND[R.kind].label + (first && d.t ? '　（読むのに約' + d.t + '分）' : ''), body: typeof d.body === 'function' ? d.body(S, R) : d.body });
   }

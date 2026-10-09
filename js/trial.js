@@ -86,6 +86,7 @@
       }
       if (T.finale) pages.push({ html: '<div class="law" style="font-size:14px;color:#aaa">' + T.finale + '</div>', wait: 2600 });
       await G.curtain(pages);
+      Object.assign(G.lastOutcome, G.kit.outcomeExtra(S, G.keiji.C()), { truthG, revealed: !!revealed });
       G.meta.runs.push({ no: G.meta.runs.length + 1, mode: T.name, result: verdict,
         confession: c.confession ? (c.confession.voluntary ? 'あり（自発）' : 'あり') + (c.retract ? '・撤回' : '') : 'なし',
         illegal: (c.sess && (c.sess.C ? 1 : 0) + (c.sess.D ? 1 : 0) + (c.sess.E ? 1 : 0)) + (c.illegalCount || 0), withheld: (c.withheld || []).length, revealed: revealed ? '判明' : '—', correct: G.lastOutcome.correct });

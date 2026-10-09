@@ -144,6 +144,7 @@
     }
     pages.push({ html: '<div class="law" style="font-size:14px;color:#aaa">本件のような強盗事件の取調べは、現在も録音・録画の義務の対象ではない。<br>義務の対象は、裁判員裁判の対象事件と検察官独自捜査事件に限られる（刑事訴訟法301条の2、2019年施行）。<br>その範囲は、起訴される事件全体のおよそ3%にとどまると指摘されている。</div>', wait: 2600 });
     await G.curtain(pages);
+    Object.assign(G.lastOutcome, G.kit.outcomeExtra(S, G.keiji.C()), { truthG: T === 'G', revealed: !!revealed });
     G.meta.runs.push({ no: G.meta.runs.length + 1, mode: '青柳書房事件', result: verdict, confession: c.confession ? (c.confession.voluntary ? 'あり（自発）' : 'あり') + (c.retract ? '・撤回' : '') : 'なし',
       illegal: (c.search === 'illegal' ? 1 : 0) + (c.sess.C ? 1 : 0) + (c.sess.D ? 1 : 0) + (c.sess.E ? 1 : 0) + (c.arrest_kind === 'bekken' ? 1 : 0), withheld: (c.withheld || []).length + (c.videoWithheld ? 1 : 0),
       revealed: revealed ? '判明' : '—', correct });

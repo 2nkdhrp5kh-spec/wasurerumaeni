@@ -236,6 +236,10 @@ G.toast = function (t) {
 };
 
 /* 違法・不適切な行動の確認（赤い付箋） */
+/* 難しさ：easy（やさしい）／normal（ふつう）／hard（むずかしい） */
+G.diff = () => (G.meta && G.meta.diff) || 'normal';
+G.DIFF_LABEL = { easy: 'やさしい', normal: 'ふつう', hard: 'むずかしい' };
+
 /* 初めてのときだけの説明 */
 G.tip = function (key, lines) { G.meta.tips = G.meta.tips || {}; if (G.meta.tips[key]) return Promise.resolve(); G.meta.tips[key] = true; G.saveMeta(); return G.talk(lines); };
 
