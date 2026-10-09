@@ -63,3 +63,5 @@
 .hj-eval{border:2px solid #1c1712;background:#efe6cf;padding:8px 10px;margin:0 0 10px}
 .hj-eval .eh{font-weight:700;font-size:15px;margin-bottom:4px}
 .hj-eval p{margin:2px 0;font-size:13px;line-height:1.7}.hj-eval .es{font-size:12px;color:#5a5040}
+@keyframes hjarrive{0%{transform:translateY(-22px) rotate(-4deg);opacity:0}60%{transform:translateY(2px);opacity:1}100%{transform:none}}
+.hj-card.arrive{animation:hjarrive .55s ease-out both;box-shadow:0 0 0 2px #e8c25a}

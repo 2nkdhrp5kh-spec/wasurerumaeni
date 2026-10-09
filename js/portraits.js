@@ -485,7 +485,9 @@
     R(x, '#4f3d2a', 70, 66, 100, 10); R(x, '#d9cfb4', 80, 63, 20, 3); R(x, '#d9cfb4', 140, 63, 16, 3);
   });
   // ---- 一人称の手前の層（自分の机・手・持ち物）。人物はこの層の奥に描く ----
-  function hand(x, X, Y, w, sleeve, right) {
+  // 自分の手は描かない（一人称で手が見えるのは不自然なため）。呼び出しは残し、何も描かない
+  function hand() { }
+  function handOld(x, X, Y, w, sleeve, right) {
     // 机に置いた手（甲を上に、指を軽く曲げる）。袖口は画面の下へ続く。光は左上から
     const H2 = 10, line = '#1c1511';
     R(x, line, X - 2, Y + H2 - 1, w + 6, H - Y); R(x, sleeve, X - 1, Y + H2, w + 4, H - Y); R(x, 'rgba(255,255,255,.08)', X, Y + H2, 2, H - Y); R(x, 'rgba(0,0,0,.3)', X + w, Y + H2, 3, H - Y);
@@ -621,7 +623,8 @@
   // 手前から伸びる前腕と手（近いので大きい）
   const HANDS = {};
   let fgBuilding = null;
-  function armP(x, X, Y, w, sleeve, right) {
+  function armP() { }
+  function armPOld(x, X, Y, w, sleeve, right) {
     if (fgBuilding) (HANDS[fgBuilding] = HANDS[fgBuilding] || []).push([X, Y, w, right]);
     const line = '#1c1511', dir = right ? 1 : -1;
     poly(x, line, [[X - 2, Y + 8], [X + w + 2, Y + 8], [X + w + 10 + dir * 14, H + 2], [X - 10 + dir * 14, H + 2]]);
@@ -682,6 +685,22 @@
     for (let k = 0; k < 15; k++) { const u = .07 + k * .052, c = ['#5a2f2f', '#2f4a3a', '#3a4a5a', '#7a6a4a', '#4a3a4a'][k % 5]; for (let j = 0; j < 4; j++) { const v0 = .1 + j * .19; poly(x, c, onSide(RC, false, u, u + .035, v0 + .03, v0 + .15)); } }
     R(x, '#f1ece0', 90, 26, 9, 9); R(x, '#222', 94, 28, 1, 4); R(x, '#222', 94, 31, 3, 1);
   };
+  // 課長席：窓を背にした課長の机。こちらが課長の机の前に立つ
+  const RK = { back: [54, 14, 186, 74], ceil: '#26241f', side: '#2e2c27', sideR: '#2a2823', floor: '#22201c', wall: '#2f2c26', wallTex: '#34312a' };
+  BG.kacho = x => {
+    room(x, RK);
+    R(x, '#1b1f22', 70, 20, 100, 36); for (let j = 21; j < 55; j += 3) R(x, '#6a777c', 71, j, 98, 2); R(x, '#2a2e30', 119, 20, 2, 36);   // 窓とブラインド
+    R(x, '#3a3428', 60, 18, 6, 56); R(x, '#8a2a24', 60, 18, 6, 10);                                                                         // 旗竿
+    R(x, '#f1ece0', 176, 22, 8, 8); R(x, '#222', 179, 24, 1, 3); R(x, '#222', 179, 26, 3, 1);                                              // 時計
+    for (let j = 0; j < 3; j++) { const v0 = .2 + j * .22; poly(x, '#3a3224', onSide(RK, true, .05, .7, v0, v0 + .2)); poly(x, '#2a2218', onSide(RK, true, .05, .7, v0 + .18, v0 + .2)); }
+    R(x, '#ddd6c2', 128, 58, 30, 14); R(x, '#a3342b', 130, 60, 26, 3); for (let j = 64; j < 70; j += 2) R(x, '#666', 131, j, 24, 1);      // 表彰状
+  };
+  FG.kacho = x => {
+    deskP(x, 82, 34, 206, '#3a2a1c', 'rgba(0,0,0,.14)', '#1a120c', '#4a3626');
+    R(x, '#1a1612', 98, 83, 44, 7); R(x, '#c9b46a', 100, 84, 40, 5); R(x, '#1a1612', 104, 85, 32, 1); R(x, '#1a1612', 104, 87, 32, 1);   // 名札「刑事課長」
+    sheetP(x, 30, 88, 56, 14, false); sheetP(x, 32, 85, 52, 6, false); R(x, '#b23a2e', 36, 86, 10, 2);                                     // 決裁箱の書類
+    R(x, '#151515', 168, 86, 30, 13); R(x, '#26282b', 170, 88, 26, 9);                                                                       // 電話
+  };
   // 手前の層（遠近つき）
   FG.interro = x => {
     deskP(x, 80, 46, 194, '#3b3227', 'rgba(0,0,0,.12)', '#1c1712', '#4a3f31');
@@ -727,7 +746,7 @@
   // 人物の立ち位置：机の向こうに座る／立つ高さ（スプライト上端の y）
   // 立って話す場面（自分は座っている。相手の目は、こちらの目の高さ＝消失点より上に来る）
   const TALL = { office: 6, street: 17, shop: 10 };
-  const PLACE = { interro: 24, office: 30, pros: 26, shop: 28, home: 30, chambers: 28, street: 41, court: 41, phone: 41, dark: 41 };
+  const PLACE = { kacho: 24, interro: 24, office: 30, pros: 26, shop: 28, home: 30, chambers: 28, street: 41, court: 41, phone: 41, dark: 41 };
   const fgCache = {};
   function fgCanvas(k) {
     if (!FG[k]) return null;
@@ -799,12 +818,23 @@
     x.fillStyle = '#dcb592'; x.fillRect(tx + (right ? 1 : 0), Y + 6, 8, 2); x.fillStyle = '#ead2bb'; x.fillRect(right ? tx + 1 : tx + 5, Y + 7, 3, 2); x.fillStyle = '#a67d5e'; x.fillRect(tx, Y + 14, 9, 2);
   }
   const DETAIL_FG = {};
-  Object.keys(FG).forEach(k => { DETAIL_FG[k] = x => { (HANDS[k] || []).forEach(([X, Y, w, r]) => hand2(x, X, Y, w, r)); if (k === 'office') mug2(x, 326, 174, true); }; });
+  Object.keys(FG).forEach(k => { DETAIL_FG[k] = x => { if (k === 'office') mug2(x, 326, 174, true); }; });
+  // 壁の時計（背景ごとの位置。2倍の座標で描く）。時刻は G.clock = { h, m }
+  const CLOCKS = { office: [64, 22, 8, '#f1ece0'], interro: [146, 28, 10, '#d6d0c0'], chambers: [90, 26, 9, '#f1ece0'], kacho: [176, 22, 8, '#f1ece0'] };
+  function drawClock(x, bg) {
+    const c = CLOCKS[bg]; if (!c) return;
+    const t = G.clock || { h: 10, m: 0 }, cx0 = (c[0] + c[2] / 2) * 2, cy0 = (c[1] + c[2] / 2) * 2, r = c[2] - 1;
+    x.fillStyle = c[3]; x.beginPath(); x.arc(cx0, cy0, r, 0, Math.PI * 2); x.fill();
+    x.fillStyle = '#6a6a6a'; for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; x.fillRect(Math.round(cx0 + Math.sin(a) * (r - 1)), Math.round(cy0 - Math.cos(a) * (r - 1)), 1, 1); }
+    const hand = (ang, len, col, w) => { x.strokeStyle = col; x.lineWidth = w; x.beginPath(); x.moveTo(cx0, cy0); x.lineTo(cx0 + Math.sin(ang) * len, cy0 - Math.cos(ang) * len); x.stroke(); };
+    hand(((t.h % 12) + t.m / 60) / 12 * Math.PI * 2, r * .5, '#1c1712', 1.6); hand(t.m / 60 * Math.PI * 2, r * .8, '#1c1712', 1);
+  }
   function draw() {
     const cv = A.cv, sc = A.sc; if (!cv || !sc || !cv.isConnected) return;
     const x = cv.getContext('2d'); x.imageSmoothingEnabled = false;
     x.setTransform(cv.width / (W * 2), 0, 0, cv.height / (H * 2), 0, 0);
     x.drawImage(hi('bg:' + sc.bg, () => bgCanvas(sc.bg)), 0, 0);
+    drawClock(x, sc.bg);
     x.scale(2, 2);   // 以下、位置は従来の座標で指定し、拡大済みの絵を半分の大きさで置く
     if (sc.who && PEOPLE[sc.who]) {
       const now = performance.now();
@@ -832,6 +862,7 @@
     }
     const fg = hi('fg:' + sc.bg, () => fgCanvas(sc.bg), DETAIL_FG[sc.bg]); if (fg) x.drawImage(fg, 0, 0, W, H);
     if (sc.dim) { x.fillStyle = 'rgba(0,0,0,' + sc.dim + ')'; x.fillRect(0, 0, W, H); }
+    if (A.fade) { const k = (performance.now() - A.fade.t0) / 520; if (k >= 1) A.fade = null; else { x.fillStyle = 'rgba(0,0,0,' + (1 - k * k).toFixed(3) + ')'; x.fillRect(0, 0, W, H); } }
     x.setTransform(1, 0, 0, 1, 0, 0);
   }
   function scene(cv, sc) {
@@ -847,12 +878,13 @@
       const now = performance.now(), fromRight = sc.x !== 'l';
       A.enter = walker(sc.who) && PEOPLE[sc.who] ? { t0: now, dur: STEP_MS * 7, from: fromRight ? 150 : -150 } : null;
       // 前の人は反対側へ歩いて出ていく
-      A.exit = prev.who && PEOPLE[prev.who] && sc.who && walker(prev.who) ? { s: sprite(prev.who, prev.stage, { tall: TALL[prev.bg] != null }), px: prev.x === 'l' ? 40 : prev.x === 'r' ? 136 : 88, py: TALL[prev.bg] ?? PLACE[prev.bg] ?? H - N, to: fromRight ? -150 : 150, t0: now, dur: STEP_MS * 5 } : null;
+      A.exit = prev.who && PEOPLE[prev.who] && walker(prev.who) ? { s: sprite(prev.who, prev.stage, { tall: TALL[prev.bg] != null }), px: prev.x === 'l' ? 40 : prev.x === 'r' ? 136 : 88, py: TALL[prev.bg] ?? PLACE[prev.bg] ?? H - N, to: fromRight ? -150 : 150, t0: now, dur: STEP_MS * 5 } : null;
     } else if (!sameRoom) { A.enter = null; A.exit = null; }
+    if (prev && prev.bg !== sc.bg && A.cv === cv) { A.fade = { t0: performance.now() }; G.audio.sfx(['interro', 'pros', 'kacho', 'chambers'].includes(sc.bg) ? 'door' : 'steps'); }
     A.cv = cv; A.sc = sc; draw();
     if (!A.timer) A.timer = setInterval(draw, 60);
   }
-  const STEP_MS = 300, WALKERS = ['shirai', 'oka', 'noguchi', 'todo'];
+  const STEP_MS = 300, WALKERS = ['shirai', 'oka', 'noguchi'];
   // 歩いて来る人が着くまでの残り時間（台詞は着いてから出す）
   const arrivalLeft = () => A.enter ? Math.max(0, A.enter.t0 + A.enter.dur - performance.now()) : 0;
   const skipArrival = () => { if (A.enter) A.enter.t0 = performance.now() - A.enter.dur; };

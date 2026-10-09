@@ -278,3 +278,15 @@ button{font:inherit;color:inherit}
 .trate .tl{font-size:12px;letter-spacing:.3em;color:var(--ink2)}
 .trate .tv{font-size:34px;font-weight:700;line-height:1.2}.trate .tv small{font-size:16px;margin-left:2px}
 .trate .ts{font-size:12px;line-height:1.7}.trate .ts2{font-size:11px;color:var(--ink2);margin-top:2px}
+.cquit{position:absolute;top:10px;right:10px;background:transparent;border:1px solid #555;color:#888;font-family:'DotGothic16',sans-serif;font-size:12px;padding:2px 8px;cursor:pointer;z-index:2}
+.say .kw{color:#e8705e;font-weight:700}
+/* 書類が届いたとき：上から机に落ちてくる */
+@keyframes docarrive{0%{transform:translateY(-26px) rotate(-6deg);opacity:0}60%{transform:translateY(3px) rotate(1deg);opacity:1}100%{transform:none}}
+.doc.arrive{animation:docarrive .55s ease-out both;box-shadow:0 0 0 2px #e8c25a,2px 2px 0 #0008}
+.toast{max-width:min(92vw,560px);line-height:1.5}
+.gainbox{border:2px solid #b8902a;background:#f6ebc8;padding:6px 10px;margin:0 0 8px;font-size:13px;line-height:1.7}
+.gainbox ul{margin:2px 0 0;padding-left:1.3em}
+/* 判を押した紙を渡す */
+@keyframes handoff{to{transform:translate(70vw,-30px) rotate(14deg);opacity:0}}
+.paper.handoff{animation:handoff .65s ease-in forwards}
+.kwp{color:#b23a2e}

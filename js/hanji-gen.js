@@ -8,6 +8,7 @@
    bad：'deny'（要件を欠く。却下すべき）／'fix'（請求書の誤り。電話で直れば発付してよい）／なし（問題なし）
    ============================================================ */
 (function () {
+  G.hanjiGen = {};
   // ---- 乱数（計画を作るときだけ使う。計画を保存すれば、同じ夜を作り直せる） ----
   function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
@@ -36,19 +37,47 @@
   const FLAWS = {
     arrest: ['none', 'none', 'date', 'identity', 'wrongDoc', 'noNeed', 'thin'],
     search: ['none', 'none', 'vague', 'place', 'noLink'],
-    koryu: ['none', 'none', 'timeLimit', 'noGrounds'],
-    encho: ['none', 'otherCase', 'abstract']
+    koryu: ['none', 'none', 'timeLimit', 'noGrounds', 'illegalArrest'],
+    encho: ['none', 'otherCase', 'abstract', 'interroOnly'],
+    body: ['none', 'needCond']
   };
+  // ---- 段階：令状当番の回と夜ごとに、出てくる請求と問題点が増えていく ----
+  // kinds：その夜の請求の数（種類ごと）／add：この段階で新しく出てくる問題点／memo：部総括判事からのメモ／laws：条文帳に加わる条文（見出しの先頭）
+  const CURRICULUM = [
+    null,
+    { kinds: { arrest: 4 }, add: { arrest: ['none', 'none', 'date', 'identity'] }, laws: ['刑事訴訟法 第199条2項', '刑事訴訟規則 第143条の3'],
+      memo: ['今夜は、逮捕状の請求だけが回ってくる。', '見るところは三つ。①被疑者が罪を犯したと疑うに足りる*相当な理由*があるか（刑訴法199条）。②*逮捕の必要*があるか。③請求書の記載が、添付の資料と合っているか。', '請求書の*被疑事実*（日時・場所・被害者）と、*被疑者*（氏名・年齢・住居）は、必ず被害届や住民票と照らし合わせること。誤記は、電話で訂正させればよい。'] },
+    { kinds: { arrest: 5 }, add: { arrest: ['wrongDoc', 'thin'] }, laws: [],
+      memo: ['添付された資料が、本当にその事件のものかを確かめること。被害届の日付・被害者・被害品が、請求書と違うことがある。', '*匿名の通報*だけでは、相当な理由の疎明にならない。通報を裏付ける資料があるかを見る。'] },
+    { kinds: { arrest: 5 }, add: { arrest: ['noNeed'] }, laws: [],
+      memo: ['罪を犯したと疑う理由があっても、*明らかに逮捕の必要がない*ときは、逮捕状を出さない（刑事訴訟規則143条の3）。', '軽い罪で、住居も勤め先も定まり、呼出しに応じている。そういう被疑者を、なぜ逮捕する必要があるのか。請求書の「逮捕の必要」の欄を読むこと。'] },
+    { kinds: { arrest: 3, koryu: 2 }, add: { koryu: ['none', 'none', 'noGrounds'] }, laws: ['刑事訴訟法 第207条', '刑事訴訟法 第60条', '刑事訴訟法 第61条', '刑事訴訟法 第87条'],
+      memo: ['今夜から、*勾留請求*も回ってくる（刑訴法207条1項）。', '勾留には、罪を犯したと疑う相当な理由に加え、60条1項の*各号*のどれかが要る。①住居不定　②罪証隠滅のおそれ　③逃亡のおそれ。さらに、勾留する必要があるか。', '勾留する前には、必ず*勾留質問*をすること（61条）。被疑者の言い分は、裁判官が自分で聴く。', '請求書が「1号（住居不定）」を挙げていても、資料を読めば住居があることがある。'] },
+    { kinds: { arrest: 2, koryu: 3 }, add: { koryu: ['timeLimit'] }, laws: ['刑事訴訟法 第205条', '刑事訴訟法 第206条'],
+      memo: ['*時間の制限*を確かめること。警察は逮捕から48時間以内に送致し、検察官は24時間以内に勾留を請求する。逮捕から通じて72時間を超えてはならない（203条・205条）。', '遅れたときは、遅延がやむを得ない事由によるものと認められなければ、勾留はできない（206条）。請求書の「逮捕」「送致」「受付」の時刻を、必ず計算すること。'] },
+    { kinds: { arrest: 2, koryu: 2, search: 2 }, add: { search: ['none', 'none', 'vague', 'place'] }, laws: ['刑事訴訟法 第218条1項', '刑事訴訟法 第219条1項', '刑事訴訟法 第102条', '判例　差し押さえるべき物の明示'],
+      memo: ['今夜から、*捜索差押許可状*の請求も回ってくる。', '令状には、*捜索すべき場所*と*差し押さえるべき物*を明示しなければならない（憲法35条、刑訴法219条）。', '「本件に関係ありと思料される一切の物件」だけでは、何を差し押さえてよいのか分からない。具体的な物を挙げさせること。場所も、部屋まで特定させること。'] },
+    { kinds: { arrest: 1, koryu: 2, search: 2, encho: 1 }, add: { search: ['noLink'], encho: ['none', 'abstract'] }, laws: ['刑事訴訟法 第208条'],
+      memo: ['他人の住居を捜索するには、そこに差し押さえるべき物があると認めるに足りる状況が要る（102条2項）。被疑者とその場所の*結びつき*を確かめること。', '今夜から、*勾留期間の延長*の請求も回ってくる。延長には「*やむを得ない事由*」が要る（208条2項）。「捜査未了」とだけ書いてある請求は、何が未了なのかを読むこと。'] },
+    { kinds: { arrest: 1, koryu: 3, search: 1, encho: 1 }, add: { koryu: ['illegalArrest'], encho: ['otherCase'] }, laws: ['学説　違法な逮捕と勾留', '刑事訴訟法 第210条1項'],
+      memo: ['勾留請求の前の*逮捕が違法*だったときは、その逮捕を前提とする勾留の請求は、却下されうる。逮捕手続書を読み、令状なしに住居に入っていないか、緊急逮捕のあと令状を直ちに請求しているかを確かめること。', '延長の理由が、実は*別の事件（余罪）*の捜査のためになっていないか。本件の捜査がどこまで進んでいるかを読むこと。'] },
+    { kinds: { arrest: 1, koryu: 2, search: 1, encho: 1, body: 1 }, add: { body: ['none', 'needCond'], encho: ['interroOnly'] }, laws: ['刑事訴訟法 第218条8項・9項', '刑事訴訟法 第131条'],
+      memo: ['今夜から、*身体検査令状*の請求も回ってくる（218条）。身体の検査は、被検査者の名誉を害しないように行わなければならない。必要なら、令状に*条件*を付けること（218条9項）。', '延長の請求が、*取調べのため*の身柄拘束になっていないか。連日の長時間の取調べ、自白を求めることだけが延長の理由になっていないかを確かめること。'] }
+  ];
+  G.hanjiGen.CURRICULUM = CURRICULUM;
+  // その段階までに出てきた問題点の一覧
+  G.hanjiGen.allowed = step => { const a = {}; for (let i = 1; i <= Math.min(step, 9); i++) Object.entries(CURRICULUM[i].add).forEach(([k, v]) => { a[k] = (a[k] || []).concat(v); }); return a; };
+  G.hanjiGen.lawsUpTo = step => { const l = []; for (let i = 1; i <= Math.min(step, 9); i++) l.push(...CURRICULUM[i].laws); return l; };
   const CRIMES_FOR = {
     arrest: ['manbiki', 'jitensha', 'okibiki', 'shajo', 'shogai', 'boko', 'ukeko', 'shinnyu', 'kibutsu'],
     search: ['ukeko', 'kakusei', 'shajo', 'okibiki'],
     koryu: ['okibiki', 'shajo', 'shogai', 'ukeko', 'shinnyu', 'kibutsu', 'manbiki'],
-    encho: ['shogai', 'ukeko', 'shajo', 'okibiki']
+    encho: ['shogai', 'ukeko', 'shajo', 'okibiki'],
+    body: ['shogai', 'kakusei']
   };
 
   // ---- 計画 ----
-  G.hanjiGen = {};
-  G.hanjiGen.plan = function (seed, used) {
+  G.hanjiGen.plan = function (seed, used, steps) {   // steps：[第一夜の段階, 第二夜, 第三夜]。null なら全部
     const R = rng(seed), pick = a => a[Math.floor(R() * a.length)], ri = (a, b) => a + Math.floor(R() * (b - a + 1));
     used = used || {};
     const names = new Set();
@@ -57,27 +86,32 @@
       return Object.assign(n, { age: ri(19, 68), job: pick(JOB), town: pick(TOWN), cho: ri(1, 7), ban: ri(1, 24), go: ri(1, 18) });
     };
     // まだ出ていない組み合わせを優先して選ぶ
-    const choose = kind => {
-      const all = [];
-      CRIMES_FOR[kind].forEach(c => FLAWS[kind].forEach(f => { if (f === 'noNeed' && !CRIME[c].light) return; all.push(c + ':' + f); }));
+    const choose = (kind, night) => {
+      const all = [], fl = steps ? (G.hanjiGen.allowed(steps[night - 1])[kind] || ['none']) : FLAWS[kind];
+      CRIMES_FOR[kind].forEach(c => [...new Set(fl)].forEach(f => { if (f === 'noNeed' && !CRIME[c].light) return; all.push(c + ':' + f); }));
       const fresh = all.filter(k => !used[kind + ':' + k]);   // 名前の記録（n:）とは別に数える
+      // 問題のない請求も、それなりに混ぜる
+      if (R() < (steps ? .38 : .25)) { const ok = all.filter(x => x.endsWith(':none')); if (ok.length) { const k = pick(ok); const [crime] = k.split(':'); return { crime, flaw: 'none' }; } }
       const k = pick(fresh.length ? fresh : all); used[kind + ':' + k] = 1;
       const [crime, flaw] = k.split(':'); return { crime, flaw };
     };
     const specs = []; let no = 0;
-    const add = (night, kind, extra) => { const cf = extra && extra.crime ? { crime: extra.crime, flaw: extra.flaw || 'none' } : choose(kind); const p = (extra && extra.p) || person(R() < .18 && cf.crime !== 'shogai');
+    const add = (night, kind, extra) => { const cf = extra && extra.crime ? { crime: extra.crime, flaw: extra.flaw || 'none' } : choose(kind, night); const p = (extra && extra.p) || person(cf.flaw === 'needCond' ? true : kind === 'body' ? false : R() < .18 && cf.crime !== 'shogai');
       specs.push(Object.assign({ id: 'g' + (++no), night, kind, crime: cf.crime, flaw: cf.flaw, p, at: 0, v: { amount: ri(3, 60) * 1000, item: pick(ITEM), shop: pick(SHOP), victim: person(R() < .5), hour: ri(8, 22), min: pick([0, 10, 15, 20, 30, 40, 45, 50]), back: ri(2, 9), inj: ri(1, 4), town2: pick(TOWN), cho2: ri(1, 7) } }, extra || {})); };
     // 連なる事件：一人の被疑者の逮捕状 → 勾留 → 延長
-    const chainCrime = pick(['shogai', 'ukeko', 'okibiki', 'shajo']);
-    const cp = person(false);
-    add(1, 'arrest', { crime: chainCrime, flaw: pick(['none', 'none', 'date']), p: cp, chain: 'c1' });
-    add(2, 'koryu', { crime: chainCrime, flaw: pick(['none', 'none', 'noGrounds']), p: cp, chain: 'c2', when: 'c1' });
-    add(3, 'encho', { crime: chainCrime, flaw: pick(['none', 'otherCase', 'abstract']), p: cp, chain: 'c3', when: 'c2' });
+    // 夜ごとの請求の数（段階があればそれに従う）
+    const kindsOf = n => steps ? CURRICULUM[Math.min(steps[n - 1], 9)].kinds : { 1: { arrest: 4, search: 2 }, 2: { koryu: 3, arrest: 2, search: 1 }, 3: { koryu: 2, encho: 1, arrest: 2, search: 1, body: 1 } }[n];
+    const has = (n, k) => (kindsOf(n)[k] || 0) > 0;
+    // 連なる事件：一人の被疑者の逮捕状 → 勾留 → 延長（その夜に出てくる種類だけ）
+    const chainCrime = pick(['shogai', 'ukeko', 'okibiki', 'shajo']), cp = person(false), took = { 1: {}, 2: {}, 3: {} };
+    const okFlaw = (n, k, wish) => { const al = steps ? (G.hanjiGen.allowed(steps[n - 1])[k] || ['none']) : FLAWS[k]; const w = wish.filter(f => al.includes(f)); return w.length ? pick(w) : 'none'; };
+    if (has(1, 'arrest')) { add(1, 'arrest', { crime: chainCrime, flaw: okFlaw(1, 'arrest', ['none', 'none', 'date']), p: cp, chain: 'c1' }); took[1].arrest = 1;
+      if (has(2, 'koryu')) { add(2, 'koryu', { crime: chainCrime, flaw: okFlaw(2, 'koryu', ['none', 'none', 'noGrounds']), p: cp, chain: 'c2', when: 'c1' }); took[2].koryu = 1;
+        if (has(3, 'encho')) { add(3, 'encho', { crime: chainCrime, flaw: okFlaw(3, 'encho', ['none', 'otherCase', 'abstract']), p: cp, chain: 'c3', when: 'c2' }); took[3].encho = 1; } } }
     // 各夜の残り
-    const NIGHT = { 1: ['arrest', 'arrest', 'arrest', 'search', 'search', 'arrest'], 2: ['koryu', 'koryu', 'arrest', 'search', 'arrest', 'koryu'], 3: ['koryu', 'encho', 'arrest', 'search', 'arrest', 'koryu'] };
-    [1, 2, 3].forEach(n => NIGHT[n].forEach(k => add(n, k)));
+    [1, 2, 3].forEach(n => Object.entries(kindsOf(n)).forEach(([k, cnt]) => { for (let i = 0; i < cnt - (took[n][k] || 0); i++) add(n, k); }));
     // 連なる事件は、同じ事件の話（日時・被害者などをそろえる）
-    const c1 = specs.find(x => x.chain === 'c1'); specs.filter(x => x.chain && x.chain !== 'c1').forEach(x => { x.v = c1.v; });
+    const c1 = specs.find(x => x.chain === 'c1'); if (c1) specs.filter(x => x.chain && x.chain !== 'c1').forEach(x => { x.v = c1.v; });
     // 受付の時刻（夜の始まりからの分）
     [1, 2, 3].forEach(n => { const list = specs.filter(s => s.night === n); list.sort(() => R() - .5).forEach((s, i) => { s.at = 15 + i * ri(26, 40); }); });
     return { seed, specs, used };
@@ -96,7 +130,7 @@
     return plan.specs.map(s => {
       const p = s.p, v = s.v, nd = NIGHTS[s.night].date, cr = CRIME[s.crime];
       const c1 = plan.specs.find(x => x.chain === 'c1');
-      const day = s.chain ? md(NIGHTS[1].date, c1.v.back) : md(nd, s.kind === 'arrest' || s.kind === 'search' ? v.back : s.kind === 'koryu' ? 3 : 14);
+      const day = s.chain && c1 ? md(NIGHTS[1].date, c1.v.back) : md(nd, s.kind === 'arrest' || s.kind === 'search' ? v.back : s.kind === 'koryu' ? 3 : 14);
       const wrongDay = md(nd, v.back + (v.back > 5 ? -3 : 3));
       const vic = v.victim;
       const place2 = '北見坂市' + v.town2 + KANJI[v.cho2 - 1] + '丁目';
@@ -191,11 +225,13 @@
         docs.push(evidence());
         docs.push(kyo);
         if (s.flaw === 'timeLimit') docs.push(D('chien', '遅延理由書', 10, P('司法警察員において、被疑者の取調べ及び関係者の所在確認に時間を要したため、送致が遅れた。')));
+        if (s.flaw === 'illegalArrest') docs.push(D('taiho', '緊急逮捕手続書', 10, P('被疑者は、' + md(nd, 2) + '午前5時10分ころ、' + addr(p) + 'の被疑者方において緊急逮捕した。',
+          '逮捕に際し、被疑者が応答しなかったため、管理人に依頼して玄関の鍵を開けさせ、室内に立ち入った。', '逮捕状の請求は、同日午後4時30分に行った（逮捕から約11時間後）。') + note('刑訴法210条1項：緊急逮捕をしたときは「直ちに」逮捕状を求める手続をしなければならない。'))) ;
         if (s.flaw === 'noGrounds') docs.push(D('hosoku', '捜査報告書（住居について）', 5, P('被疑者は、事件の数日前から知人宅に泊まることがあり、住居が定まっていないと認められる。', '（住民登録地には妻子が居住しており、被疑者も週の大半はそこで寝泊まりしている。）')));
         docs.push(D('benkai', '弁解録取書', 5, P(pick(['やりました。申し訳ありません。', 'やっていません。', '覚えていません。酒を飲んでいたので。']))));
         def.iv = [pick(['家族に連絡させてください。', '仕事があるんです。', '言うことは、警察で言ったとおりです。']), pick(['逃げたりしません。', '……はい。', '弁護士を呼べますか。'])];
         def.bad = s.flaw === 'none' ? null : 'deny';
-        def.call = () => ({ who: 'hj_kenji', cost: 30, lines: [['hj_kenji', '検察庁です。……' + (s.flaw === 'timeLimit' ? '時間の件ですね。遅延理由書のとおりです。' : s.flaw === 'noGrounds' ? '住居の件ですか。……報告書以上の資料はありません。' : '請求書のとおりです。')], ['hj_kenji', '判断はお任せします。']] });
+        def.call = () => ({ who: 'hj_kenji', cost: 30, lines: [['hj_kenji', '検察庁です。……' + (s.flaw === 'timeLimit' ? '時間の件ですね。遅延理由書のとおりです。' : s.flaw === 'noGrounds' ? '住居の件ですか。……報告書以上の資料はありません。' : s.flaw === 'illegalArrest' ? '逮捕の手続ですか。……警察からは、早朝で裁判所に連絡がつかなかった、と聞いています。' : '請求書のとおりです。')], ['hj_kenji', '判断はお任せします。']] });
         def.after = (S, Rr) => Rr.eff === 'grant'
           ? (def.bad ? [p.name.replace(' ', '') + 'の勾留について、弁護人が準抗告を申し立てた。' + pick(['勾留は取り消され、釈放されたと聞いた。', '申立ては退けられたと聞いた。'])] : [p.name.replace(' ', '') + 'は勾留された。' + pick(['満期の前に起訴されたと聞いた。', '処分保留のまま釈放されたと聞いた。'])])
           : [p.name.replace(' ', '') + 'は釈放された。' + pick(['在宅のまま捜査が続けられているという。', '翌月、被害者に弁償したと聞いた。', 'その後のことは、分からない。'])];
@@ -203,19 +239,33 @@
 
       if (s.kind === 'encho') {
         def.base = md(nd, -1); def.ask = 10;
-        const why = s.flaw === 'otherCase' ? '1　被疑者には、同種の余罪（' + md(nd, 40) + 'ころの別件）があり、その取調べを要する。<br>2　被疑者は否認している。'
+        const why = s.flaw === 'interroOnly' ? '1　被疑者は否認を続けており、真相を解明するため、さらに取調べを要する。<br>2　被疑者の供述の変遷について、追及を要する。' : s.flaw === 'otherCase' ? '1　被疑者には、同種の余罪（' + md(nd, 40) + 'ころの別件）があり、その取調べを要する。<br>2　被疑者は否認している。'
           : s.flaw === 'abstract' ? '1　捜査未了。<br>2　関係者の取調べ未了。'
           : '1　' + pick(['被害品の鑑定結果が未着である（' + md(nd, 4) + '嘱託、結果は' + md(nd, -6) + 'ころの見込み）。', '共犯者と思われる人物の所在を捜査中である（所在の手がかりを得ている）。']) + '<br>2　被害者の再聴取を要する（被害者は入院中で、' + md(nd, -3) + 'に聴取の予定）。';
         docs.push(D('req', '勾留期間延長請求書', 10, REQ('勾留期間延長請求書', [['被疑者', susLine(p)], ['罪名', charge], ['勾留の期間', md(nd, 9) + 'から' + md(nd, 0) + 'まで'], ['延長を求める期間', '10日'], ['刑訴法60条1項各号', '第2号、第3号'], ['やむを得ない事由', why]]), 'req'));
-        docs.push(D('jokyo', '捜査状況報告書', 15, s.flaw === 'otherCase' ? P('本件（' + charge + '）については、被害者・目撃者の供述調書、物的証拠の収集をおおむね終えた。', 'この10日間の取調べの大半は、余罪についてのものである。')
+        docs.push(D('jokyo', '捜査状況報告書', 15, s.flaw === 'interroOnly' ? P('物的証拠・関係者の供述調書の収集は終えている。', '被疑者の取調べ時間：1日あたり約13時間（午前9時から午後10時ころまで）。連日。被疑者は「何度聞かれても同じです」と述べている。') + note('延長を求める理由は、取調べのみである。')
+          : s.flaw === 'otherCase' ? P('本件（' + charge + '）については、被害者・目撃者の供述調書、物的証拠の収集をおおむね終えた。', 'この10日間の取調べの大半は、余罪についてのものである。')
           : s.flaw === 'abstract' ? P('本件の捜査を継続中である。') : P('本件の捜査の状況は、請求書記載のとおり。', '被疑者の取調べは、1日あたり約3時間。')));
         def.bad = s.flaw === 'none' ? null : 'deny';
-        def.call = () => ({ who: 'hj_kenji', cost: 30, lines: [['hj_kenji', '検察庁です。……' + (s.flaw === 'abstract' ? '具体的に、ですか。……いま、お答えできる資料はありません。' : s.flaw === 'otherCase' ? '余罪の件も、本件と同じ手口ですから。' : '請求書のとおりです。')]] });
+        def.call = () => ({ who: 'hj_kenji', cost: 30, lines: [['hj_kenji', '検察庁です。……' + (s.flaw === 'abstract' ? '具体的に、ですか。……いま、お答えできる資料はありません。' : s.flaw === 'interroOnly' ? '否認していますから。話を聞く時間が、もう少し要ります。' : s.flaw === 'otherCase' ? '余罪の件も、本件と同じ手口ですから。' : '請求書のとおりです。')]] });
         def.after = (S, Rr) => Rr.eff === 'grant'
           ? [p.name.replace(' ', '') + 'の勾留は延長された。' + (s.flaw === 'otherCase' ? '延長の間に、余罪を認めたと聞いた。' : pick(['満期に起訴されたと聞いた。', '満期に、処分保留のまま釈放されたという。']))]
           : [p.name.replace(' ', '') + 'は、延長されずに釈放された。' + pick(['のちに在宅のまま起訴されたと聞いた。', 'のちに不起訴になった、と聞いた。'])];
       }
 
+      if (s.kind === 'body') {
+        const fem = s.flaw === 'needCond';
+        def.place = '被疑者の身体（上半身）';
+        docs.push(D('req', '身体検査令状請求書', 10, REQ('身体検査令状請求書', [['被疑者', susLine(p) + '（' + md(nd, 1) + '逮捕、北見坂警察署に留置中）'], ['罪名', charge], ['被疑事実の要旨', fact(day)],
+          ['検査すべき身体', '被疑者の身体（上半身）'], ['身体の検査を必要とする理由', s.crime === 'kakusei' ? '被疑者の両腕に注射痕があるかを確認し、写真撮影する必要がある。' : '被害者は、犯人ともみ合った際に犯人の胸を引っかいたと述べており、被疑者の胸部の傷の有無を確認し、写真撮影する必要がある。'],
+          ['性別', fem ? '女' : '男'], ['健康状態', '良好（留置担当官による）']]), 'req'));
+        docs.push(evidence());
+        def.bad = fem ? 'cond' : null;
+        def.call = () => ({ who: 'hj_keibu', cost: 30, lines: [['hj_keibu', '北見坂署です。……検査の方法ですか。' + (fem ? '当署には、当直の女性警察官がいます。医師の手配もできます。' : '男性の捜査員が、留置施設の一室で行います。')]] });
+        def.after = (S, Rr) => Rr.eff === 'grant'
+          ? (fem && Rr.how !== 'cond' ? ['身体検査は行われた。後日、弁護人から、検査のやり方について抗議があったと聞いた。'] : ['身体検査は行われ、写真が撮られた。' + pick(['傷は、確かにあったという。', '傷は見つからなかったという。'])])
+          : ['身体検査令状は出なかった。' + pick(['警察は、本人の承諾を得ようとしたらしい。', 'それきりになった。'])];
+      }
       def.docs = docs;
       return def;
     });

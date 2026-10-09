@@ -44,16 +44,21 @@
     if (d === 13) { L.push(['', '（勾留延長。あと10日。）']); if (G.keiji.C().suspect) kit.forms.ext(S, G.keiji.C()); if (!S.staffGone.oka) { K.loseStaff('oka'); L.push(['todo', '岡も外す。残りは白井とお前でやれ。', { scene: sc('todo') }]); } }
     if (d === 8 && !c.confession && o.wantConfession) L.push(['todo', '検事が電話してきた。' + o.wantConfession, { scene: sc('todo') }]);
     if (d === 20) L.push(['shirai', '主任、満期まであと3日です。', { scene: sc('shirai') }]);
+    if (!c.confession && !c.releaseAsked) {
+      if (d === 5) L.push(['todo', '署長に聞かれたぞ。「自白はまだか」とな。', { scene: sc('todo') }], ['todo', 'このヤマが片づけば、今期の*本部長賞*はうちの係だ。……分かってるな。']);
+      if (d === 9) L.push(['todo', '新聞が嗅ぎ回ってる。「捜査難航」と書かれたら、署の面子は丸つぶれだ。', { scene: sc('todo') }], ['todo', '否認のままじゃ、検事も起訴に踏み切れん。*今週中に落とせ*。']);
+      if (d === 15) L.push(['shirai', '主任。……遺族の方が、また署に来てました。', { scene: sc('shirai') }], ['shirai', '「いつになったら認めるんですか」と。俺は、何も言えませんでした。']);
+    }
     return L;
   };
 
   // 取調べのやり方（共通の枠組み）
   kit.RISK = (recorded, meter) => ({
-    C: { id: 'long', title: '長時間の取調べ', law: '憲法38条2項、刑訴法319条1項', lure: meter >= 55 ? '白井「もう限界ですよ。今夜詰めれば、落ちます」' : '白井「時間をかければ、人は話すもんです」',
+    C: { id: 'long', title: '長時間の取調べ', gain: ['今夜のうちに自白が取れる見込み：' + (meter >= 55 ? '高い' : 'ある'), '満期を待たずに送致でき、本部の評価が上がる', '課長と検事の期待に応えられる'], law: '憲法38条2項、刑訴法319条1項', lure: meter >= 55 ? '白井「もう限界ですよ。今夜詰めれば、落ちます」' : '白井「時間をかければ、人は話すもんです」',
       effects: ['得た自白が、任意性を欠くとして証拠から外されうる', recorded ? '取調べは録画されている。公判で、その映像が再生される' : '公判で、取調官として追及される', '虚偽の自白を生む原因になる'] },
-    D: { id: 'promise', title: '利益を約束して自白を求める', law: '刑訴法319条1項（判例：約束による自白）', lure: '白井「家族の話をすると、たいてい落ちますよ」',
+    D: { id: 'promise', title: '利益を約束して自白を求める', gain: ['相手に「認めたほうが得だ」と思わせれば、話は早い', '被害者・遺族に早く結果を伝えられる'], law: '刑訴法319条1項（判例：約束による自白）', lure: '白井「家族の話をすると、たいてい落ちますよ」',
       effects: ['得た自白が、任意性を欠くとして証拠から外されうる', recorded ? '取調べは録画されている。公判で、その映像が再生される' : '公判で、取調官として追及される', '虚偽の自白を生む原因になる'] },
-    E: { id: 'threat', title: '脅迫的な取調べ', law: '憲法38条2項、刑訴法319条1項', lure: '課長「否認してる奴に遠慮してどうする」',
+    E: { id: 'threat', title: '脅迫的な取調べ', gain: ['否認を崩す近道。「あの課長のやり方」で落ちた被疑者は多い', '自白が取れれば、事件は片づく'], law: '憲法38条2項、刑訴法319条1項', lure: '課長「否認してる奴に遠慮してどうする」',
       effects: ['得た自白が、脅迫による自白として証拠から外されうる', recorded ? '取調べは録画されている。公判で、その映像が再生される' : '公判で、取調官として追及される', '虚偽の自白を生む原因になる'] }
   });
   kit.poolLines = function (S, pool, key) {
@@ -74,9 +79,9 @@
     const L = cfg.labels;
     const k = await G.openPaper({ title: '取調べ', sub: cfg.sub ? cfg.sub(S) : '', noClose: true, body: P('どう進めるか。'),
       buttons: [{ label: L.A[0], value: 'A', small: L.A[1] }, { label: L.B[0], value: 'B', small: L.B[1] },
-        { label: '夜まで取調べを続ける', value: 'C', cls: 'red', small: '朝9時から、話すまで' },
-        { label: '怒鳴りつけ、追い詰める', value: 'E', cls: 'red', small: L.E || '机を叩く。家族のことを持ち出す' },
-        { label: L.D[0], value: 'D', cls: 'red', small: L.D[1] }, { label: 'やめておく', value: null, small: '時間は使わない' }] });
+        { label: '夜まで取調べを続ける', value: 'C', cls: 'red', small: '朝9時から、話すまで。' + ((c.meter || 0) >= 55 ? '今夜なら、落ちる' : '一晩で話が動くことは多い') },
+        { label: '怒鳴りつけ、追い詰める', value: 'E', cls: 'red', small: (L.E || '机を叩く。家族のことを持ち出す') + '。否認を崩す近道' },
+        { label: L.D[0], value: 'D', cls: 'red', small: L.D[1] + '。相手の逃げ道を用意してやる' }, { label: 'やめておく', value: null, small: '時間は使わない' }] });
     if (!k) { G.audio.ambient(null); return false; }
     const R = kit.RISK(rec, c.meter || 0);
     if (R[k] && !(await G.confirmRisk(R[k]))) { G.audio.ambient(null); return false; }

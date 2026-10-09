@@ -24,10 +24,13 @@
     return new Promise(res => { S._finish = res; K.morning(true); });
   };
   K.date = (d) => dateOf(C.base, d == null ? S.day : d);
+  // 書類が届いたとき：机に置かれる演出（紙の音・知らせ）。まとめて届いたら、まとめて知らせる
+  let arrived = [], arrT = null;
+  const announce = title => { arrived.push(title); clearTimeout(arrT); arrT = setTimeout(() => { if (!arrived.length) return; G.audio.sfx('paper'); G.toast('捜査記録に綴じた：' + arrived.map(t => '「' + t + '」').join('')); arrived = []; }, 120); };
   K.addDoc = function (d) {
     const ex = S.docs.find(x => x.id === d.id);
-    if (ex) { Object.assign(ex, d, { isNew: true }); return ex; }
-    d.isNew = true; S.docs.push(d); return d;
+    if (ex) { Object.assign(ex, d, { isNew: true, fresh: true }); announce(ex.title); return ex; }
+    d.isNew = true; d.fresh = true; S.docs.push(d); announce(d.title); return d;
   };
   K.doc = id => S.docs.find(d => d.id === id);
   K.freeStaff = () => C.staff.filter(s => !S.staffGone[s.id] && !S.tasks.find(t => t.staff === s.id));
@@ -55,6 +58,8 @@
 
   K.render = function (hint) {
     if (S && S._closed) return;
+    // 指示を出す画面（自分の机）では、刑事部屋の音を
+    if (C && C.scene && (C.scene(S) || {}).bg === 'office' && G.audio.ambientKind && G.audio.ambientKind() !== 'office') G.audio.ambient('office');
     const info = C.info(S);
     G.layout({ role: C.role, date: K.date(), info: info.text, clock: info.clock, scene: C.scene(S), hint: hint || '（今日の指示を出す。）',
       body: '<div class="row2"><div class="panel"><div class="ph"><span>捜査員</span></div>' + staffPanel() + '</div>'
@@ -66,11 +71,12 @@
     const el = G.$('#docs'); if (!el) return; el.innerHTML = '';
     S.docs.forEach(d => {
       const b = document.createElement('button');
-      b.className = 'doc' + (d.isNew ? ' new' : '') + (d.kind === 'memo' ? ' memo' : '') ;
+      b.className = 'doc' + (d.isNew ? ' new' : '') + (d.fresh ? ' arrive' : '') + (d.kind === 'memo' ? ' memo' : '') ; d.fresh = false;
       b.textContent = d.title;
       b.onclick = async () => {
         if (G.ui.talking) return;
         d.isNew = false; b.classList.remove('new');
+        if (C.compare) G.meta.tips = G.meta.tips || {}, (!G.meta.tips.docs && (G.meta.tips.docs = true, G.saveMeta(), G.toast('記録の下の「横に並べる」で、別の記録と見比べられる')));
         const others = S.docs.filter(x => x.id !== d.id);
         const v = await G.openPaper({ title: d.title, sub: d.sub, body: typeof d.body === 'function' ? d.body(S) : d.body, stamps: d.stamps,
           buttons: C.compare && others.length ? [{ label: '横に並べる', value: 'cmp', small: '別の記録と見比べる' }] : [] });
@@ -176,11 +182,15 @@
       K.refresh();
       G.toast(s.name + 'に「' + (a.short || a.label) + '」を指示した（' + days + '日）');
     } else {
+      const lab = typeof a.label === 'function' ? a.label(S) : (a.label || '');
+      if (/任意で話を聴く/.test(lab)) await G.tip('ninni', [['shirai', '主任。逮捕する前の*任意*の聴取は、*録画の義務*はありません。相手は、いつでも席を立って帰れます。', { scene: { bg: 'office', who: 'shirai' } }], ['shirai', '……ここで無理をすると、あとで「任意じゃなかった」と言われます。まあ、覚えておいてください。']]);
+      if (/取り調べる/.test(lab) && S.c.arrest != null) await G.tip('interro', [['shirai', '取調べの前には、必ず*黙秘権*を告げてください（刑訴法198条2項）。言いたくないことは言わなくていい、と。', { scene: { bg: 'office', who: 'shirai' } }], ['shirai', '罪名によっては、ここからの取調べは全部*録画*されます。されない罪名もある。……どっちにしても、調書に書いたことは法廷で読まれます。']]);
       const r = a.run ? await a.run(S) : null;
+      if (/を逮捕する/.test(lab) && S.c.arrest != null) await G.tip('arrest', [['shirai', '逮捕しました。ここから時計が動きます。*48時間*以内に検察官へ送致、検察官は*24時間*以内に勾留を請求します。', { scene: { bg: 'office', who: 'shirai' } }], ['shirai', '*勾留*は10日、延長しても最大でもう10日。全部で*23日*。その間に、起訴できるだけの記録をそろえる。……長いようで、短いですよ。']]);
       if (r === false) { K.render(); return; }   // 取りやめ
       if (a.once !== false) S.done[a.id] = true;
       S.fin[a.id] = true;
-      if (!a.free) S.selfUsed = true;
+      if (!a.free) { S.selfUsed = true; G.clock = { h: Math.min(19, (G.clock ? G.clock.h : 9) + 2 + (Math.random() < .5 ? 1 : 0)), m: [0, 10, 20, 30, 40, 50][Math.floor(Math.random() * 6)] }; }
       if (S._ended) return;
       K.render();
     }
@@ -237,6 +247,7 @@
     try { await morning(first); } finally { G.ui.busy = false; }
   };
   async function morning(first) {
+    G.clock = { h: 8, m: 30 };
     K.render('');
     const all = collect(first);
     K.refresh();
@@ -262,5 +273,6 @@
     return m.concat(lines).concat(C.after ? (C.after(S) || []) : []);
   }
   // 事件が終わったあとは、この画面を描き直さない（次の画面＝検察・公判を上書きしないように）
+  K.abort = () => { if (S) { S._ended = true; S._closed = true; S._finish = null; } if (C) C.actsOverride = null; };
   K.end = function (result) { S._ended = true; S._closed = true; const f = S._finish; S._finish = null; f && f(result); };
 })();

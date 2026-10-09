@@ -283,7 +283,7 @@
       ['', '（四十分後、訂正された請求書がファクスで届いた。）', { sfx: 'type' }]],
       apply: (R) => {
         R.items = '携帯電話機、キャッシュカード、預金通帳、手帳・メモ類、名簿類、現金、紺色のスーツ、その他本件に関係ありと思料される文書及び物件';
-        replaceDoc(R, 'req', D('req2', '捜索差押許可状請求書（訂正）', 5, kv([['被疑者', '浜岡 蓮（はまおか れん）　22歳'], ['罪名', '詐欺'], ['捜索すべき場所', '北見坂市栄町三丁目12番5号 栄町コーポ102号室（被疑者方）'],
+        replaceDoc(R, 'req', D('req2', '捜索差押許可状請求書（訂正）', 5, REQ('捜索差押許可状請求書', [['被疑者', '浜岡 蓮（はまおか れん）　22歳'], ['罪名', '詐欺'], ['捜索すべき場所', '北見坂市栄町三丁目12番5号 栄町コーポ102号室（被疑者方）'],
           ['差し押さえるべき物', R.items + '<br><small>（訂正印あり）</small>']]), 'req'));
         R.fixed = true;
       } }),
@@ -377,7 +377,7 @@
       ['', '（三十分後、訂正された請求書と住民票照会回答書が届いた。）', { sfx: 'type' }]],
       apply: (R) => {
         R.sus = ['井関 拓也', 'いせき たくや', '27歳'];
-        replaceDoc(R, 'req', D('req2', '逮捕状請求書（訂正）', 5, kv([['被疑者', '井関 拓也（いせき たくや）　27歳　アルバイト'], ['住居', '北見坂市緑ヶ丘二丁目14番3号'], ['罪名', '住居侵入'],
+        replaceDoc(R, 'req', D('req2', '逮捕状請求書（訂正）', 5, REQ('逮捕状請求書', [['被疑者', '井関 拓也（いせき たくや）　27歳　アルバイト'], ['住居', '北見坂市緑ヶ丘二丁目14番3号'], ['罪名', '住居侵入'],
           ['被疑事実の要旨', '（訂正前と同じ）'], ['逮捕の必要', '被疑者は犯行後逃走しており、逃亡及び罪証隠滅のおそれがある。'], ['訂正', '被疑者の氏名・年齢・住居（訂正印あり）']]), 'req'));
         replaceDoc(R, 'jumin', D('jumin2', '住民票照会回答書（再照会）', 5, kv([['氏名', '井関 拓也（いせき たくや）'], ['住所', '北見坂市緑ヶ丘二丁目14番3号'], ['年齢', '27歳'], ['世帯', '母と同居']])));
         R.fixed = true;
@@ -472,7 +472,7 @@
       ['hj_tochoku', '訂正した請求書を、すぐお送りします。'],
       ['', '（五十分後、訂正印の押された請求書が届いた。）', { sfx: 'type' }]],
       apply: (R) => {
-        replaceDoc(R, 'req', D('req2', '逮捕状請求書（訂正）', 5, kv([['被疑者', '宇佐美 恭平（うさみ きょうへい）　45歳'], ['罪名', '詐欺'], ['被疑事実の要旨', USAMI_FACT('10月13日') + '<br><small>（「10月3日」を「10月13日」に訂正。訂正印あり）</small>']]), 'req'));
+        replaceDoc(R, 'req', D('req2', '逮捕状請求書（訂正）', 5, REQ('逮捕状請求書', [['被疑者', '宇佐美 恭平（うさみ きょうへい）　45歳'], ['罪名', '詐欺'], ['被疑事実の要旨', USAMI_FACT('10月13日') + '<br><small>（「10月3日」を「10月13日」に訂正。訂正印あり）</small>']]), 'req'));
         R.fixed = true;
       } }),
     after: (S, R) => R.eff === 'grant'
@@ -500,7 +500,7 @@
       ['', '（四十五分後、訂正された請求書が届いた。）', { sfx: 'type' }]],
       apply: (R) => {
         R.place = '北見坂市港町一丁目4番7号 港町ハイツ203号室';
-        replaceDoc(R, 'req', D('req2', '捜索差押許可状請求書（訂正）', 5, kv([['被疑者', '千早 博之（ちはや ひろゆき）　39歳'], ['罪名', '覚醒剤取締法違反（営利目的譲渡）'], ['捜索すべき場所', R.place + '<br><small>（訂正印あり）</small>'], ['差し押さえるべき物', R.items]]), 'req'));
+        replaceDoc(R, 'req', D('req2', '捜索差押許可状請求書（訂正）', 5, REQ('捜索差押許可状請求書', [['被疑者', '千早 博之（ちはや ひろゆき）　39歳'], ['罪名', '覚醒剤取締法違反（営利目的譲渡）'], ['捜索すべき場所', R.place + '<br><small>（訂正印あり）</small>'], ['差し押さえるべき物', R.items]]), 'req'));
         R.fixed = true;
       } }),
     after: (S, R) => R.eff === 'grant'
@@ -625,8 +625,16 @@
   const waiting = () => S.reqs.filter(R => R.at <= S.t && !R.dec);
   const future = () => S.reqs.filter(R => R.at > S.t);
   function replaceDoc(R, oldId, d) {
+    // 訂正された請求書：訂正していない項目は、元の請求書から引き継ぐ（被疑事実を照らし合わせられるように）
+    const old = R.docs.find(x => x.id === oldId);
+    if (old && old.body && old.body.rows && d.body && d.body.rows) {
+      const keys = d.body.rows.map(r => r[0]);
+      d.body.rows.forEach(r => { if (/訂正前と同じ/.test(r[1])) { const o = old.body.rows.find(x => x[0] === r[0]); if (o) r[1] = o[1]; } });
+      old.body.rows.forEach(r => { if (!keys.includes(r[0])) d.body.rows.push(r.slice()); });
+    }
     const i = R.docs.findIndex(x => x.id === oldId);
-    d.isNew = true;
+    d.isNew = true; d.fresh = true; setTimeout(() => { d.fresh = false; }, 1200);
+    G.audio.sfx('type'); setTimeout(() => G.toast('ファクスが届いた：「' + d.title + '」'), 300);
     if (i >= 0) R.docs[i] = d; else R.docs.push(d);
   }
   function inst(def) {
@@ -656,7 +664,7 @@
       + '<span class="hj-nm">' + R.sus[0] + '</span>　' + R.sus[2]
       + '<span class="hj-sub">' + R.def.charge + '　｜　受付 ' + dayOf(R.at) + ' ' + hm(R.at) + '　｜　' + fromLabel + '</span></div>'
       + '<div class="hj-stack" id="hj-stack">'
-      + R.docs.map((d, i) => '<button class="hj-card' + (R.read[d.id] ? ' read' : '') + (d.isNew ? ' new' : '') + (d.cls ? ' ' + d.cls : '') + '" data-i="' + i + '"><span class="hj-ct">' + d.title + '</span><span class="hj-cm">' + (R.read[d.id] ? '読んだ' : d.t ? '読む　' + d.t + '分' : '読む') + '</span></button>').join('')
+      + R.docs.map((d, i) => '<button class="hj-card' + (R.read[d.id] ? ' read' : '') + (d.isNew ? ' new' : '') + (d.fresh ? ' arrive' : '') + (d.cls ? ' ' + d.cls : '') + '" data-i="' + i + '"><span class="hj-ct">' + d.title + '</span><span class="hj-cm">' + (R.read[d.id] ? '読んだ' : d.t ? '読む　' + d.t + '分' : '読む') + '</span></button>').join('')
       + '</div></div>';
   }
   function decHtml(R) {
@@ -677,6 +685,7 @@
   }
 
   function render(hint) {
+    if (S) { const m = (START + (S.t || 0)) % 1440; G.clock = { h: Math.floor(m / 60), m: m % 60 }; }
     const R = cur(), n = NIGHTS[S.night];
     if (!hint) hint = R ? '（' + KIND[R.kind].label + '。' + R.sus[0] + '、' + R.def.charge + '。書類は' + R.docs.length + '綴。）' : '（' + hm(S.t) + '。裁判官室は静かだ。）';
     G.layout({ role: '令状当番', date: dayOf(S.t), info: '北見坂地方裁判所　' + n.name, clock: clockHtml(), scene: { bg: BG_CHAMBERS }, hint, body: deskHtml(R) });
@@ -772,9 +781,9 @@
         buttons: rs.map((r, i) => ({ label: r, value: String(i), keep: true })), closeLabel: '戻る' });
       if (v == null) return;
       reason = rs[+v];
-      G.stampOn('却下', 'red');
+      await G.sleep(250); G.stampOn('却下', 'red');
       await G.sleep(350); G.stampOn('印', 'red', true);
-      await G.sleep(900); G.closePaper();
+      await G.sleep(700); await handToClerk(R, false);
     } else {
       if (R.kind === 'encho') {
         const ask = R.def.ask || 10;
@@ -787,9 +796,9 @@
       const ok = await G.openPaper({ title: K.paper + '（案）', sub: '記名押印すれば、発付される。', body: draft(R, how, days),
         buttons: [{ label: '記名押印する', value: 'ok', cls: 'green', keep: true }], closeLabel: '戻る' });
       if (ok !== 'ok') return;
-      G.stampOn(K.gs, 'green');
+      await G.sleep(250); G.stampOn(K.gs, 'green');
       await G.sleep(350); G.stampOn('印', 'red', true);
-      await G.sleep(900); G.closePaper();
+      await G.sleep(700); await handToClerk(R, true);
     }
     R.dec = how === 'deny' ? 'deny' : 'grant';
     R.eff = R.dec; R.how = how; R.reason = reason; R.days = days;
@@ -799,8 +808,14 @@
     advance(10);
   }
 
+  // 判を押した書面を、書記官に回す
+  async function handToClerk(R, grant) {
+    await G.handOff((grant ? (R.kind === 'koryu' ? '勾留状' : R.kind === 'encho' ? '延長の裁判' : KIND[R.kind].paper) : '却下の裁判') + 'を、書記官に回した。');
+    if (!S.handedTonight) { S.handedTonight = true;
+      await G.talk([['hj_clerk', grant ? 'お預かりします。……' + (R.def.from === 'pro' ? '検察庁' : '警察署') + 'に交付します。' : 'お預かりします。却下、ですね。……請求者に連絡します。', { scene: { bg: BG_CHAMBERS, who: 'hj_clerk' } }]]); }
+  }
   function draft(R, how, days) {
-    const n = NIGHTS[S.night], req = R.docs.find(d => d.id === 'req'), rows = (req && req.body && req.body.rows) || [];
+    const n = NIGHTS[S.night], req = R.docs.find(d => d.id === 'req2') || R.docs.find(d => d.id === 'req'), rows = (req && req.body && req.body.rows) || [];
     const get = k => { const r = rows.find(x => x[0] === k); return r ? r[1] : ''; };
     const sp = parseSus(get('被疑者') || (R.sus[0] + '（' + R.sus[1] + '）　' + R.sus[2]));
     const d = Object.assign({}, sp, { addr: get('住居') || get('住所'), charge: R.def.charge, facts: get('被疑事実の要旨') || '別紙のとおり', date: n.date, valid: n.valid, judgeName: '（あなた）' });
@@ -829,7 +844,7 @@
 
   /* ---------- 夜の始まりと終わり ---------- */
   async function night(n) {
-    S.night = n; S.t = 0; S.nightOver = false;
+    S.night = n; S.t = 0; S.nightOver = false; S.handedTonight = false;
     S.reqs = S.defs.filter(d => d.night === n && (!d.when || d.when(S))).map(inst).sort((a, b) => a.at - b.at);
     G.audio.cue('silence'); G.audio.ambient(null);
     await G.curtain([{ html: '<div class="big">' + NIGHTS[n].name + '</div><div class="small">' + NIGHTS[n].date + '　午後9時　令状当番</div>', wait: 1200 }], { delay: 300 });
@@ -839,8 +854,21 @@
       render(n === 1 ? '（午後9時。裁判官室。）' : '');
       if (n === 1 && !S.tutDone) { S.tutDone = true; await tutorial(); }
       else await G.talk([['hj_clerk', pick(['今夜もよろしくお願いします。机に回します。', '当番、お疲れさまです。……もう一件、来ています。', '今夜は、少し多いかもしれません。']), { scene: { bg: BG_CHAMBERS, who: 'hj_clerk' } }]]);
+      await memoFor(n);
       render();
     });
+  }
+  // 部総括判事からのメモ：新しい種類の請求や問題点が出てくる夜に、机に置いてある
+  async function memoFor(n) {
+    const step = S.steps ? S.steps[n - 1] : 10;
+    if (step <= (G.meta.hanjiMaxStep || 0)) return;
+    G.meta.hanjiMaxStep = step; G.saveMeta();
+    const cur = step <= 9 ? G.hanjiGen.CURRICULUM[step] : null;
+    const lines = cur ? cur.memo : ['今夜の当番は、これまでの総まとめになる。', '請求の形式が整っていても、その*目的*を読むこと。軽い罪での逮捕・勾留が、実は重い別の事件の取調べのためではないか（いわゆる*別件逮捕*。適法かどうかの考え方は分かれている）。', '勾留中の取調べが、*余罪*の追及に偏っていないか。被害者の面通しが、写真1枚だけ、本人1人だけを見せる方法で行われていないか。'];
+    const laws = step <= 9 ? cur.laws.map(k => (G.LAW_HANJI.find(r => r[0].startsWith(k)) || G.LAW.find(r => r[0].startsWith(k)) || [k])[0]) : ['すべての条文'];
+    await G.openPaper({ title: '部総括判事からのメモ', sub: NIGHTS[n].name + 'の前に、机の上に置いてあった', noClose: true,
+      body: lines.map(l => '<p>' + l.replace(/\*([^*]+)\*/g, '<b class="kwp">$1</b>') + '</p>').join('') + (laws.length ? G.note('条文帳に加わった：' + laws.join('、')) : ''),
+      buttons: [{ label: '読んだ', value: 1 }] });
   }
   async function tutorial() {
     await G.talk([
@@ -899,6 +927,7 @@
     const e = S.eff, out = [];
     const longHeld = e.A3e === 'grant' || e.A3k === 'grant';
     const robberyArrest = e.A2a === 'grant' || e.A3r === 'grant';
+    S.pursued = longHeld || robberyArrest;
     if (longHeld && rnd() < .6) out.push('柘植亮介は、身柄を拘束されて十八日目に、質店の件を認めた、と聞いた。のちの公判で、柘植は「取調べに疲れて、言われたとおりに話した」と述べ、自白を撤回した。');
     else if (longHeld) out.push('柘植亮介は、最後まで質店の件を認めなかった。起訴されたのは、自転車の件だけだった、と聞いた。');
     else if (robberyArrest) out.push('柘植亮介は、強盗致傷で起訴された。否認している。公判は、来年になるという。');
@@ -1070,16 +1099,16 @@
   function evaluate() {
     const done = S.log.filter(R => R.dec === 'grant' || R.dec === 'deny');
     if (!done.length) return '';
-    const should = R => { const b = R.def.bad; return b === 'deny' ? 'deny' : b === 'fix' ? (R.fixed ? 'grant' : 'deny') : b === 'part' ? 'part' : b === 'split' ? 'split' : 'grant'; };
+    const should = R => { const b = R.def.bad; return b === 'deny' ? 'deny' : b === 'fix' ? (R.fixed ? 'grant' : 'deny') : b === 'part' || b === 'cond' ? 'part' : b === 'split' ? 'split' : 'grant'; };
     const judged = done.filter(R => should(R) !== 'split');
     const bad = judged.filter(R => should(R) === 'deny'), missed = bad.filter(R => R.dec === 'grant'), caught = bad.filter(R => R.dec === 'deny');
     const okDenied = judged.filter(R => should(R) === 'grant' && R.dec === 'deny');
-    const partMiss = judged.filter(R => should(R) === 'part' && R.dec === 'grant' && R.how !== 'part');
+    const partMiss = judged.filter(R => should(R) === 'part' && R.dec === 'grant' && R.how !== 'part' && R.how !== 'cond');
     const denyRate = Math.round(done.filter(R => R.dec === 'deny').length / done.length * 100), badRate = Math.round(bad.length / done.length * 100);
     let head, body;
     if (bad.length && missed.length / bad.length >= .5 && denyRate < badRate * .7) {
       head = '捜査機関にとって、ちょうどいい令状当番だった。';
-      body = '要件に問題のある請求が' + bad.length + '件あった。そのうち' + missed.length + '件を、そのまま発付した。' + (partMiss.length ? '一部だけ発付すべき請求も、全部を認めた。' : '');
+      body = '要件に問題のある請求が' + bad.length + '件あった。そのうち' + missed.length + '件を、そのまま発付した。' + (partMiss.length ? '一部だけ、または条件を付けて発付すべき請求も、そのまま認めた。' : '');
     } else if (!missed.length && okDenied.length <= 1) {
       head = '厳格な審査を行った。';
       body = bad.length ? '要件に問題のある請求' + bad.length + '件を、一件も見落とさなかった。' : '問題のある請求は、この三夜にはほとんどなかった。';
@@ -1100,6 +1129,7 @@
   function genEnd() {
     const c = S.plan.specs.filter(x => x.chain), nm = c[0].p.name.replace(' ', ''), e = S.eff, out = [];
     const held = c.slice(1).some(x => e[x.id] === 'grant');
+    S.pursued = held;
     out.push(held ? nm + 'は、勾留の満期に起訴された。' + pick(['否認を続けている、と聞いた。', '公判で、捜査段階の供述を翻したという。']) : nm + 'の事件がその後どうなったのか、あなたは知らない。');
     if (rnd() < .25) {
       S.revealed = true;
@@ -1112,7 +1142,7 @@
   /* ---------- 保存（夜ごと） ---------- */
   const LIB = { D, REQ, kv, P, note, replaceDoc, NIGHTS, qa };
   function saveNight(n) {
-    G.meta.hanjiSave = { night: n, hand: S.hand, plan: S.plan || null, eff: S.eff, flags: S.flags, count: S.count, truthA: S.truthA, revealed: S.revealed,
+    G.meta.hanjiSave = { night: n, hand: S.hand, dutyNo: S.dutyNo, steps: S.steps, plan: S.plan || null, eff: S.eff, flags: S.flags, count: S.count, truthA: S.truthA, revealed: S.revealed,
       log: S.log.map(R => ({ id: R.id, kind: R.kind, sus: R.sus, dec: R.dec, eff: R.eff, how: R.how, reason: R.reason, days: R.days, fixed: !!R.fixed })) };
     G.saveMeta();
   }
@@ -1125,16 +1155,21 @@
     G.lawMode = 'hanji';
     const sv = resume ? G.meta.hanjiSave : null;
     S = fresh(); H._S = S;
-    if (sv) { Object.assign(S, { eff: sv.eff, flags: sv.flags, count: sv.count, truthA: sv.truthA, revealed: sv.revealed, hand: sv.hand, plan: sv.plan, tutDone: true }); }
+    if (sv) { Object.assign(S, { eff: sv.eff, flags: sv.flags, count: sv.count, truthA: sv.truthA, revealed: sv.revealed, hand: sv.hand, plan: sv.plan, tutDone: true, dutyNo: sv.dutyNo || 5, steps: sv.steps || null }); }
     else {
-      S.hand = !G.meta.hanjiHandDone;
-      if (!S.hand) { S.plan = G.hanjiGen.plan((Math.random() * 2147483647) | 0, G.meta.hanjiUsed || {}); G.meta.hanjiUsed = S.plan.used; G.saveMeta(); }
+      // 何回目の当番か：1〜3回目は段階的に、4回目は手書きの三夜、5回目からは全部
+      S.dutyNo = G.meta.hanjiDutyNo = (G.meta.hanjiDutyNo || 0) + 1;
+      S.steps = S.dutyNo <= 3 ? [1, 2, 3].map(i => (S.dutyNo - 1) * 3 + i) : null;
+      S.hand = S.dutyNo === 4 && !G.meta.hanjiHandDone;
+      S.tutDone = S.dutyNo > 1;
+      if (!S.hand) { S.plan = G.hanjiGen.plan((Math.random() * 2147483647) | 0, G.meta.hanjiUsed || {}, S.steps); G.meta.hanjiUsed = S.plan.used; }
+      G.saveMeta();
     }
     S.defs = S.hand ? DEFS : G.hanjiGen.defs(S.plan, LIB);
     if (sv) S.log = sv.log.map(L => Object.assign({ def: S.defs.find(d => d.id === L.id) }, L)).filter(x => x.def);
     G.closePaper();
     G.audio.cue('silence');
-    if (!sv) await G.curtain([{ html: '<div class="big">判事編</div><div class="small">令状当番の夜</div>', wait: 1200 },
+    if (!sv) await G.curtain([{ html: '<div class="big">判事編</div><div class="small">令状当番　第' + S.dutyNo + '回</div>', wait: 1200 },
       { html: '<div class="law">北見坂地方裁判所　刑事部。<br>裁判官。<br><br>あなたは、捜査をしない。<br>届いた紙を読んで、決める。</div>', wait: 2200 }]);
     else await G.curtain([{ html: '<div class="big">続きから</div><div class="small">' + NIGHTS[sv.night + 1].name + 'から</div>', wait: 1000 }]);
     for (let n = sv ? sv.night + 1 : 1; n <= 3; n++) {
@@ -1150,7 +1185,7 @@
     await G.curtain([{ html: '<div class="quote">「わが国の刑事裁判はかなり絶望的である。」</div><div class="cite">平野龍一「現行刑事訴訟の診断」団藤重光博士古稀祝賀論文集 第4巻（有斐閣、1985年）407頁以下</div>', wait: 4000 }]);
     const c = S.count;
     G.meta.runs.push({ no: G.meta.runs.length + 1, mode: '令状当番', result: '発付' + c.grant + '・却下' + c.deny + '・追加資料' + c.call + (c.next ? '・引継ぎ' + c.next : '') + (S.verdictWord ? '<br><small>' + S.verdictWord + '</small>' : ''),
-      confession: '—', illegal: '—', withheld: '—', revealed: S.revealed ? '判明' : '—' });
+      confession: '—', illegal: '—', withheld: '—', revealed: S.revealed ? '判明' : '—', correct: S.revealed ? S.pursued === S.truthA : null });
     G.saveMeta();
     G.audio.ambient(null);
   }

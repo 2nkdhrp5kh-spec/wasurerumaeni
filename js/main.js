@@ -5,6 +5,7 @@
 (function () {
   const $ = G.$;
   async function title() {
+    G.inMode = false;
     G.closePaper(); G.audio.cue('title'); G.audio.ambient(null);
     const done = G.meta.runs.length > 0;
     $('#app').innerHTML = '<div class="title"><div class="sub">— 仮題 —</div><h1>調書</h1>'
@@ -27,17 +28,23 @@
       if (!v) return;
       G.audio.sfx('select');
       if (v === 'duty' && sv) delete G.meta.hanjiSave;
+      G.inMode = true;
       if (v === 'trials') await G.hanji.trials(); else await G.hanji.duty(v === 'resume');
       record();
     };
     $('#t-rec').onclick = record;
-    $('#t-law').onclick = G.openLaw;
+    $('#t-law').onclick = async () => {
+      const v = await G.openPaper({ title: '条文帳', sub: 'どちらの本を開くか。', body: G.P('刑事編と判事編では、使う条文が違う。'),
+        buttons: [{ label: '捜査（刑事編）', value: 'keiji', small: '刑法の罪名、捜査の手続、自白、違法収集証拠' }, { label: '令状・公判（判事編）', value: 'hanji', small: '逮捕・勾留・延長・捜索差押えの要件、訴因変更' }], closeLabel: '戻る' });
+      if (!v) return;
+      G.lawMode = v; await G.openLaw(); G.lawMode = null;
+    };
     $('#t-cr').onclick = credits;
     $('#t-warn').onclick = () => G.showWarning(false);
   }
 
   async function keiji() {
-    G.lawMode = 'keiji';
+    G.lawMode = 'keiji'; G.inMode = true;
     G.audio.cue('law1');
     await G.curtain([{ html: '<div class="big">刑事編</div>', wait: 1000 }, { html: G.QUOTES.law1a, wait: 3000 },
       { html: '<div class="law">北見坂警察署　刑事課　強行犯係。<br>巡査部長。<br><br>それが、あなただ。</div>', wait: 1800 }]);
@@ -66,15 +73,15 @@
 
   // 事件ごとの進み具合（遊んだ回数・見た結末）
   const CASES = [
-    { id: 'aoyagi', label: '青柳書房事件', small: '古書店で、店主が縛られ、金庫が奪われた', results: ['有罪', '無罪', '不起訴', '釈放（不起訴）', '未解決'], reveals: { enzai: '再審', murai: '別の事件', miyashita: '別の男の逮捕' } },
-    { id: 'ekimae', label: '北見坂駅前事件', small: '深夜の駅前で、男性が倒れて頭を打った。タクシー運転手が通報', results: ['有罪', '有罪（減軽）', '無罪', '不起訴', '釈放（不起訴）'], reveals: { wrong: '有罪のあとで', free: '有罪にならなかったあとで' } },
-    { id: 'chikan', label: '8時12分発', small: '朝の電車で、女性が男の手をつかんだ。駅員が男を引き渡した', results: ['有罪', '略式命令（罰金）', '無罪', '不起訴', '釈放（不起訴）'], reveals: { wrong: '有罪のあとで', free: '有罪にならなかったあとで' } },
-    { id: 'kasai', label: '本町三丁目火災', small: '未明の住宅火災。住人の母と息子は避難した', results: ['有罪', '無罪', '不起訴', '釈放（不起訴）'], reveals: { wrong: '有罪のあとで', free: '有罪にならなかったあとで' } }
+    { id: 'aoyagi', label: '青柳書房事件', small: '古書店で、店主が縛られ、金庫が奪われた', results: ['有罪', '無罪', '不起訴', '釈放（不起訴）', '未解決'], reveals: { enzai: '再審', murai: '別の事件', miyashita: '別の男の逮捕', right: '正しかったと分かる' } },
+    { id: 'ekimae', label: '北見坂駅前事件', small: '深夜の駅前で、男性が倒れて頭を打った。タクシー運転手が通報', results: ['有罪', '有罪（減軽）', '無罪', '不起訴', '釈放（不起訴）'], reveals: { wrong: '有罪のあとで', free: '有罪にならなかったあとで', right: '正しかったと分かる' } },
+    { id: 'chikan', label: '7時16分発', small: '朝の電車で、女性が男の手をつかんだ。駅員が男を引き渡した', results: ['有罪', '略式命令（罰金）', '無罪', '不起訴', '釈放（不起訴）'], reveals: { wrong: '有罪のあとで', free: '有罪にならなかったあとで', right: '正しかったと分かる' } },
+    { id: 'kasai', label: '本町三丁目火災', small: '未明の住宅火災。住人の母と息子は避難した', results: ['有罪', '無罪', '不起訴', '釈放（不起訴）'], reveals: { wrong: '有罪のあとで', free: '有罪にならなかったあとで', right: '正しかったと分かる' } }
   ];
   // この機能より前の記録からも、印を付ける
   function backfill() {
     if (G.meta.casesBackfilled) return; G.meta.casesBackfilled = true;
-    const map = { '刑事編': 'aoyagi', '青柳書房事件': 'aoyagi', '駅前事件': 'ekimae', '北見坂駅前事件': 'ekimae', '8時12分発': 'chikan', '本町三丁目火災': 'kasai' };
+    const map = { '刑事編': 'aoyagi', '青柳書房事件': 'aoyagi', '駅前事件': 'ekimae', '北見坂駅前事件': 'ekimae', '7時16分発': 'chikan', '8時12分発': 'chikan', '本町三丁目火災': 'kasai' };
     (G.meta.runs || []).forEach(r => { const id = map[r.mode]; if (!id) return; const m = caseMeta(id); m.started++; m.finished++; m.results[r.result] = (m.results[r.result] || 0) + 1; });
     G.saveMeta();
   }
@@ -87,17 +94,16 @@
       + '　数年後 ' + rv.length + '/' + Object.keys(k.reveals).length + (rv.length ? '（' + rv.map(r => k.reveals[r]).join('・') + '）' : '') + '</span>';
   }
 
-  // 真相究明率：遊んだ事件のうち、真相が明らかになったもの（すべて偶然による）
+  // 判明した事件での正答率：真相が（偶然）明らかになった事件のうち、自分の処理が正しかったもの
   function truthRate(rows) {
-    const n = rows.length, m = rows.filter(r => r.revealed === '判明').length, pct = n ? Math.round(m / n * 100) : 0;
-    const part = (f, name) => { const rr = rows.filter(f); if (!rr.length) return ''; const k = rr.filter(r => r.revealed === '判明').length; return name + ' ' + k + '/' + rr.length; };
-    const hanji = r => /判事編|令状当番|公判/.test(r.mode);
-    return '<div class="trate"><div class="tl">真相究明率</div><div class="tv">' + pct + '<small>%</small></div><div class="ts">' + n + '件のうち、真相が明らかになったのは' + m + '件。<br>そのすべてが、偶然による。</div>'
-      + '<div class="ts2">' + [part(r => !hanji(r), '刑事編'), part(hanji, '判事編')].filter(Boolean).join('　／　') + '</div></div>';
+    const rev = rows.filter(r => r.revealed === '判明'), known = rev.filter(r => r.correct === true || r.correct === false), ok = known.filter(r => r.correct).length;
+    const pct = known.length ? Math.round(ok / known.length * 100) + '<small>%</small>' : '—';
+    return '<div class="trate"><div class="tl">判明した事件での正答率</div><div class="tv">' + pct + '</div>'
+      + '<div class="ts">遊んだ' + rows.length + '件のうち、真相が明らかになったのは' + rev.length + '件。' + (known.length ? 'そのうち、あなたの処理が正しかったのは' + ok + '件。' : '') + '<br>真相が明らかになるのは、すべて偶然による。<br>誤っていたときのほうが、明らかになりやすい（再審の申立て、別の事件など）。</div></div>';
   }
 
   function record() {
-    G.audio.ambient(null);
+    G.audio.ambient(null); G.audio.sfx('paper');
     const rows = G.meta.runs.slice().reverse();
     $('#app').innerHTML = '<header class="bar"><span class="role">記録</span><span class="info">これまでの事件。真相の欄はない。</span></header>';
     const w = document.createElement('div');

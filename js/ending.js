@@ -120,9 +120,15 @@
     if (verdict === '有罪' && T === 'I' && rnd() < .55) revealed = 'enzai';
     if (verdict !== '有罪' && T === 'G' && rnd() < .55) revealed = 'murai';
     if (verdict === '未解決' && T === 'I' && rnd() < .4) revealed = 'miyashita';
-    G.lastOutcome = { verdict, reveal: revealed };
+    // 正しかったことが、偶然分かることもある
+    if (!revealed && ((verdict === '有罪' && T === 'G') || (verdict !== '有罪' && verdict !== '未解決' && T === 'I')) && rnd() < .25) revealed = 'right';
+    const correct = revealed ? (revealed === 'right' || revealed === 'miyashita') : null;
+    G.lastOutcome = { verdict, reveal: revealed, correct };
     G.audio.cue('years');
-    if (revealed === 'enzai') await enzai(S);
+    if (revealed === 'right') await G.curtain(verdict === '有罪'
+      ? [{ html: '<div class="big">5年後</div>', wait: 1200 }, { html: '<div class="doc-s"><h3>手提げ金庫</h3>北見川の河川改修の工事で、川底から緑色の手提げ金庫が引き上げられた。<br>中に残っていた帳面は、青柳書房のものだった。金庫の取っ手から、久住透の指紋が検出された。</div>', wait: 2600 }]
+      : [{ html: '<div class="big">3年後</div>', wait: 1200 }, { html: '<div class="doc-s"><h3>強盗の常習犯</h3>隣県で強盗の現行犯として逮捕された男の部屋から、緑色の手提げ金庫が見つかった。<br>中の帳面は、青柳書房のものだった。</div>', wait: 2600 }]);
+    else if (revealed === 'enzai') await enzai(S);
     else if (revealed === 'murai') await murai(S, verdict);
     else if (revealed === 'miyashita') await miyashitaOnly(S);
     else await G.curtain([{ html: '<div class="law">それから、何年かが過ぎた。<br><br>何も起きなかった。<br><br>' + (verdict === '有罪' ? '久住透は、刑期を務めて出所した。' : verdict === '未解決' ? '青柳書房事件は、未解決のままである。' : '久住透が、その後どこで何をしているのかは、分からない。') + '</div>', wait: 2200 },
@@ -140,7 +146,7 @@
     await G.curtain(pages);
     G.meta.runs.push({ no: G.meta.runs.length + 1, mode: '青柳書房事件', result: verdict, confession: c.confession ? (c.confession.voluntary ? 'あり（自発）' : 'あり') + (c.retract ? '・撤回' : '') : 'なし',
       illegal: (c.search === 'illegal' ? 1 : 0) + (c.sess.C ? 1 : 0) + (c.sess.D ? 1 : 0) + (c.sess.E ? 1 : 0) + (c.arrest_kind === 'bekken' ? 1 : 0), withheld: (c.withheld || []).length + (c.videoWithheld ? 1 : 0),
-      revealed: revealed ? '判明' : '—' });
+      revealed: revealed ? '判明' : '—', correct });
     G.saveMeta();
   };
 

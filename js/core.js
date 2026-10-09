@@ -46,7 +46,9 @@ G.curtain = function (pages, opt) {
       const wait = (pg.wait != null ? pg.wait : opt.wait) || 1400;
       setTimeout(() => { ready = true; tap.classList.add('show'); }, wait);
     };
-    cur.onclick = () => { G.audio.unlock(); if (ready) show(); };
+    cur.onclick = e => { if (e && e.target && e.target.id === 'cquit') return; G.audio.unlock(); if (ready) show(); };
+    // 暗転の画面でも中断できる（二度押し）
+    const cq = $('#cquit'); if (cq) { cq.hidden = !G.inMode; cq.textContent = '中断'; cq.onclick = e => { e.stopPropagation(); if (cq.dataset.arm === '1') { cq.dataset.arm = ''; G.quit(); return; } cq.dataset.arm = '1'; cq.textContent = 'もう一度押すと中断'; setTimeout(() => { cq.dataset.arm = ''; cq.textContent = '中断'; }, 3000); }; }
     setTimeout(show, opt.delay != null ? opt.delay : 600);
   });
 };
@@ -108,7 +110,7 @@ G.layout = function (o) {
   $('#b-quit').onclick = async () => {
     const ok = await G.openPaper({ title: '中断する', body: G.P('この事件をここでやめて、タイトルに戻る。途中の記録は残らない。', 'つらいと感じたら、いつでもやめてかまわない。'), noClose: true,
       buttons: [{ label: 'やめてタイトルに戻る', value: true, cls: 'red' }, { label: '続ける', value: false }] });
-    if (ok) location.reload();
+    if (ok) G.quit();
   };
   $('#b-snd').onclick = () => { G.meta.muted = !G.meta.muted; G.saveMeta(); G.audio.setMuted(G.meta.muted); $('#b-snd').textContent = G.meta.muted ? '音：切' : '音：入'; };
   G.drawScene(o.scene || { bg: 'dark' });
@@ -116,8 +118,25 @@ G.layout = function (o) {
 G.audit = [];
 G.auditLog = m => { if (G.audit.length < 500) G.audit.push(m); };
 G.drawScene = function (sc) {
+  // 課長と話すときは、こちらが課長の机まで行く
+  if (sc && sc.who === 'todo' && (!sc.bg || sc.bg === 'office')) sc = Object.assign({}, sc, { bg: 'kacho' });
   if (sc && sc.who && G.auditCtx && G.auditCtx.suspect === sc.who && G.auditCtx.inCustody() && !['interro', 'street', 'shop', 'court'].includes(sc.bg)) G.auditLog('拘束中の被疑者が場違いな場所に表示: ' + sc.who + ' @ ' + sc.bg);
   G.lastScene = sc; const cv = $('#cv'); if (cv && G.portraits) G.portraits.scene(cv, sc); };
+
+/* 台詞の重要語：*…* で囲んだ語と、登場人物の台詞に出る用語を赤くする */
+G.KEYWORDS = ['録音・録画', '録画の義務', '録画', '黙秘権', '供述拒否権', '逮捕状', '捜索差押許可状', '令状', '勾留延長', '勾留', '満期', '48時間', '72時間', '23日', '任意', '強制', '違法収集証拠', '違法', '証拠能力', '任意性',
+  '自白', '秘密の暴露', '送致', '在宅', '釈放', '不起訴', '起訴', '正当防衛', '過剰防衛', '殺意', '故意', '伝聞', '別件', '現行犯', '略式', '再審', '訴因', '弁護人', '準抗告', '相当な理由', '逮捕の必要', '罪証隠滅', '逃亡'];
+G.markup = function (text, auto) {
+  // 返り値：[{ ch, red }]（1文字ずつ）
+  const out = []; let red = false;
+  for (const ch of text) { if (ch === '*') { red = !red; continue; } out.push({ ch, red }); }
+  if (auto) {
+    const plain = out.map(o => o.ch).join(''), used = new Set();
+    G.KEYWORDS.forEach(k => { if (used.size > 3) return; const i = plain.indexOf(k); if (i < 0 || [...used].some(u => u[0] <= i + k.length && i <= u[1])) return; used.add([i, i + k.length]); for (let j = i; j < i + k.length; j++) out[j].red = true; });
+  }
+  return out;
+};
+G.renderMarked = (arr, k) => { let h = '', red = false; for (let i = 0; i < Math.min(k, arr.length); i++) { const o = arr[i]; if (o.red !== red) { h += red ? '</span>' : '<span class="kw">'; red = o.red; } h += o.ch === '<' ? '&lt;' : o.ch === '&' ? '&amp;' : o.ch; } return h + (red ? '</span>' : ''); };
 
 /* 台詞：1文字ずつ表示し、つぶやき音を鳴らす */
 G.talk = function (lines, opt) {
@@ -127,7 +146,8 @@ G.talk = function (lines, opt) {
     const aw = $('#acts-wrap');
     G.ui.talking = true; if (aw) aw.classList.add('wait');
     let i = 0, typing = null, full = '', waitArrive = null, startType = null;
-    const finishType = () => { if (typing) { clearInterval(typing); typing = null; box.querySelector('.say').textContent = full; G.anim.speaking = null; } };
+    let marked = [];
+    const finishType = () => { if (typing) { clearInterval(typing); typing = null; box.querySelector('.say').innerHTML = G.renderMarked(marked, marked.length); G.anim.speaking = null; } };
     const next = () => {
       if (waitArrive) { clearTimeout(waitArrive); waitArrive = null; G.portraits.skipArrival(); startType(); return; }
       if (typing) { finishType(); return; }
@@ -156,10 +176,10 @@ G.talk = function (lines, opt) {
         G.anim.speaking = (c && c.portrait) ? c.portrait : null;
         box.innerHTML = '<div class="who">' + name + (c && c.kana ? '<span class="kana">' + c.kana + '</span>' : '') + '</div><div class="say' + (nar ? ' nar' : '') + '"></div><div class="more">▼</div>';
         const say = box.querySelector('.say');
-        full = text; let k = 0;
+        marked = G.markup(text, !nar); full = marked.map(o => o.ch).join(''); let k = 0;
         const step = nar ? 18 : Math.round(34 / ((c && c.voice && c.voice.rate) || 1));
         typing = setInterval(() => {
-          k++; say.textContent = full.slice(0, k);
+          k++; say.innerHTML = G.renderMarked(marked, k);
           if (!nar && c && c.voice && who !== 'you' && k % 2 === 1) G.audio.voice(c.voice, full[k - 1]);
           if (k >= full.length) { clearInterval(typing); typing = null; G.anim.speaking = null; }
         }, step);
@@ -200,8 +220,15 @@ G.openPaper = function (o) {
 G.closePaper = () => { const ov = $('#overlay'); ov.hidden = true; ov.innerHTML = ''; };
 G.stampOn = function (t, c, round) {
   const st = $('#stamps'); if (!st) return;
+  // 判子は紙の上のほうに押す。スマホで下までスクロールしていても見えるように、上へ戻す
+  const ov = $('#overlay'); if (ov && ov.scrollTop > 0) ov.scrollTo({ top: 0, behavior: 'smooth' });
   const s = document.createElement('span'); s.className = 'stamp hit ' + c + (round ? ' round' : ''); s.textContent = t;
   s.style.transform = 'rotate(' + (-12 + G.rnd() * 8).toFixed(1) + 'deg)'; st.appendChild(s); G.audio.sfx('stamp');
+};
+// 判を押した紙を、相手（書記官など）に渡す：紙が机から離れていく
+G.handOff = async function (msg) {
+  const p = document.querySelector('#overlay .paper'); if (p) p.classList.add('handoff');
+  G.audio.sfx('paper'); await G.sleep(650); G.closePaper(); if (msg) G.toast(msg);
 };
 G.toast = function (t) {
   let el = $('#toast'); if (!el) { el = document.createElement('div'); el.id = 'toast'; el.className = 'toast'; document.body.appendChild(el); }
@@ -209,6 +236,22 @@ G.toast = function (t) {
 };
 
 /* 違法・不適切な行動の確認（赤い付箋） */
+/* 初めてのときだけの説明 */
+G.tip = function (key, lines) { G.meta.tips = G.meta.tips || {}; if (G.meta.tips[key]) return Promise.resolve(); G.meta.tips[key] = true; G.saveMeta(); return G.talk(lines); };
+
+/* 中断：どの画面からでも、タイトルに戻る（ページの再読み込みに頼らない） */
+G.inMode = false;
+G.quit = function () {
+  G.inMode = false; const cq = $('#cquit'); if (cq) cq.hidden = true;
+  G._ctok = (G._ctok || 0) + 1;                       // 進行中の暗転を無効に
+  const cur = $('#curtain'); cur.classList.remove('on'); cur.onclick = null; $('#cbox').innerHTML = '';
+  G.closePaper(); G.ui.talking = false; G.ui.busy = false; G.anim.speaking = null;
+  if (G.keiji && G.keiji.abort) G.keiji.abort();
+  G.audio.ambient(null); G.audio.cue('silence');
+  G.auditCtx = null; G.lawMode = null;
+  if (G.main && G.main.title) G.main.title(); else location.reload();
+};
+
 /* 注意書き（起動時・タイトル・性犯罪を扱う事件の前） */
 G.WARNING = G.P('<b>本作はフィクションです。</b>登場する人物・団体・地名・条例は架空のものです。',
   '<b>犯罪とその被害の描写を含みます。</b>暴力、人の死、性犯罪、火災、取調べでの威圧的な言動などが出てきます。被害を訴える人の話が疑われる場面もあります。犯罪の被害に遭ったことのある方にとっては、つらい記憶を呼び起こすおそれがあります。無理をせず、途中でやめる（画面上の「中断」）、事件を選ばない、といった選択をしてください。',
@@ -218,7 +261,9 @@ G.showWarning = (first) => G.openPaper({ title: '注意', sub: 'はじめに、�
 
 G.confirmRisk = function (risk) {
   const first = !G.meta['risk_' + risk.id];
-  const body = (risk.lure ? '<p style="font-family:DotGothic16,sans-serif">' + risk.lure + '</p>' : '') + '<div class="riskbox"><b>' + risk.title + '</b><br>根拠：' + risk.law
+  const body = (risk.lure ? '<p style="font-family:DotGothic16,sans-serif">' + risk.lure + '</p>' : '')
+    + (risk.gain ? '<div class="gainbox"><b>うまくいけば</b><ul>' + risk.gain.map(g => '<li>' + g + '</li>').join('') + '</ul></div>' : '')
+    + '<div class="riskbox"><b>' + risk.title + '</b><br>根拠：' + risk.law
     + (first || risk.always ? '<br>起こりうること：<ol>' + risk.effects.map(e => '<li>' + e + '</li>').join('') + '</ol>' : '')
     + '</div>' + (risk.note ? G.note(risk.note) : '');
   return G.openPaper({ title: '確認', red: true, body, noClose: true,

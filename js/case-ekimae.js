@@ -258,6 +258,10 @@
 
   /* 公判 */
   const TRIAL = {
+    isGuilty: S => S.c.truth === 'A',
+    confirm: (S, guiltyV) => guiltyV
+      ? ['<div class="big">5年後</div>', '<div class="doc-s"><h3>手紙</h3>服役を終えた戸田誠から、被害者の母に手紙が届いた、と弁護人を通じて聞いた。<br>「あの夜、先に殴ったのは自分です。押したのではありません。ずっと言えずにいました」</div>']
+      : ['<div class="big">3年後</div>', '<div class="doc-s"><h3>動画</h3>あの夜、駅前でバスを待っていた女性のスマートフォンに、動画が残っていた。<br>酔った若い男がタクシーの運転手に掴みかかり、運転手が振り払った瞬間、男は後ろに倒れていた。</div>'],
     accusedName: '戸田誠', name: '駅前事件', court: '北見坂地方裁判所（裁判員裁判：裁判官3人・裁判員6人）', truthText: '樋口が先に襲いかかった世界か、戸田が先に殴った世界か。',
     issue: { pro: '正当防衛が成立しないことを示す事情', yes: '以上によれば、被告人の行為は正当防衛に当たらない。', no: '以上によれば、被告人の行為が正当防衛に当たらないことについて、合理的な疑いが残る。刑訴法336条により、被告人に対し無罪の言渡しをする。' },
     retract(S) { const c = S.c; if (c.confession) c.retract = c.confession.voluntary ? false : c.truth === 'D' ? rnd() < .85 : rnd() < .4; },

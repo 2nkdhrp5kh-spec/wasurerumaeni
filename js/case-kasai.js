@@ -211,6 +211,10 @@
   async function finish(S, how) { S._ended = true; S.c.how = how; await kit.soutchi(C, S); K.end(how); }
 
   const TRIAL = {
+    isGuilty: S => S.c.truth === 'A',
+    confirm: (S, guiltyV) => guiltyV
+      ? ['<div class="big">3年後</div>', '<div class="doc-s"><h3>告白</h3>大塚茂は、服役中に面会に来た親族に、火をつけたのは自分だと話したという。<br>「母を連れて、楽になりたかった」</div>']
+      : ['<div class="big">2年後</div>', '<div class="doc-s"><h3>リコール</h3>同じ型番の石油ストーブで、転倒時に消火装置が作動しない不具合が確認され、メーカーがリコールを発表した。<br>本町三丁目の火災も、事故の一つとして数えられていた。</div>'],
     accusedName: '大塚茂', name: '本町三丁目火災', court: '北見坂地方裁判所（裁判員裁判：裁判官3人・裁判員6人）', truthText: '大塚が火をつけた世界か、ストーブの事故だった世界か。',
     issue: { pro: '本件火災が被告人の放火によることを示す事情', yes: '以上によれば、本件火災は被告人の放火によるものと認められる。', no: '以上によれば、本件火災が被告人の放火によるものであることについて、合理的な疑いが残る。刑訴法336条により、被告人に対し無罪の言渡しをする。' },
     retract(S) { const c = S.c; if (c.confession) c.retract = c.confession.voluntary ? false : c.truth === 'N' ? rnd() < .85 : rnd() < .4; },

@@ -109,12 +109,29 @@
     const nextRare = () => { rareT = setTimeout(() => { if (amb && amb.g === g && RARE) { G.pick(RARE)(); nextRare(); } }, 50000 + Math.random() * 90000); };
     if (RARE) nextRare();
     if (kind === 'interro') { hum(100, .02); hum(200, .006); room(400, .05); timer = setInterval(() => sfx('tick'), 1000); }
-    if (kind === 'office') { room(600, .06); hum(60, .01); }
+    if (kind === 'office') {
+      room(600, .06); hum(60, .01);
+      // 人の話し声のざわめき（声の帯域の雑音を、ゆっくり揺らす）
+      { const s = AC.createBufferSource(); s.buffer = noiseBuffer(3); s.loop = true; const bp = AC.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 520; bp.Q.value = 1.4;
+        const mg = AC.createGain(); mg.gain.value = .022; const lfo = AC.createOscillator(); lfo.frequency.value = .37; const lg = AC.createGain(); lg.gain.value = .014; lfo.connect(lg); lg.connect(mg.gain);
+        s.connect(bp); bp.connect(mg); mg.connect(g); s.start(); lfo.start(); nodes.push(s, lfo); }
+      // ときどき：キーボード、紙、椅子、遠くの電話
+      const near = (fn) => { const og = AC.createGain(); og.gain.value = 1; og.connect(g); fn(AC.currentTime + .02, og); };
+      const tick = (t, d, f, v, q) => { const s = AC.createBufferSource(); s.buffer = noiseBuffer(.05); const bp = AC.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = q || 3; const eg = AC.createGain(); env(eg, t, .002, .03, v); s.connect(bp); bp.connect(eg); eg.connect(d); s.start(t); };
+      const EV = [
+        () => near((t, d) => { const n = 6 + (Math.random() * 14 | 0); for (let i = 0; i < n; i++) tick(t + i * (.08 + Math.random() * .09), d, 1800 + Math.random() * 900, .05); }),
+        () => near((t, d) => { for (let i = 0; i < 5; i++) tick(t + i * .03, d, 3000 + Math.random() * 2000, .04, 1); }),
+        () => near((t, d) => { const o = AC.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(180, t); o.frequency.linearRampToValueAtTime(140, t + .25); const bp = AC.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 900; const eg = AC.createGain(); env(eg, t, .02, .25, .015); o.connect(bp); bp.connect(eg); eg.connect(d); o.start(t); o.stop(t + .3); }),
+        () => near((t, d) => { for (let r = 0; r < 2; r++) for (let i = 0; i < 8; i++) { const o = AC.createOscillator(); o.type = 'square'; o.frequency.value = i % 2 ? 1650 : 1300; const eg = AC.createGain(); env(eg, t + r * .5 + i * .04, .002, .02, .006); o.connect(eg); eg.connect(d); o.start(t + r * .5 + i * .04); o.stop(t + r * .5 + i * .04 + .03); } })
+      ];
+      const W = [5, 3, 2, 1], tot = W.reduce((a, b) => a + b);
+      timer = setInterval(() => { if (Math.random() < .5) return; let r = Math.random() * tot, i = 0; while ((r -= W[i]) > 0) i++; EV[i](); }, 3500);
+    }
     if (kind === 'court') { room(300, .07); }
     if (kind === 'rain') { room(1800, .12); room(500, .08); }
     if (kind === 'night') { room(250, .04); }
     fadeTo(g, 1, 2);
-    amb = { g, stop: () => { nodes.forEach(n => { try { n.stop(); } catch (e) {} }); if (timer) clearInterval(timer); if (rareT) clearTimeout(rareT); } };
+    amb = { g, kind, stop: () => { nodes.forEach(n => { try { n.stop(); } catch (e) {} }); if (timer) clearInterval(timer); if (rareT) clearTimeout(rareT); } };
   }
 
   // ---- 効果音（合成） ----
@@ -176,7 +193,7 @@
 
   G.audio = {
     unlock() { if (ctx() && pendingCue) { const p = pendingCue; pendingCue = null; cue(p); } },
-    cue, ambient, sfx, voice, voiceStop() {},
+    cue, ambient, sfx, voice, voiceStop() {}, ambientKind: () => amb ? amb.kind : null,
     setMuted(m) { muted = m; if (master) fadeTo(master, m ? 0 : 1, .3); if (current && !current.gain) current.el.volume = m ? 0 : .5; },
     CUES, TRACKS
   };

@@ -65,13 +65,20 @@
         }
       }
       G.audio.cue('years');
-      const revealed = await T.reveal(S, verdict);
-      G.lastOutcome = { verdict, reveal: revealed ? (/有罪|略式/.test(verdict) ? 'wrong' : 'free') : null };
+      let revealed = await T.reveal(S, verdict);
+      const guiltyV0 = /有罪|略式/.test(verdict), truthG = T.isGuilty ? T.isGuilty(S) : null;
+      let rkind = revealed ? (guiltyV0 ? 'wrong' : 'free') : null;
+      // 正しかったことが、偶然分かることもある（誤っていたときほどは、明らかにならない）
+      if (!revealed && truthG != null && T.confirm && guiltyV0 === truthG && verdict !== '未解決' && rnd() < .25) {
+        await G.curtain(T.confirm(S, guiltyV0).map((h, i) => ({ html: h, wait: i ? 2600 : 1200 }))); revealed = true; rkind = 'right';
+      }
+      const correct = revealed && truthG != null ? guiltyV0 === truthG : null;
+      G.lastOutcome = { verdict, reveal: rkind, correct };
       if (!revealed) await G.curtain([{ html: '<div class="law">それから、何年かが過ぎた。<br><br>何も起きなかった。<br><br>' + T.nothing(verdict) + '</div>', wait: 2200 },
         { html: '<div class="law" style="font-size:15px;color:#aaa">何も起きなかったことは、何の証明にもならない。</div>', wait: 1800 }]);
       G.audio.cue('finale');
       const guiltyV = /有罪|略式/.test(verdict);
-      const pages = [{ html: G.kit.honbu(S, verdict, revealed ? (guiltyV ? 'wrong' : 'free') : null), wait: 2400 },
+      const pages = [{ html: G.kit.honbu(S, verdict, rkind === 'wrong' || rkind === 'free' ? rkind : null), wait: 2400 },
         { html: '<div class="big" style="letter-spacing:.1em">あなたは、確信していましたか。</div>', wait: 2400 }];
       if (revealed && !G.meta.revealedOnce) {
         G.meta.revealedOnce = true;
@@ -81,7 +88,7 @@
       await G.curtain(pages);
       G.meta.runs.push({ no: G.meta.runs.length + 1, mode: T.name, result: verdict,
         confession: c.confession ? (c.confession.voluntary ? 'あり（自発）' : 'あり') + (c.retract ? '・撤回' : '') : 'なし',
-        illegal: (c.sess && (c.sess.C ? 1 : 0) + (c.sess.D ? 1 : 0) + (c.sess.E ? 1 : 0)) + (c.illegalCount || 0), withheld: (c.withheld || []).length, revealed: revealed ? '判明' : '—' });
+        illegal: (c.sess && (c.sess.C ? 1 : 0) + (c.sess.D ? 1 : 0) + (c.sess.E ? 1 : 0)) + (c.illegalCount || 0), withheld: (c.withheld || []).length, revealed: revealed ? '判明' : '—', correct: G.lastOutcome.correct });
       G.saveMeta();
     }
   };
