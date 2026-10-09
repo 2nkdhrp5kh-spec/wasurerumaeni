@@ -385,3 +385,5 @@ button{font:inherit;color:inherit}
 .sstrip span{padding:1px 7px;border:1px solid #0006;background:#00000030;color:#d8c9a8}
 .sstrip .f{background:#3f6a4e;color:#fff}.sstrip .b{color:#e0cfa8}.sstrip .g{opacity:.45;text-decoration:line-through}
 .tabletop > .row2{margin-top:12px}
+.art .plain{background:#efe3bf;border-left:4px solid #b8902a;padding:4px 8px;margin:4px 0 6px;font-size:13.5px;line-height:1.7;color:#2a241c}
+.art .plain span{display:inline-block;font-size:10.5px;background:#b8902a;color:#fff;padding:0 5px;margin-right:6px;font-family:'DotGothic16',sans-serif;vertical-align:1px}

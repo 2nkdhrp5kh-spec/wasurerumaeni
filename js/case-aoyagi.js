@@ -538,8 +538,8 @@
         body: found ? P(where + 'を捜索し、裏口から約40m下流の水中から<b>緑色の手提げ金庫（空）</b>を発見した。被害者が自店のものと確認した。', '金庫の所在は、捜査側が把握していなかった事実である。')
           : P('被疑者の供述に基づき、' + where + 'を2日間捜索したが、<b>金庫は発見されなかった</b>。水流で移動した可能性がある。') });
       if (found) G.audio.cue('confession');
-      return found ? [['', '（胴長を履いた白井が、泥の中から何かを引き上げた。）', { scene: { bg: 'street' } }], ['shirai', '……ありました。緑の金庫だ。'], ['shirai', '秘密の暴露ですな。これで決まりだ。']]
-        : [['', '（2日間、水の中を捜した。）', { scene: { bg: 'street' } }], ['shirai', '……出ません。流されたか。']]; } });
+      return found ? [['', '（胴長を履いた白井が、泥の中から何かを引き上げた。）', { scene: { bg: 'street' } }], ['shirai', '……ありました。緑の金庫だ。', { scene: sc('shirai', 'street') }], ['shirai', '秘密の暴露ですな。これで決まりだ。']]
+        : [['', '（2日間、水の中を捜した。）', { scene: { bg: 'street' } }], ['shirai', '……出ません。流されたか。', { scene: sc('shirai', 'street') }]]; } });
   A.push({ id: 'hikiatari', who: 'self', label: '久住を現場に連れて行き、説明させる', sub: '引き当たり捜査', cond: S => !!S.c.confession && inCustody(S),
     risk: { id: 'hikiatari', lure: '課長「現場で説明させれば、調書に厚みが出る」', title: '現場を見せると、供述が現場に合わせて変わるおそれがある', law: '禁止規定はない。供述の信用性の問題', effects: ['現場の様子が、被疑者の供述に入り込む', '以後の供述が現場と一致しても、それが本人の記憶によるものか区別できなくなる'] },
     run: async S => {
@@ -641,14 +641,15 @@
     if (c.confession) { const r = await afterConfession(S); G.audio.ambient(null); return r; }
     const total = c.sess.A + c.sess.B + c.sess.C + c.sess.D + c.sess.E;
     await G.talk(total === 0 ? [['', '（久住透。34歳。痩せている。）'], ['kuzumi', '……何回聞かれても、やってないです。']] : [['kuzumi', G.pick(['……また、ですか。', '……おはようございます。', '……'])]]);
-    const k0 = await G.openPaper({ title: '取調べ', sub: c.arrest_kind === 'bekken' ? '拘束の理由は賭博。だが、聞くのは強盗のことだ。' : '', noClose: true, body: P('どう進めるか。'),
+    const k0 = await G.openPaper({ title: '取調べ', sub: c.arrest_kind === 'bekken' ? '拘束の理由は賭博。だが、聞くのは強盗のことだ。' : '', noClose: true, body: P('どう進めるか。', '（どの進め方が法的に許されるかは、「条文帳を開く」で、刑訴法198条・319条と判例を確かめられる。）'),
       buttons: [{ label: '黙秘権を告げ、弁解を聴く', value: 'A', small: '言い分をそのまま聴き取る' },
         { label: '証拠を示して追及する', value: 'B', small: c.leaks.length < 3 ? '現場の写真や、集めた証拠を突きつける' : '集めた証拠を突きつける' },
         { label: '休憩を入れて、夕方まで追及する', value: 'F', small: '朝9時から夕方まで。昼食と休憩をはさむ' },
         { label: '夜まで取調べを続ける', value: 'C', small: '朝9時から、話すまで' },
         { label: '「現場からお前の指紋が出た」と告げる', value: 'G', small: '照合の結果は、まだはっきりしない。反応を見る' },
         { label: '怒鳴りつけ、追い詰める', value: 'E', small: '机を叩く。家族のことを持ち出す' },
-        { label: '「認めれば、すぐ出られる」と言う', value: 'D', small: '取引を持ちかける' }, { label: 'やめておく', value: null, small: '時間は使わない' }] });
+        { label: '「認めれば、すぐ出られる」と言う', value: 'D', small: '取引を持ちかける' }, { label: 'やめておく', value: null, small: '時間は使わない' }, { label: '条文帳を開く', value: 'law', small: '刑訴法198条・319条、判例' }] });
+    if (k0 === 'law') { await G.openLaw('判例・学説'); return interro(S); }
     if (!k0) { G.audio.ambient(null); return false; }
     const k = k0 === 'F' ? 'A' : k0 === 'G' ? 'D' : k0;   // F（休憩を入れた取調べ）は A と同じ扱い、G（偽計）は D と同じ扱い
     const RISK = {
@@ -843,7 +844,7 @@
     done: S => { const found = S.c.truth === 'I' && rnd() < .75; S.c.safeFoundM = found;
       K.addDoc({ id: 'safeM', title: '金庫の捜索結果報告（北見橋）', kind: found ? 'inc' : 'exc', evid: true, stamps: found ? [{ t: '秘密の暴露', c: 'red' }] : [],
         body: found ? P('北見橋の上流側橋脚付近の川底から、<b>緑色の手提げ金庫（空）</b>を発見した。被害者が自店のものと確認した。', '金庫の所在は、捜査側が把握していなかった事実である。') : P('北見橋の周辺を2日間捜索したが、金庫は発見されなかった。') });
-      return found ? [['', '（白井が、川底から緑色の箱を引き上げた。）', { scene: { bg: 'street' } }], ['shirai', '……ありました。宮下の言ったとおりだ。']] : [['shirai', '……出ません。流されたか。', { scene: sc('shirai') }]]; } });
+      return found ? [['', '（白井が、川底から緑色の箱を引き上げた。）', { scene: { bg: 'street' } }], ['shirai', '……ありました。宮下の言ったとおりだ。', { scene: sc('shirai', 'street') }]] : [['shirai', '……出ません。流されたか。', { scene: sc('shirai') }]]; } });
   const TRIAL_M = {
     isGuilty: S => S.c.truth === 'I',
     accusedName: '宮下剛', name: '青柳書房事件', court: '北見坂地方裁判所', truthText: '久住が犯人だった世界か、宮下が犯人だった世界か。',

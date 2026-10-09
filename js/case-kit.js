@@ -159,16 +159,17 @@
     const rec = c.recorded != null ? c.recorded : cfg.recorded;
     if (rec) await G.talk([['', '（録画装置の赤いランプが点いている。この取調べは、最初から最後まで記録される。）']]);
     const total = c.sess.A + c.sess.B + c.sess.C + c.sess.D + c.sess.E;
-    if (total === 0 && cfg.first) await G.talk(cfg.first);
+    if (total === 0 && cfg.first && !c.sawFirst) { c.sawFirst = true; await G.talk(cfg.first); }
     const L = cfg.labels;
     // どの進め方が適法かは、印を付けない（条文帳で確かめる）
-    const k0 = await G.openPaper({ title: '取調べ', sub: cfg.sub ? cfg.sub(S) : '', noClose: true, body: P('どう進めるか。'),
+    const k0 = await G.openPaper({ title: '取調べ', sub: cfg.sub ? cfg.sub(S) : '', noClose: true, body: P('どう進めるか。', '（どの進め方が法的に許されるかは、「条文帳を開く」で、刑訴法198条・319条と判例を確かめられる。）'),
       buttons: [{ label: L.A[0], value: 'A', small: L.A[1] }, { label: L.B[0], value: 'B', small: L.B[1] },
         { label: '休憩を入れて、夕方まで追及する', value: 'F', small: '朝9時から夕方まで。昼食と休憩をはさみ、同じ点を何度も確かめる' },
         { label: '夜まで取調べを続ける', value: 'C', small: '朝9時から、話すまで。' + ((c.meter || 0) >= 55 ? '今夜なら、落ちる' : '一晩で話が動くことは多い') },
         { label: '「現場からお前の指紋が出た」と告げる', value: 'G', small: '鑑定の結果は、まだ出ていない。反応を見る' },
         { label: '怒鳴りつけ、追い詰める', value: 'E', small: (L.E || '机を叩く。家族のことを持ち出す') + '。否認を崩す近道' },
-        { label: L.D[0], value: 'D', small: L.D[1] + '。相手の逃げ道を用意してやる' }, { label: 'やめておく', value: null, small: '時間は使わない' }] });
+        { label: L.D[0], value: 'D', small: L.D[1] + '。相手の逃げ道を用意してやる' }, { label: 'やめておく', value: null, small: '時間は使わない' }, { label: '条文帳を開く', value: 'law', small: '刑訴法198条・319条、判例' }] });
+    if (k0 === 'law') { await G.openLaw('判例・学説'); c.sawFirst = true; return kit.interro(S, cfg); }
     if (!k0) { G.audio.ambient(null); return false; }
     // F（休憩を入れた長めの取調べ）は B と同じ扱い、G（偽計）は D（約束による自白）と同じ扱い
     const k = k0 === 'F' ? 'B' : k0 === 'G' ? 'D' : k0;

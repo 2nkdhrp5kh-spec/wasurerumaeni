@@ -10,7 +10,7 @@
     const done = G.meta.runs.length > 0;
     $('#app').innerHTML = '<div class="title"><div class="sub">— 仮題 —</div><h1>調書</h1>'
       + '<div class="menu">'
-      + '<button class="act primary" id="t-keiji"><span class="l">刑事編</span><span class="s">捜査官として</span></button>'
+      + '<button class="act primary" id="t-keiji"><span class="l">刑事編</span><span class="s">捜査官として　（はじめての方はここから。序章で操作を覚えられる）</span></button>'
       + '<button class="act" id="t-hanji"><span class="l">判事編</span><span class="s">令状当番の夜　（刑事編のあとがおすすめ）</span></button>'
       + '<button class="act" id="t-kyumon" disabled><span class="l">糾問編</span><span class="s">' + (done ? '準備中' : '刑事編と判事編のあとで') + '</span></button>'
       + '<button class="act ghost" id="t-rec"><span class="l">記録</span></button>'
