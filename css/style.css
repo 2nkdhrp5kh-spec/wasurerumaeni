@@ -42,11 +42,12 @@ button{font:inherit;color:inherit}
 .staff{display:flex;gap:8px;align-items:center;padding:3px 0;border-bottom:1px dotted #3a372f;font-size:13px}
 .staff:last-child{border-bottom:none}
 .staff .nm{min-width:4.5em;color:var(--text)}
-.staff .st{color:var(--muted);flex:1;line-height:1.5}
+.staff .st{color:var(--muted);flex:1;min-width:0;overflow-wrap:anywhere;line-height:1.5}
+.staff .st .nw{display:inline-block;white-space:nowrap}
 .staff.free .st{color:#7f9a6a}
 .staff.gone{opacity:.4;text-decoration:line-through}
 .elem{display:flex;align-items:center;gap:8px;font-size:13px;padding:2px 0}
-.elem .k{min-width:5.5em}
+.elem .k{flex:1;min-width:0}
 .elem .boxes{display:flex;gap:3px}
 .elem .bx{width:14px;height:14px;border:2px solid #555;background:#1a1916}
 .elem .bx.on{background:var(--amber);border-color:var(--amber)}
@@ -84,7 +85,7 @@ button{font:inherit;color:inherit}
 .endday .s{display:block;font-size:11px;color:#b9a888;letter-spacing:0}
 
 /* ---------- paper overlay ---------- */
-#overlay{position:fixed;inset:0;background:#000c;display:flex;align-items:flex-start;justify-content:center;padding:20px 12px;overflow-y:auto;z-index:20}
+#overlay{position:fixed;inset:0;background:#000c;display:flex;align-items:flex-start;justify-content:center;padding:calc(20px + var(--top-inset,0px)) 12px calc(20px + var(--bot-inset,0px));overflow-y:auto;z-index:20}
 #overlay[hidden]{display:none}
 .paper{background:var(--paper);color:var(--ink);width:100%;max-width:640px;border:2px solid #000;box-shadow:6px 6px 0 #000b;position:relative;padding:18px 20px 14px;font-family:'Noto Serif JP',serif;font-size:15px;line-height:1.95;
   background-image:linear-gradient(transparent 31px,rgba(90,79,63,.12) 32px);background-size:100% 32px}
@@ -375,8 +376,8 @@ button{font:inherit;color:inherit}
 .pc-h b{font-size:15px}.pc-h small{font-size:11px;color:#6a5a44}
 .pc-t{margin-left:auto;font-size:10.5px;background:#b23a2e;color:#fff;padding:0 6px;font-family:'DotGothic16',sans-serif}
 .pcard ul{list-style:none;margin:6px 0;padding:0;font-size:12.5px;line-height:1.6}
-.pcard li{padding-left:3.2em;text-indent:-3.2em}
-.pcard li .pf-s{display:inline-block;min-width:3.2em;font-weight:700;letter-spacing:-.1em}
+.pcard li{display:flex;align-items:baseline;gap:.3em}
+.pcard li .pf-s{flex:0 0 3.2em;text-indent:0;font-weight:700;letter-spacing:-.1em}
 .pf-y .pf-s{color:#b23a2e}.pf-n .pf-s{color:#3f6a8a}.pf-q .pf-s{color:#6a5a44}
 .pc-b{width:100%;background:#2a241c;color:#f4ecd6;border:none;padding:6px;font-size:12.5px;cursor:pointer;font-family:'DotGothic16',sans-serif}
 .pc-b:hover{background:#4a3e30}
@@ -398,3 +399,14 @@ button{font:inherit;color:inherit}
 @keyframes scpulse{50%{opacity:.3}}
 @media (prefers-reduced-motion:reduce){.startcard .sc-h{animation:none}}
 .startcard .sc-n{font-size:11px;color:#777}
+
+/* 第五章：メッセージアプリの画面 */
+.chat{background:#cfd8e2;border:1px solid #8a96a4;border-radius:10px;padding:0 8px 8px;margin:6px 0 12px;font-family:system-ui,-apple-system,sans-serif;font-size:13.5px;line-height:1.5}
+.chat-h{background:#3d4b5c;color:#fff;margin:0 -8px 6px;padding:6px 10px;border-radius:9px 9px 0 0;font-weight:700;font-size:13px}
+.chat-d{text-align:center;font-size:11px;color:#556;margin:8px 0 4px}
+.bub{display:flex;align-items:flex-end;gap:5px;margin:4px 0}
+.bub .tx{background:#fff;color:#111;padding:6px 10px;border-radius:14px;max-width:72%;word-break:break-all}
+.bub .ts{font-size:10px;color:#556;white-space:nowrap}
+.bub .ts b{color:#b23a2e;font-weight:700}
+.bub.me{flex-direction:row-reverse}
+.bub.me .tx{background:#8ee07a}

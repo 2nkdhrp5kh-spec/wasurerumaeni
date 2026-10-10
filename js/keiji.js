@@ -16,7 +16,7 @@
 
   K.start = function (caseDef, state) {
     // 行き詰まったとき：部下に記録を読み返してもらう（どの二つを並べるとよいか、だけを教えてくれる）
-    if (caseDef.compare && caseDef.pick && !caseDef.actions.some(a => a && a.id === 'rereadHint')) caseDef.actions.push({ id: 'rereadHint', who: 'staff', days: 1, once: false, label: '捜査記録を読み返してもらう', short: '記録の読み返し', sub: '見落としがないか。並べて読むべき記録を教えてくれる',
+    if (caseDef.compare && caseDef.pick && !caseDef.noReread && !caseDef.actions.some(a => a && a.id === 'rereadHint')) caseDef.actions.push({ id: 'rereadHint', who: 'staff', days: 1, once: false, label: '捜査記録を読み返してもらう', short: '記録の読み返し', sub: '見落としがないか。並べて読むべき記録を教えてくれる',
       cond: S2 => G.diff() !== 'hard' && S2.docs.length >= 3 && !S2.tasks.some(t => t.aid === 'rereadHint'),
       done: S2 => {
         const seen = new Set((S2.cmpNotes || []).map(n => n.title));
@@ -62,7 +62,7 @@
     return C.staff.map(s => {
       const t = S.tasks.find(x => x.staff === s.id);
       const gone = S.staffGone[s.id];
-      const st = gone ? '別件に回された' : t ? t.label + '（' + (t.doneDay - S.day <= 0 ? '今日中' : 'あと' + (t.doneDay - S.day) + '日') + '）' : '待機中';
+      const st = gone ? '別件に回された' : t ? t.label + '<span class="nw">（' + (t.doneDay - S.day <= 0 ? '今日中' : 'あと' + (t.doneDay - S.day) + '日') + '）</span>' : '待機中';
       return '<div class="staff' + (gone ? ' gone' : t ? '' : ' free') + '"><span class="nm">' + s.name + '</span><span class="st">' + st + '</span></div>';
     }).join('') + '<div class="staff' + (S.selfUsed ? '' : ' free') + '"><span class="nm">あなた</span><span class="st">' + (S.selfUsed ? '今日の行動は済んだ' : '動ける') + '</span></div>';
   }
@@ -110,7 +110,7 @@
   };
   // 机の上の記録：種類ごとの束に分ける（束は開け閉めできる。未読や光っている記録がある束は開く）
   const GROUPS = [
-    ['say', '供述・弁解', d => /供述|弁解|話|証言|メッセージ/.test(d.title) && d.kind !== 'memo'],
+    ['say', '供述・弁解', d => /供述|弁解|の話|証言|メッセージ/.test(d.title) && d.kind !== 'memo'],
     ['rep', '捜査報告・鑑定', d => d.kind !== 'memo' && !/令状|許可状|勾留状|請求書|逮捕状/.test(d.title)],
     ['form', '令状・請求書', d => /令状|許可状|勾留状|請求書|逮捕状/.test(d.title)],
     ['memo', 'メモ・資料', d => true]

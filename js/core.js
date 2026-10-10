@@ -117,6 +117,8 @@ G.CHAR = {
 /* ---------- 画面の骨組み ---------- */
 G.ui = { talking: false, tab: 'staff' };
 G.anim = { speaking: null };
+// 枠の中で開かれたとき（アプリの中のプレビューなど）は、上に見出しの帯が重なる
+try { if (window.self !== window.top) { G.topInset = 64; document.documentElement.style.setProperty('--top-inset', '64px'); } } catch (e) { G.topInset = 64; document.documentElement.style.setProperty('--top-inset', '64px'); }
 G.layout = function (o) {
   const app = $('#app');
   app.innerHTML =
@@ -172,10 +174,14 @@ G.talk = function (lines, opt) {
     let backTo = null;
     if (G._scrollBack) { clearTimeout(G._scrollBack.t); backTo = G._scrollBack.y; G._scrollBack = null; }
     // 背景・人物・台詞欄のすべて（.scene 全体）が画面に収まっていなければ、そこまで動かす
-    const sc = box.closest('.scene') || box, r0 = sc.getBoundingClientRect();
-    if (r0.top < 0 || r0.bottom > window.innerHeight) {
+    // 上に重なる帯（アプリの見出しなど）の高さ G.topInset を除いた範囲に、顔の上から台詞欄の下までを収める
+    const sc = box.closest('.scene') || box, r0 = sc.getBoundingClientRect(), top = G.topInset || 0;
+    if (r0.top < top || r0.bottom > window.innerHeight) {
       if (backTo == null) backTo = window.scrollY;
-      window.scrollTo({ top: Math.max(0, window.scrollY + r0.top - 6), behavior: 'smooth' });
+      const y0 = window.scrollY + r0.top;
+      // ページの一番上に戻しても台詞欄まで見えるなら、一番上へ
+      const want = (y0 + r0.height <= window.innerHeight) ? 0 : Math.max(0, y0 - top - 6);
+      window.scrollTo({ top: want, behavior: 'smooth' });
     }
     let i = 0, typing = null, full = '', waitArrive = null, startType = null;
     const tok = G._qtok;   // 中断（G.quit）されたら、この台詞は死ぬ：画面の押下を横取りせず、声も止める
