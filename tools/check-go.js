@@ -117,6 +117,7 @@ const AMBIG_OK = /朝|夜|晩|昼|夕|午前|午後|深夜|未明|明け方|勤�
     const T = await F.evaluate(() => { const w = G.world5; return null; });
     const toT = (m, d, h, mi) => { const DIM = { 11: 30, 12: 31, 1: 31 }; let n = 0; for (let mo = 11; mo !== m; mo = mo === 12 ? 1 : mo + 1) n += DIM[mo]; return (n + d - 1) * 1440 + (h || 0) * 60 + (mi || 0); };
     for (const d of docs) {
+      if (/undefined|NaN|\[object /.test(d.all)) P('壊れた表示', '「' + d.title + '」：' + d.all.match(/.{0,20}(undefined|NaN|\[object ).{0,10}/)[0]);
       if (!d.memo && INFER.test(d.text)) P('推理の書き込み', '「' + d.title + '」：…' + d.text.slice(Math.max(0, d.text.search(INFER) - 20), d.text.search(INFER) + 12) + '…');
       if (d.at != null) for (const m of d.all.matchAll(/(\d{1,2})月(\d{1,2})日(?:\s?(\d{1,2}):(\d{2}))?/g)) {
         const t = m[3] != null ? toT(+m[1], +m[2], +m[3], +m[4]) : toT(+m[1], +m[2]);

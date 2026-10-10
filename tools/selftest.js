@@ -16,7 +16,7 @@ const URL = 'file://' + path.resolve(__dirname, '..', 'index.html');
 
 (async () => {
   const browser = await chromium.launch();
-  const report = { runs: 0, ended: 0, errors: [], audit: new Set(), stalls: [], pairs: {}, hlStuck: 0, outcomes: [] };
+  const report = { bal: {}, runs: 0, ended: 0, errors: [], audit: new Set(), stalls: [], pairs: {}, hlStuck: 0, outcomes: [] };
   for (const cid of CASES) for (let r = 0; r < RUNS; r++) {
     const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
     const errs = [];
@@ -147,7 +147,15 @@ const URL = 'file://' + path.resolve(__dirname, '..', 'index.html');
     const tr = await page.evaluate(() => { const S = G.keiji.state && G.keiji.state(); if (!S) return ''; const C = G.keiji.C(); let est = ''; try { const e = C.gauge ? C.gauge(S) : ''; const m = String(e).match(/「([^」]+)」/); est = m ? ' 見立て「' + m[1] + '」' : ''; } catch (e) {} return (S.c.truth || '') + (S.c.target ? '→' + S.c.target : '') + ' 記録' + S.docs.length + ' 逮捕' + (S.c.arrest != null ? S.c.arrest + '日目' : 'なし') + est; });
     if (process.env.LOG) report.outcomes.push('   log: ' + log.filter(x => !/^p:good/.test(x)).slice(-60).join(' / '));
     report.outcomes.push((thorough ? '[尽] ' : '[乱] ') + cid + ' ' + tr + ' ' + (ended ? (lastRun ? lastRun.result : '序章おわり') : '終わらず') + (lastRun && lastRun.confession ? ' 自白:' + lastRun.confession : ''));
+    // 釣り合いの集計：事件・真相（有罪が正しいか）・遊び方ごとに、判決が真相に合ったか
+    const lo = await page.evaluate(() => G.lastOutcome ? { v: G.lastOutcome.verdict, t: G.lastOutcome.truthG } : null);
+    if (lo && lo.t != null && cid !== 'akisu') {
+      const key = cid + '｜真相' + (lo.t ? '有罪' : '無実') + '｜' + (thorough ? '尽' : '乱'), b = report.bal[key] = report.bal[key] || { right: 0, wrong: 0, open: 0 };
+      if (/未解決/.test(lo.v || '')) b.open++; else if (/有罪|略式/.test(lo.v || '') === lo.t) b.right++; else b.wrong++;
+    }
     process.stdout.write('.');
+    // セーブの見本を残す（tools/check-save.js が、新しい版で読めるかを確かめるのに使う）
+    if (process.env.SAVE_OUT && ended) { const m = await page.evaluate(() => localStorage.getItem('chousho.meta.v1')); if (m) require('fs').writeFileSync(process.env.SAVE_OUT.replace(/\.json$/, '') + '-' + cid + '.json', m); }
     await page.close();
   }
   await browser.close();
@@ -160,6 +168,15 @@ const URL = 'file://' + path.resolve(__dirname, '..', 'index.html');
   console.log('照らし合わせの組（両方の記録がそろった回で検査）');
   Object.entries(report.pairs).sort().forEach(([k, v]) => { const bad = Object.keys(v).filter(x => x !== 'ok' && x !== 'docs-missing' && x !== 'n/a'); console.log((bad.length ? '  ✗ ' : '  　 ') + k + ' ' + JSON.stringify(v)); });
   console.log('結末'); report.outcomes.forEach(o => console.log('  ' + o));
-  const fail = report.errors.length || report.stalls.length || report.hlStuck || report.ended < report.runs || Object.values(report.pairs).some(v => Object.keys(v).some(x => x !== 'ok' && x !== 'docs-missing' && x !== 'n/a'));
-  process.exit(fail ? 1 : 0);
+  console.log('釣り合い（判決が真相に合った／外れた／未解決）');
+  const balWarn = [];
+  Object.entries(report.bal).sort().forEach(([k, b]) => { const n = b.right + b.wrong + b.open; console.log('  ' + k + '　' + b.right + '／' + b.wrong + '／' + b.open);
+    // 手を尽くしても一度も真相に届かない組（3回以上遊んだとき）は、解けない事件のおそれ
+    if (/尽$/.test(k) && n >= 3 && b.right === 0) balWarn.push(k + '：手を尽くしても真相に届かない'); });
+  Object.keys(report.bal).filter(k => /乱$/.test(k)).forEach(k => { const a = report.bal[k], t = report.bal[k.replace(/乱$/, '尽')]; if (!t) return; const na = a.right + a.wrong + a.open, nt = t.right + t.wrong + t.open;
+    // 乱暴な捜査のほうが、はっきり真相に届きやすい＝違法が得になっている
+    if (na >= 3 && nt >= 3 && a.right / na > t.right / nt + .3) balWarn.push(k.replace(/｜乱$/, '') + '：乱暴な捜査のほうが真相に届きやすい'); });
+  balWarn.forEach(w => console.log('  （注意）' + w));
+  const fail = report.balFail = balWarn.length, _f = report.errors.length || report.stalls.length || report.hlStuck || report.ended < report.runs || Object.values(report.pairs).some(v => Object.keys(v).some(x => x !== 'ok' && x !== 'docs-missing' && x !== 'n/a'));
+  process.exit(fail || _f ? 1 : 0);
 })();
