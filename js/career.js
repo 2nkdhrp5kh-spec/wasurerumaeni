@@ -109,6 +109,7 @@
   }
 
   G.career = {
+    devWitness: witness,
     async run(resume, playCase) {
       let cr = G.meta.career;
       if (!resume || !cr || cr.done) { cr = G.meta.career = fresh(); save();

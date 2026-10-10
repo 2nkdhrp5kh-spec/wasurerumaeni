@@ -908,7 +908,7 @@
       : ['<div class="big">4年後</div>', '<div class="doc-s"><h3>別の事件</h3>久住透が、別の強盗事件で逮捕された。録画された取調べで、彼は青柳書房の事件も自分だと述べた。</div>'],
     async reveal(S, verdict) {
       const c = S.c, guilty = verdict.startsWith('有罪');
-      if (guilty && c.truth === 'G' && rnd() < .55) {
+      if (guilty && c.truth === 'G' && G.devHit(.55)) {
         await G.curtain([{ html: '<div class="big">4年後</div>', wait: 1200 },
           { html: '<div class="doc-s"><h3>別の事件</h3>久住透が、別の強盗事件で逮捕された。取調べは録画されていた。<br>「古本屋も、おれです。金庫は裏の用水路に投げた」<br>用水路の泥の中から、緑色の金庫が見つかった。</div>', wait: 3000 },
           { html: '<div class="doc-s"><h3>再審</h3>宮下剛は、再審で無罪となった。<br>「前があるってのは、こういうことだ」――逮捕の朝、彼はそう言った。</div>', wait: 3000 }]);
@@ -970,7 +970,7 @@
   G.cases.aoyagi = {
     trialM: TRIAL_M,
     run: async function () {
-      const S = { c: { truth: rnd() < .5 ? 'G' : 'I', leaks: [], sess: { A: 0, B: 0, C: 0, D: 0, E: 0 } } };
+      const S = { c: { truth: G.devTruth || (rnd() < .5 ? 'G' : 'I'), leaks: [], sess: { A: 0, B: 0, C: 0, D: 0, E: 0 } } };
       G.audio.cue('main'); G.audio.ambient('office');
       await G.curtain(['<div class="big">本章</div><div class="small">青柳書房事件</div>']);
       setLawTools(S); G.auditCtx = { get suspect() { return S.c.target === 'M' ? 'miyashita' : 'kuzumi'; }, inCustody: () => inCustody(S) };

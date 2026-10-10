@@ -216,13 +216,13 @@
     finale: '痴漢事件は、取調べの録音・録画の義務の対象ではない。<br>否認すれば勾留が続き、認めれば罰金で帰れる。この構造は「人質司法」と呼ばれ、批判されてきた。',
     async reveal(S, verdict) {
       const c = S.c, punished = verdict.startsWith('有罪') || verdict.startsWith('略式');
-      if (punished && c.truth === 'I' && rnd() < .55) {
+      if (punished && c.truth === 'I' && G.devHit(.55)) {
         await G.curtain([{ html: '<div class="big">3年後</div>', wait: 1200 },
           { html: '<div class="doc-s"><h3>同じ路線で</h3>江藤浩二（57歳）が、別の女性への痴漢で逮捕された。乗客がスマートフォンで撮影していた。<br>押収された江藤のスマートフォンには、日付と時刻、車両の番号を記した手帳のようなメモが残っていた。<br><br>その中に、「6/10　7:16　2両目」の記載があった。</div>', wait: 3400 },
           { html: '<div class="doc-s"><h3>再審</h3>' + (verdict.startsWith('略式') ? '確定した略式命令は、確定判決と同一の効力を持つ（刑訴法470条）。佐伯修は、再審を請求した。<br>「あの日、帰りたかった。娘の顔が見たかった。だから、やってもいないことを認めた。」' : '佐伯修は再審を請求した。') + '<br><br>再審で、佐伯は無罪となった。<br>会社には、戻らなかった。</div>', wait: 3600 }]);
         return true;
       }
-      if (!punished && c.truth === 'G' && rnd() < .55) {
+      if (!punished && c.truth === 'G' && G.devHit(.55)) {
         await G.curtain([{ html: '<div class="big">2年後</div>', wait: 1200 },
           { html: '<div class="doc-s"><h3>同じ路線で</h3>佐伯修（47歳）が、高校生への痴漢で現行犯逮捕された。周りの乗客が撮影した動画に、佐伯の左手が映っていた。<br>佐伯は、取調べでこう述べた。<br>「前のときも、やりました。……あのときは、運がよかった。」</div>', wait: 3400 },
           { html: '<div class="doc-s"><h3>森川美咲さんの手紙（抜粋）</h3>「あのあと、半年、電車に乗れませんでした。大学には、母に車で送ってもらいました。<br>警察の人も、検察の人も、親切でした。でも、最後には『あなたの言うことだけでは、足りない』と言われました。<br>私は、嘘をついていませんでした。」</div>', wait: 3600 }]);
@@ -255,7 +255,7 @@
   G.cases.chikan = {
     title: '7時16分発', sub: '痴漢・証拠は被害者の供述', trial: TRIAL,
     run: async function () {
-      const S = { c: { truth: rnd() < .5 ? 'G' : 'I', sess: { A: 0, B: 0, C: 0, D: 0, E: 0 } } };
+      const S = { c: { truth: G.devTruth || (rnd() < .5 ? 'G' : 'I'), sess: { A: 0, B: 0, C: 0, D: 0, E: 0 } } };
       G.audio.cue('main'); G.audio.ambient('office');
       await G.curtain(['<div class="big">7時16分発</div><div class="small">朝の電車。女性が「痴漢です」と男の手をつかんだ</div>']);
       G.auditCtx = { suspect: 'saeki', inCustody: () => inC(S) };

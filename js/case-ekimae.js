@@ -314,13 +314,13 @@
     finale: '本件は裁判員裁判の対象事件であり、逮捕後の取調べは録画されていた（刑訴法301条の2）。<br>逮捕される前の任意の取調べは、録画の義務の対象ではない。',
     async reveal(S, verdict) {
       const c = S.c, guilty = verdict.startsWith('有罪');
-      if (guilty && c.truth === 'D' && rnd() < .55) {
+      if (guilty && c.truth === 'D' && G.devHit(.55)) {
         await G.curtain([{ html: '<div class="big">4年後</div>', wait: 1200 },
           { html: '<div class="doc-s"><h3>動画</h3>ある女性のスマートフォンに、古い動画が残っていた。<br>あの夜、駅前でバスを待っていた彼女は、酔った若い男がタクシーの運転手に掴みかかる様子を、面白半分に撮っていた。<br><br>動画の中で、運転手は三度「離せ」と言い、男の手を振り払っていた。<br>男は、自分の勢いで、後ろに倒れた。</div>', wait: 3400 },
           { html: '<div class="doc-s"><h3>再審</h3>戸田誠は、すでに刑を終えていた。<br>動画は新証拠と認められ、再審が開始された（刑訴法435条6号）。<br>再審公判で、戸田は無罪となった。<br><br>「あの夜、振り払わなければよかったんですかね。……じゃあ、どうすればよかったんですか」</div>', wait: 3400 }]);
         return true;
       }
-      if (!guilty && c.truth === 'A' && rnd() < .55) {
+      if (!guilty && c.truth === 'A' && G.devHit(.55)) {
         await G.curtain([{ html: '<div class="big">3年後</div>', wait: 1200 },
           { html: '<div class="doc-s"><h3>判決（隣県の地方裁判所）</h3>タクシー運転手の戸田誠は、運賃をめぐって口論になった乗客の男性（34歳）の顔面を拳で多数回殴り、急性硬膜下血腫等の傷害を負わせた。男性には重い後遺障害が残り、言葉を話すことができなくなった。<br><br>戸田は、取調べ（録画）でこう述べた。<br>「前にも一度、駅前でやった。あのときも、先に殴ったのは俺だ。」</div>', wait: 3600 },
           { html: '<div class="doc-s"><h3>樋口和也の母の手記（抜粋）</h3>「あの子は酔うと口が悪くなる子でした。それは知っています。<br>でも、殴られて死ぬほどのことを、あの子はしたんでしょうか。<br>『正当防衛』という言葉を、私は、たぶん一生、許せません。」</div>', wait: 3600 },
@@ -346,7 +346,7 @@
   G.cases.ekimae = {
     title: '北見坂駅前事件', sub: '傷害致死・正当防衛は成立するか', trial: TRIAL,
     run: async function () {
-      const S = { c: { truth: rnd() < .5 ? 'D' : 'A', sess: { A: 0, B: 0, C: 0, D: 0, E: 0 } } };
+      const S = { c: { truth: G.devTruth || (rnd() < .5 ? 'D' : 'A'), sess: { A: 0, B: 0, C: 0, D: 0, E: 0 } } };
       G.audio.cue('main'); G.audio.ambient('office');
       await G.curtain(['<div class="big">北見坂駅前事件</div><div class="small">駅前の路上で、男性が倒れた</div>']);
       G.auditCtx = { suspect: 'toda', inCustody: () => inC(S) };

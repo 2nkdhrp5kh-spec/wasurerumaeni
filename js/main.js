@@ -22,7 +22,7 @@
       + '<button class="act ghost" id="t-warn"><span class="l">注意事項</span></button>'
       + '<button class="act ghost" id="t-diff"><span class="l">難しさ：' + G.DIFF_LABEL[G.diff()] + '</span><span class="s">' + G.DIFF_DESC[G.diff()][0] + '　押すと選び直せる</span></button></div>'
       + '<div class="foot">本作はフィクションです。登場する人物・団体・地名は架空のものです。<br>暴力的な描写を含みます。<br>手続は現行法に基づいていますが、ゲームとして日数や手順を簡略化しています。</div>'
-      + (DEV ? '<button class="devreset" id="t-reset">開発用：進捗をリセット</button>' : '') + '</div>';
+      + (DEV ? '<button class="devreset" id="t-jump">開発用：場面へ飛ぶ</button><button class="devreset" id="t-reset">開発用：進捗をリセット</button>' : '') + '</div>';
     $('#t-keiji').onclick = () => { G.audio.unlock(); G.audio.sfx('select'); keiji(); };
     $('#t-hanji').onclick = async () => {
       G.audio.unlock(); G.audio.sfx('click');
@@ -41,6 +41,7 @@
       record();
     };
     // 開発用：保存されている進捗（記録・記章・経歴・令状当番の続き・説明の既読など）をすべて消す
+    if ($('#t-jump')) $('#t-jump').onclick = async () => { G.audio.unlock(); await G.dev.menu(playCase); title(); };
     if ($('#t-reset')) $('#t-reset').onclick = async () => {
       const v = await G.openPaper({ title: '進捗をリセット', sub: '開発用', body: G.P('記録・記録庫・記章・経歴・令状当番の続き・説明の既読を、すべて消します。元には戻せません。'),
         buttons: [{ label: 'すべて消す', value: true, cls: 'red' }], closeLabel: 'やめる' });

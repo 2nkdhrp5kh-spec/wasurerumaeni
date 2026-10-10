@@ -124,11 +124,11 @@
     // 数年後
     let revealed = null;
     const T = c.truth;
-    if (verdict === '有罪' && T === 'I' && rnd() < .55) revealed = 'enzai';
-    if (verdict !== '有罪' && T === 'G' && rnd() < .55) revealed = 'murai';
-    if (verdict === '未解決' && T === 'I' && rnd() < .4) revealed = 'miyashita';
+    if (verdict === '有罪' && T === 'I' && G.devHit(.55)) revealed = 'enzai';
+    if (verdict !== '有罪' && T === 'G' && G.devHit(.55)) revealed = 'murai';
+    if (verdict === '未解決' && T === 'I' && G.devHit(.4)) revealed = 'miyashita';
     // 正しかったことが、偶然分かることもある
-    if (!revealed && ((verdict === '有罪' && T === 'G') || (verdict !== '有罪' && verdict !== '未解決' && T === 'I')) && rnd() < .25) revealed = 'right';
+    if (!revealed && ((verdict === '有罪' && T === 'G') || (verdict !== '有罪' && verdict !== '未解決' && T === 'I')) && G.devHit(.25)) revealed = 'right';
     const correct = revealed ? (revealed === 'right' || revealed === 'miyashita') : null;
     G.lastOutcome = { verdict, reveal: revealed, correct };
     G.audio.cue('years');

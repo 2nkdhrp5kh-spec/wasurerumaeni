@@ -263,13 +263,13 @@
     finale: '本件は裁判員裁判の対象事件であり、逮捕後の取調べは録画されていた（刑訴法301条の2）。<br>火災の原因をめぐる鑑定は、科学の進歩によって評価が変わることがある。',
     async reveal(S, verdict) {
       const c = S.c, guilty = verdict.startsWith('有罪');
-      if (guilty && c.truth === 'N' && rnd() < .55) {
+      if (guilty && c.truth === 'N' && G.devHit(.55)) {
         await G.curtain([{ html: '<div class="big">5年後</div>', wait: 1200 },
           { html: '<div class="doc-s"><h3>リコール</h3>石油ストーブKT-2300について、転倒時に自動消火装置が作動しない欠陥が確認され、メーカーはリコールを発表した。同型の火災は全国で11件に上っていた。<br><br>弁護人は、新たな証拠として再審を請求した。</div>', wait: 3400 },
           { html: '<div class="doc-s"><h3>再審</h3>再審で、大塚茂は無罪となった。<br>母キヨは、その2年前、施設で亡くなっていた。<br><br>「最後に会ったのは、あの夜、背負って外に出たときです。……背中が、温かかった。」</div>', wait: 3600 }]);
         return true;
       }
-      if (!guilty && c.truth === 'A' && rnd() < .55) {
+      if (!guilty && c.truth === 'A' && G.devHit(.55)) {
         await G.curtain([{ html: '<div class="big">2年後</div>', wait: 1200 },
           { html: '<div class="doc-s"><h3>判決（裁判員裁判）</h3>大塚茂は、隣の市のアパートの自室に灯油を撒いて火をつけ、2階に住む男性（71歳）を死亡させた。火災保険金を請求していた。<br><br>男性は、足が不自由だった。避難の途中、階段で倒れていた。</div>', wait: 3600 },
           { html: '<div class="doc-s"><h3>取調べ（録音録画記録より）</h3>「本町の家も、おれです。あのときは、鑑定で助かった。」</div>', wait: 3000 },
@@ -295,7 +295,7 @@
   G.cases.kasai = {
     title: '本町三丁目火災', sub: '放火・火事か放火か', trial: TRIAL,
     run: async function () {
-      const S = { c: { truth: rnd() < .5 ? 'A' : 'N', sess: { A: 0, B: 0, C: 0, D: 0, E: 0 } } };
+      const S = { c: { truth: G.devTruth || (rnd() < .5 ? 'A' : 'N'), sess: { A: 0, B: 0, C: 0, D: 0, E: 0 } } };
       G.audio.cue('main'); G.audio.ambient('office');
       await G.curtain(['<div class="big">本町三丁目火災</div><div class="small">未明の住宅火災。出火原因は分からない</div>']);
       G.auditCtx = { suspect: 'otsuka', inCustody: () => inC(S) };

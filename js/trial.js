@@ -70,7 +70,7 @@
       const guiltyV0 = /有罪|略式/.test(verdict), truthG = T.isGuilty ? T.isGuilty(S) : null;
       let rkind = revealed ? (guiltyV0 ? 'wrong' : 'free') : null;
       // 正しかったことが、偶然分かることもある（誤っていたときほどは、明らかにならない）
-      if (!revealed && truthG != null && T.confirm && guiltyV0 === truthG && verdict !== '未解決' && rnd() < .25) {
+      if (!revealed && truthG != null && T.confirm && guiltyV0 === truthG && verdict !== '未解決' && G.devHit(.25)) {
         await G.curtain(T.confirm(S, guiltyV0).map((h, i) => ({ html: h, wait: i ? 2600 : 1200 }))); revealed = true; rkind = 'right';
       }
       const correct = revealed && truthG != null ? guiltyV0 === truthG : null;

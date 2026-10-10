@@ -24,6 +24,9 @@ G.store = window.CHOUSHO_STORE || {
 G.load = (k, d) => { try { const v = G.store.get(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } };
 G.save = (k, v) => { try { G.store.set(k, JSON.stringify(v)); } catch (e) {} };
 // セーブデータの版。形を変えたら番号を上げ、MIGRATE に「前の版からの直し方」を足す（古いセーブを壊さないため）
+// 開発用（?dev=1 の「場面へ飛ぶ」）：真相と、数年後の出来事を決め打ちにする。ふだんは null
+G.devTruth = null; G.devReveal = null;
+G.devHit = p => G.devReveal != null ? G.devReveal : G.rnd() < p;
 G.SAVE_VERSION = 2;
 const MIGRATE = {
   // 1 → 2：版番号を持たない最初の形。中身はそのまま使える
