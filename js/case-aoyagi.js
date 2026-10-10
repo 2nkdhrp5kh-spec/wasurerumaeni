@@ -971,8 +971,9 @@
     trialM: TRIAL_M,
     run: async function () {
       const S = { c: { truth: G.devTruth || (rnd() < .5 ? 'G' : 'I'), leaks: [], sess: { A: 0, B: 0, C: 0, D: 0, E: 0 } } };
-      G.audio.cue('main'); G.audio.ambient('office');
+      G.audio.cue('titleOut'); G.audio.ambient('office');   // 前の曲は、事件名の暗転と一緒に消える
       await G.curtain(['<div class="big">本章</div><div class="small">青柳書房事件</div>']);
+      G.audio.cue('main');
       setLawTools(S); G.auditCtx = { get suspect() { return S.c.target === 'M' ? 'miyashita' : 'kuzumi'; }, inCustody: () => inCustody(S) };
       const how = await K.start(C, S);
       G.lawTools = null;

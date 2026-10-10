@@ -296,8 +296,9 @@
     title: '本町三丁目火災', sub: '放火・火事か放火か', trial: TRIAL,
     run: async function () {
       const S = { c: { truth: G.devTruth || (rnd() < .5 ? 'A' : 'N'), sess: { A: 0, B: 0, C: 0, D: 0, E: 0 } } };
-      G.audio.cue('main'); G.audio.ambient('office');
+      G.audio.cue('titleOut'); G.audio.ambient('office');   // 前の曲は、事件名の暗転と一緒に消える
       await G.curtain(['<div class="big">本町三丁目火災</div><div class="small">未明の住宅火災。出火原因は分からない</div>']);
+      G.audio.cue('main');
       G.auditCtx = { suspect: 'otsuka', inCustody: () => inC(S) };
       await K.start(C, S);
       G.audio.ambient(null);

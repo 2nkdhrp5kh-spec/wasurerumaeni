@@ -82,6 +82,7 @@
       if (G.meta.prologueDone) skip = await G.openPaper({ title: '序章', body: G.P('序章（操作の練習を兼ねた短い事件）を、もう一度遊ぶか。'), noClose: true,
         buttons: [{ label: '序章から', value: false }, { label: '本章から', value: true }] });
       if (!skip) {
+        G.audio.cue('titleOut');   // 前の曲は、序章の暗転と一緒に消える
         await G.curtain([{ html: '<div class="big">序章</div><div class="small">空き巣</div>', wait: 1000 }]);
         await G.cases.akisu.run();
       }

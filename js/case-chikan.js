@@ -256,8 +256,9 @@
     title: '7時16分発', sub: '痴漢・証拠は被害者の供述', trial: TRIAL,
     run: async function () {
       const S = { c: { truth: G.devTruth || (rnd() < .5 ? 'G' : 'I'), sess: { A: 0, B: 0, C: 0, D: 0, E: 0 } } };
-      G.audio.cue('main'); G.audio.ambient('office');
+      G.audio.cue('titleOut'); G.audio.ambient('office');   // 前の曲は、事件名の暗転と一緒に消える
       await G.curtain(['<div class="big">7時16分発</div><div class="small">朝の電車。女性が「痴漢です」と男の手をつかんだ</div>']);
+      G.audio.cue('main');
       G.auditCtx = { suspect: 'saeki', inCustody: () => inC(S) };
       await K.start(C, S);
       G.audio.ambient(null);
