@@ -118,7 +118,8 @@
       let cr = G.meta.career;
       if (!resume || !cr || cr.done) { cr = G.meta.career = fresh(); save();
         await G.curtain([{ html: '<div class="big">経歴</div>', wait: 1000 },
-          { html: '<div class="law">北見坂警察署　刑事課　強行犯係。<br>巡査部長。38歳。<br>妻と、小学二年生の娘がいる。<br><br>これから数年のあいだに、あなたは四つの事件の主任になる。</div>', wait: 2600 }]); }
+          { html: '<div class="law">北見坂警察署　刑事課　強行犯係。<br>巡査部長。38歳。<br><br>それが、あなただ。</div>', wait: 1800 },
+          { html: '<div class="law">妻と、小学二年生の娘がいる。<br><br>これから数年のあいだに、あなたは四つの事件の主任になる。</div>', wait: 2600 }]); }
       for (let i = cr.step; i < ORDER.length; i++) {
         G.layout({ role: RANK[cr.rank], date: '', info: '経歴　' + (i + 1) + '／4', scene: { bg: 'home' }, hint: '' });
         G.audio.ambient(null);

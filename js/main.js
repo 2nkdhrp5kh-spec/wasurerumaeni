@@ -68,13 +68,13 @@
     if (!G.meta.diffChosen) await G.chooseDiff(true);
     G.lawMode = 'keiji'; G.inMode = true;
     G.audio.cue('law1');
-    await G.curtain([{ html: '<div class="big">刑事編</div>', wait: 1000 }, { html: G.QUOTES.law1a, wait: 3000 },
-      { html: '<div class="law">北見坂警察署　刑事課　強行犯係。<br>巡査部長。<br><br>それが、あなただ。</div>', wait: 1800 }]);
+    await G.curtain([{ html: '<div class="big">刑事編</div>', wait: 1000 }, { html: G.QUOTES.law1a, wait: 3000 }]);
     // 経歴（物語）か、事件を選ぶか
     const cr = G.meta.career;
-    const mode = await G.openPaper({ title: '刑事編', sub: 'どう遊ぶか', noClose: true, body: G.P('「経歴」は、一人の刑事の数年間を、四つの事件で順に歩む物語。「事件を選ぶ」は、好きな事件を一つ遊ぶ。'),
+    const mode = await G.openPaper({ title: '刑事編', sub: 'どう遊ぶか', closeLabel: '戻る', body: G.P('「経歴」は、一人の刑事の数年間を、四つの事件で順に歩む物語。「事件を選ぶ」は、好きな事件を一つ遊ぶ。'),
       buttons: (cr && !cr.done && cr.step > 0 ? [{ label: '経歴：続きから', value: 'resume', cls: 'green', small: (cr.step + 1) + '件目から（' + ['巡査部長', '警部補', '警部'][cr.rank] + '）' }] : [])
         .concat([{ label: '経歴（物語）', value: 'career', small: cr && cr.step > 0 && !cr.done ? 'はじめから（続きの記録は消える）' : '四つの事件を、年を追って' }, { label: '事件を選ぶ', value: 'free', small: '一つの事件を自由に' }]) });
+    if (!mode) { G.lawMode = null; G.inMode = false; return title(); }   // 戻る：タイトルへ
     let skip = !!G.meta.prologueDone;
     if (mode !== 'resume') {
       if (G.meta.prologueDone) skip = await G.openPaper({ title: '序章', body: G.P('序章（操作の練習を兼ねた短い事件）を、もう一度遊ぶか。'), noClose: true,
