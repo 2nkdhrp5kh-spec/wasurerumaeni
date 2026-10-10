@@ -974,9 +974,9 @@
     D('zenka', '前科調書', 0, kv([['前科', '窃盗 1犯（10年前。拘禁刑1年・執行猶予3年）'], ['内容', '勤務先の売上金の着服']]))
   ];
   async function trial() {
-    G.audio.cue('hanjiTrial'); G.audio.ambient('court');
+    G.audio.cue('titleOut'); G.audio.ambient('court');   // タイトルの曲は暗転と一緒に消え、次の画面で公判の曲が始まる
     await G.curtain([{ html: '<div class="big">数か月後</div><div class="small">北見坂地方裁判所　刑事部　単独事件</div>', wait: 1400, sfx: 'crowd' },
-      { html: '<div class="law">令状の当番ではない日。<br>あなたは、法廷にいる。<br><br>捜査は、もう終わっている。<br>あなたが読めるのは、法廷に出された記録だけだ。</div>', wait: 2000 }]);
+      { html: '<div class="law">令状の当番ではない日。<br>あなたは、法廷にいる。<br><br>捜査は、もう終わっている。<br>あなたが読めるのは、法廷に出された記録だけだ。</div>', wait: 2000, cue: 'hanjiTrial' }]);
     const read = {};
     return new Promise(res => {
       let busy = false;
@@ -1184,7 +1184,7 @@
     S.defs = S.hand ? DEFS : G.hanjiGen.defs(S.plan, LIB);
     if (sv) S.log = sv.log.map(L => Object.assign({ def: S.defs.find(d => d.id === L.id) }, L)).filter(x => x.def);
     G.closePaper();
-    G.audio.cue('silence');
+    G.audio.cue('titleOut');   // タイトルの曲は暗転と一緒に消える
     if (!sv) await G.curtain([{ html: '<div class="big">判事編</div><div class="small">令状当番　第' + S.dutyNo + '回</div>', wait: 1200 },
       { html: '<div class="law">北見坂地方裁判所　刑事部。<br>裁判官。<br><br>あなたは、捜査をしない。<br>届いた紙を読んで、決める。</div>', wait: 2200 }]);
     else await G.curtain([{ html: '<div class="big">続きから</div><div class="small">' + NIGHTS[sv.night + 1].name + 'から</div>', wait: 1000 }]);

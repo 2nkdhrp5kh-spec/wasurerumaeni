@@ -21,28 +21,30 @@
   };
   // ---- 場面ごとの指定 ----
   // t: 曲（null は無音）／at: 開始位置（秒）／restart: 同じ曲が鳴っていても頭出しし直す
-  // 曲は1回流れたら止まる（ループしない）。
+  // then: 曲が終わったら、少し間をおいて続けて流す曲（最後まで行ったら最初の曲に戻る。最初の曲は loopAt から）
+  // 一つの場面が長く続いても（20分以上）、曲が切れないように
   const CUES = {
     title:        { t: 'barcarolle', at: 0 },
     quote:        { t: 'barcarolle', at: 0 },
-    law1:         { t: 'barcarolle', at: 0 },
+    law1:         { t: null, fade: 3 },          // タイトルから刑事編へ：暗転と一緒に消える
     prologue:     { t: 'waltz', at: 0, restart: true },
     prologueSolve:{ t: 'waltz', at: 150, restart: true },
     main:         { t: 'eroica', at: 0, restart: true },
     arrest:       { t: 'eroica', at: 255, restart: true },
     confession:   { t: 'eroica', at: 470, restart: true },
     soutchi:      { t: 'eroica', at: 760, restart: true },
-    interro:      { t: 'prelude20', at: 0 },               // 取調べのたびに頭から鳴らし直さない
+    interro:      { t: 'prelude20', at: 0, then: ['noct48'] },   // 取調べのたびに頭から鳴らし直さない
     expiry:       { t: 'noct48', at: 0, restart: true },
-    trial:        { t: 'op110', at: OP110_START, restart: true },
-    verdict:      { t: 'op110', at: OP110_START },   // 公判から鳴っていれば、そのまま続ける
+    trial:        { t: 'op110', at: OP110_START, loopAt: OP110_START, restart: true },
+    verdict:      { t: 'op110', at: OP110_START, loopAt: OP110_START },   // 公判から鳴っていれば、そのまま続ける
     years:        { t: 'noct20', at: 0, restart: true },
     grave:        { t: 'funeral', at: 0, restart: true },
     finale:       { t: 'pathetique', at: 0, restart: true },
-    hanjiTrial:   { t: 'waldstein', at: 0, restart: true },
+    hanjiTrial:   { t: 'waldstein', at: 0, then: ['op110'], restart: true },   // 公判の記録を読むのは長い。刑事編の公判の曲に続ける
     warrant:      { t: 'aria', at: 0, restart: true },
     witness:      { t: 'etude257', at: 0, restart: true },
-    silence:      { t: null }
+    silence:      { t: null },
+    titleOut:     { t: null, fade: 3 }           // 暗転と一緒に消える
   };
 
   let AC = null, master = null, bgmGain = null, ambGain = null, sfxGain = null, voiceGain = null;
@@ -53,7 +55,7 @@
       try {
         AC = new (window.AudioContext || window.webkitAudioContext)();
         master = AC.createGain(); master.gain.value = muted ? 0 : 1; master.connect(AC.destination);
-        bgmGain = AC.createGain(); bgmGain.gain.value = .33; bgmGain.connect(master);   // 以前の .55 の約6割
+        bgmGain = AC.createGain(); bgmGain.gain.value = .264; bgmGain.connect(master);   // 曲の音量（.33 から2割下げた）
         ambGain = AC.createGain(); ambGain.gain.value = .5; ambGain.connect(master);
         sfxGain = AC.createGain(); sfxGain.gain.value = .8; sfxGain.connect(master);
         voiceGain = AC.createGain(); voiceGain.gain.value = 1.6; voiceGain.connect(master);
@@ -77,12 +79,24 @@
   function cue(id) {
     const c = CUES[id]; if (!c) return;
     if (!AC) { pendingCue = id; return; }
-    if (!c.t) { stopCurrent(2.5); return; }
+    if (!c.t) { stopCurrent(c.fade || 2.5); return; }
     if (current && current.name === c.t && !c.restart) return;
     stopCurrent(2.5);
-    const me = { name: c.t, el: null, node: null, gain: null };
+    const me = { name: c.t, el: null, node: null, gain: null, idx: 0,
+      seq: [{ t: c.t, at: c.at || 0 }].concat((c.then || []).map(t => ({ t, at: 0 }))), loopAt: c.loopAt || 0 };
     current = me;
-    playEl(me, c);
+    playEl(me, me.seq[0]);
+  }
+  // 曲が終わったら、少し間をおいて次の曲へ（場面が変わっていなければ）
+  const GAP = 12;
+  function onTrackEnd(me) {
+    if (current !== me) return;
+    setTimeout(() => {
+      if (current !== me) return;
+      me.idx = (me.idx + 1) % me.seq.length;
+      const it = me.seq[me.idx];
+      playEl(me, { t: it.t, at: me.idx === 0 ? me.loopAt : it.at });
+    }, GAP * 1000);
   }
   // 鳴らし方1：audio 要素（曲を丸ごと読み込んでページの中の data にしてから。別の場所から配られた曲を Web Audio に通すと無音になるため）
   function playEl(me, c) {
@@ -93,12 +107,12 @@
       const el = me.el = slot ? slot.el : new Audio(); el.preload = 'auto';
       let gain = null;
       if (slot) { gain = slot.gain; gain.gain.cancelScheduledValues(AC.currentTime); gain.gain.value = 0; el.volume = 1; }
-      if (!gain) el.volume = muted ? 0 : .35;
+      if (!gain) el.volume = muted ? 0 : .28;
       me.gain = gain;
       el._owner = me;
       // 要素を使い回すので、前の曲の受け手が残らないよう on〜 に代入する
       el.onloadedmetadata = () => { try { el.currentTime = Math.min(c.at || 0, Math.max(0, el.duration - 5)); } catch (e) {} };
-      el.onended = () => { if (current === me) current = null; };
+      el.onended = () => onTrackEnd(me);
       // audio 要素が使えない環境（読み込みを禁じられている等）：鳴らし方2へ
       el.onerror = () => { if (current === me) { lastErr = 'audio要素：' + (el.error ? el.error.code : '?'); playBuf(me, c); } };
       el.src = blobUrl || TRACKS[c.t];
@@ -114,7 +128,7 @@
         if (current !== me) return;
         const node = AC.createBufferSource(); node.buffer = buf;
         const g = AC.createGain(); g.gain.value = 0; node.connect(g); g.connect(bgmGain);
-        node.onended = () => { if (current === me) current = null; };
+        node.onended = () => onTrackEnd(me);
         me.el = null; me.node = node; me.gain = g;
         node.start(0, Math.min(c.at || 0, Math.max(0, buf.duration - 5))); fadeTo(g, 1, 3);
       }).catch(e => { lastErr = (lastErr ? lastErr + '／' : '') + 'デコード：' + (e && e.message || e); if (current === me) current = null; });
@@ -294,7 +308,7 @@
   G.audio = {
     unlock() { if (ctx()) primeSlots(); if (AC && pendingCue) { const p = pendingCue; pendingCue = null; cue(p); } },
     cue, ambient, sfx, voice, voiceStop() {}, ambientKind: () => amb ? amb.kind : null,
-    setMuted(m) { muted = m; if (master) fadeTo(master, m ? 0 : 1, .3); if (current && !current.gain && current.el) current.el.volume = m ? 0 : .35; },
+    setMuted(m) { muted = m; if (master) fadeTo(master, m ? 0 : 1, .3); if (current && !current.gain && current.el) current.el.volume = m ? 0 : .28; },
     diag, CUES, TRACKS
   };
 })();
