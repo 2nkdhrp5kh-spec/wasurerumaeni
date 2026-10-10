@@ -53,7 +53,7 @@
       try {
         AC = new (window.AudioContext || window.webkitAudioContext)();
         master = AC.createGain(); master.gain.value = muted ? 0 : 1; master.connect(AC.destination);
-        bgmGain = AC.createGain(); bgmGain.gain.value = .33;   // 以前の .55 の約6割 bgmGain.connect(master);
+        bgmGain = AC.createGain(); bgmGain.gain.value = .33; bgmGain.connect(master);   // 以前の .55 の約6割
         ambGain = AC.createGain(); ambGain.gain.value = .5; ambGain.connect(master);
         sfxGain = AC.createGain(); sfxGain.gain.value = .8; sfxGain.connect(master);
         voiceGain = AC.createGain(); voiceGain.gain.value = 1.6; voiceGain.connect(master);

@@ -125,7 +125,7 @@
         { label: '判事編：令状当番', value: 'warrant', small: 'ゴルトベルク アリア' },
         { label: '判事編：公判', value: 'hanjiTrial', small: 'ソナタ21番 第2楽章' }] });
     if (!v) return;
-    if (v === 'diag') { G.toast('調べています（数秒）'); const lines = await G.audio.diag(); await G.openPaper({ title: '音の診断', sub: '開発用', body: '<pre style="white-space:pre-wrap;font-size:12px">' + lines.map(x => x.replace(/</g, '&lt;')).join('\n') + '</pre>', buttons: [{ label: '閉じる', value: 1 }] }); return; }
+    if (v === 'diag') { G.toast('調べています（数秒）'); const lines = await G.audio.diag(); await G.openPaper({ title: '音の診断', sub: '開発用', body: '<pre style="white-space:pre-wrap;font-size:12px">' + lines.map(x => x.replace(/</g, '&lt;')).join('\n') + '</pre>', noClose: true, buttons: [{ label: '閉じる', value: 1 }] }); return; }
     G.inMode = true;
     if (v === 'prologue') { G.lawMode = 'keiji'; await G.cases.akisu.run(); return; }
     if (v === 'warrant') { await G.hanji.duty(false); return; }
