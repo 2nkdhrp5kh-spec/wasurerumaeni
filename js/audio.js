@@ -4,7 +4,7 @@
    ============================================================ */
 (function () {
   // ---- 曲 ----
-  const OP110_FUGA = 0;   // 録音の中でフーガが始まる位置（秒）
+  const OP110_START = 283;   // 4分43秒から使う
   const TRACKS = {
     barcarolle: 'audio/barcarolle.mp3',   // ショパン 舟歌 作品60（導入）
     waltz:      'audio/waltz34-2.mp3',    // ショパン ワルツ第3番 作品34-2（序章）
@@ -34,8 +34,8 @@
     soutchi:      { t: 'eroica', at: 760, restart: true },
     interro:      { t: 'prelude20', at: 0 },               // 取調べのたびに頭から鳴らし直さない
     expiry:       { t: 'noct48', at: 0, restart: true },
-    trial:        { t: 'op110', at: 0, restart: true },
-    verdict:      { t: 'op110', at: OP110_FUGA, restart: true },  // フーガの入り
+    trial:        { t: 'op110', at: OP110_START, restart: true },
+    verdict:      { t: 'op110', at: OP110_START },   // 公判から鳴っていれば、そのまま続ける
     years:        { t: 'noct20', at: 0, restart: true },
     grave:        { t: 'funeral', at: 0, restart: true },
     finale:       { t: 'pathetique', at: 0, restart: true },

@@ -9,7 +9,7 @@
 | 本章（main / arrest / confession / soutchi） | ベートーヴェン 交響曲第3番 第2楽章 | Czech National Symphony Orchestra（Musopen） | Beethoven SymphonyNo.3Eroica …-02-MarciaFunebreAdagioAssai.ogg | CC0（Musopen は出典表記を希望） | audio/eroica2.mp3 |
 | 取調べ（interro） | ショパン 前奏曲 作品28-20 | Ivan Ilić（Musopen） | Chopin - Preludes, Op. 28 - No. 20 'Funeral march'.ogg | CC BY 3.0（表記が必要） | audio/prelude20.mp3 |
 | 勾留の満期（expiry） | ショパン 夜想曲第13番 作品48-1 | Luke Faulkner | Chopin Nocturne in C minor Op. 48 no. 1 Luke Faulkner.ogg | CC0 | audio/noct48-1.mp3 |
-| 刑事編の公判・判決（trial / verdict） | ベートーヴェン ピアノソナタ第31番 作品110 第3楽章 | Musopen | Ludwig van Beethoven - sonata no. 31 in a flat major, op. 110 - iii. adagio, ma non troppo.ogg | PD-old-100 ＋ PD-author（Musopen） | audio/op110-3.mp3 |
+| 刑事編の公判・判決（trial / verdict） | ベートーヴェン ピアノソナタ第31番 作品110 第3楽章 | Musopen | Ludwig van Beethoven - sonata no. 31 in a flat major, op. 110 - iii. adagio, ma non troppo.ogg | PD-old-100 ＋ PD-author（Musopen） | audio/op110-3.mp3（4分43秒から流す） |
 | 数年後（years） | ショパン 夜想曲第20番 嬰ハ短調 遺作 | Musopen | Chopin, Nocturne in C-sharp minor, Op. Posth.ogg | CC0 | audio/noct20.mp3 |
 | 経歴モードで、自分が捜査した事件の再審（再審請求審を含む）に証人として呼ばれる場面（grave） | ショパン ピアノソナタ第2番 第3楽章 | Andreas Xenopoulos（Musopen） | Frederic Chopin Piano Sonata No.2 in B flat minor Op35 - III Marche Funebre.ogg | CC0 | audio/sonata2-3.mp3 |
 | 終幕（finale） | ベートーヴェン ピアノソナタ第8番 第2楽章 | Paul Pitman（Musopen） | Beethoven, Sonata No. 8 in C Minor Pathetique, Op. 13 - II. Adagio cantabile.ogg | CC0 | audio/pathetique2.mp3 |
