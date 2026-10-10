@@ -55,7 +55,7 @@ const URL = 'file://' + path.resolve(__dirname, '..', 'index.html');
             const good = [/^住居侵入・強盗刑法/, /^傷害致死/, /^現住建造物等放火/, /^迷惑行為防止条例/, /^逮捕しない/, /^黙秘権を告げる/, /^すぐに会わせる/, /^余罪には触れない/, /^断る/, /^証拠を示して/, /^休憩を入れて/, /^弁解を聴く/, /^言い分を聴く/, /^8枚の写真/, /^「示した写真は1枚」/, /^送る$/, /^まだ続ける/, /^一問一答/, /^自分にやらせて/];
             for (const re of good) { const b = bs.find(x => re.test(x.textContent)); if (b) { b.click(); return 'p:good'; } }
           }
-          const pref = bs.filter(b => !/閉じる|やめる|やめておく|条文帳を開く/.test(b.textContent) && !(window.__thorough && /告げずに|夜まで|怒鳴り|認めれば|指紋が出た|明日の午後|中心に聴く|指示に従う|任せる/.test(b.textContent)));
+          const pref = bs.filter(b => !/閉じる|やめる|やめておく|条文帳を開く/.test(b.textContent) && !(window.__thorough && /告げずに|夜まで|怒鳴り|認めれば|指紋が出た|明日の午後|中心に聴く|指示に従う|任せる|帰ってくる前|連れて行き、部屋を捜す|その場で中身/.test(b.textContent)));
           const b = pref.length && Math.random() < .85 ? pref[Math.floor(Math.random() * pref.length)] : bs[Math.floor(Math.random() * bs.length)];
           b.click(); return 'p:' + b.textContent.slice(0, 16);
         }

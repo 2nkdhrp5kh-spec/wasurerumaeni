@@ -292,6 +292,43 @@
   };
 
   // 罪名を選ぶ（逮捕状の請求、または送致のとき）
+  /* 逮捕の場面：どこで逮捕するか、逮捕に伴う捜索差押え（刑訴法220条）をどこまでするか、スマートフォンをどう扱うか
+     cfg: { who, home: '自宅の呼び方', out: '外の場所', body: 身体を調べたときに使う行動id, room: S => [[台詞]] | null, phone: S => 中身を見たときに使う行動id }
+     見つけた記録には d.s220 を付け、公判で適法かどうかを判断する（trial.js） */
+  kit.arrestSearch = async function (S, cfg) {
+    const c = S.c, C = G.keiji.C();
+    const place = await G.openPaper({ title: '逮捕の場所', sub: cfg.who + 'の逮捕状を執行する', noClose: true, body: P('どこで逮捕するか。', '逮捕の現場では、令状がなくても捜索・差押えができる（刑訴法220条1項2号）。どこで逮捕するかで、その範囲が変わる。'),
+      buttons: [{ label: cfg.home + 'で、帰ってくるのを待って逮捕する', value: 'home', small: '部屋の中で逮捕する' }, { label: cfg.out + 'で逮捕する', value: 'out', small: '見つけた所で、すぐに' }] });
+    const opts = place === 'home'
+      ? [{ label: '捜索はしない', value: 'none' }, { label: '本人の身体と持ち物だけ', value: 'body' }, { label: '逮捕した部屋（住まい全体）を捜す', value: 'room', small: '同じ住まいの中' },
+         { label: '本人が帰ってくる前に、部屋を捜し始める', value: 'pre', small: '逮捕は、そのあと帰宅したときに', cls: 'red' }]
+      : [{ label: '捜索はしない', value: 'none' }, { label: '本人の身体と持ち物だけ', value: 'body' }, { label: 'そのまま' + cfg.home + 'へ連れて行き、部屋を捜す', value: 'outHome', cls: 'red', small: '本人の立会いのもとで' }];
+    let scope = await G.openPaper({ title: '逮捕に伴う捜索差押え', sub: '令状なしで、どこまで捜すか', noClose: true, body: P('逮捕の現場で、どこまで捜すか。', '（何を「逮捕する場合」「逮捕の現場」とみるかは、条文帳の220条と判例を確かめられる。）'), buttons: opts.concat([{ label: '条文帳を開く', value: 'law' }]) });
+    while (scope === 'law') { await G.openLaw('刑事訴訟法'); scope = await G.openPaper({ title: '逮捕に伴う捜索差押え', sub: '令状なしで、どこまで捜すか', noClose: true, body: P('逮捕の現場で、どこまで捜すか。'), buttons: opts }); }
+    if (scope !== 'none' && G.diff() === 'hard' && C.id !== 'akisu') {
+      const ok = await G.citeLaw({ k: 's220', ok: ['刑事訴訟法 第220条'], what: '逮捕の現場で、令状なしに捜索・差押えをする' });
+      if (!ok) { await G.talk([['todo', '……根拠も言えないのに、人の家を捜すな。今日は逮捕だけだ。', { scene: kit.sc('todo', 'kacho') }]]); scope = 'none'; }
+    }
+    c.s220 = { place, scope };
+    if (scope === 'none') return;
+    const mark = (ids, flag) => ids.forEach(id => { const d = K.doc(id); if (d && !d.s220) d.s220 = flag; });
+    const before = new Set(S.docs.map(d => d.id));
+    let lines = [];
+    const run = id => { const a = C.actions.find(x => x && x.id === id); if (!a || (S.fin[id])) return []; S.fin[id] = true; S.done[id] = true; return (a.done ? a.done(S) : []) || []; };
+    if (cfg.body) lines = lines.concat(run(cfg.body));
+    if (scope === 'room' || scope === 'pre' || scope === 'outHome') lines = lines.concat((cfg.room && cfg.room(S)) || [['shirai', '部屋を一通り捜しました。……事件に結びつくような物は、出ませんでした。', { scene: kit.sc('shirai') }]]);
+    const flag = scope === 'body' || scope === 'room' ? 'legal' : scope;
+    mark(S.docs.filter(d => !before.has(d.id)).map(d => d.id), flag);
+    if (lines.length) await G.talk([['', '（' + (scope === 'body' ? '本人の身体と持ち物を調べた。' : scope === 'pre' ? '本人の帰宅を待たず、部屋の捜索を始めた。帰ってきたところを逮捕した。' : scope === 'outHome' ? '逮捕したあと、本人を連れて住まいへ行き、部屋を捜した。' : '逮捕した部屋で、そのまま捜索した。') + '）', { scene: { bg: 'office' } }]].concat(lines));
+    // スマートフォン
+    if (cfg.phone) {
+      const ph = await G.openPaper({ title: 'スマートフォン', sub: cfg.who + 'の持っていたスマートフォンを差し押さえた', noClose: true, body: P('中身をどうするか。'),
+        buttons: [{ label: 'その場で中身を見る', value: 'view', cls: 'red', small: '検索履歴やメッセージを、すぐに' }, { label: '令状を取ってから解析する', value: 'warrant', small: '捜索差押許可状（電磁的記録）。数日かかる' }] });
+      c.s220.phone = ph;
+      if (ph === 'view') { const b2 = new Set(S.docs.map(d => d.id)); const L = run(cfg.phone(S)); mark(S.docs.filter(d => !b2.has(d.id)).map(d => d.id), 'phoneView'); if (L.length) await G.talk(L); }
+      else c.phoneSeized = true;
+    }
+  };
   kit.charge = S => S.c.charge && (G.keiji.C().charges || []).find(x => x.id === S.c.charge);
   kit.title = (S, name) => { const ch = kit.charge(S); return name + (ch ? '（' + ch.label + '）' : ''); };
   kit.chooseCharge = async function (S, C, why, must) {

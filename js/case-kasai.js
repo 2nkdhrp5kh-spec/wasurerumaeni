@@ -177,6 +177,7 @@
     await G.talk([['todo', '請求する。', { scene: sc('todo') }], ['', '（逮捕状は翌日発付される。）']]); S.c.warrantPending = S.day;
   } });
   A.push({ id: 'arrest', who: 'self', label: '大塚を逮捕する', primary: true, cond: S => S.c.warrantReady && S.c.arrest == null, run: async S => {
+    await kit.arrestSearch(S, { who: '大塚', home: '身を寄せている親族の家', out: '母の入院先の病院の前', phone: () => 'phone' });
     G.drawScene(sc('otsuka', 'street', 0));
     S.c.recorded = !!kit.charge(S).saibanin;
     await G.talk([['you', '大塚茂さん。' + kit.charge(S).label + 'の容疑で逮捕します。'], ['otsuka', '……母は、どうなるんですか。'], ['', '（逮捕。' + (S.c.recorded ? 'この罪名は裁判員裁判の対象。ここから先の取調べは、録音・録画される。' : 'この罪名では、取調べの録音・録画の義務はない。') + '）', { sfx: 'metal' }]]);

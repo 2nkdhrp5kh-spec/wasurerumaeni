@@ -201,11 +201,18 @@
     S.c.warrantPending = S.day;
   } });
   A.push({ id: 'arrest', who: 'self', label: '戸田を逮捕する', primary: true, cond: S => S.c.warrantReady && S.c.arrest == null, run: async S => {
+    await kit.arrestSearch(S, { who: '戸田', home: '自宅のアパート', out: 'タクシー会社の車庫', body: 'shirt', phone: () => 'todaPhone' });
     G.drawScene(sc('toda', 'street', 0));
     S.c.recorded = !!kit.charge(S).saibanin;
     await G.talk([['you', '戸田誠さん。' + kit.charge(S).label + 'の容疑で逮捕します。'], ['toda', '……向こうから来たんですよ。俺は、振り払っただけだ。'], ['', '（逮捕。' + (S.c.recorded ? 'この罪名は裁判員裁判の対象。ここから先の取調べは、録音・録画される。' : 'この罪名では、取調べの録音・録画の義務はない。') + '）', { sfx: 'metal' }]]);
     S.c.arrest = S.day; S.c.warrantReady = false;
   } });
+  A.push({ id: 'todaPhone', who: 'staff', days: 4, label: '戸田のスマートフォンを解析する', short: 'スマホの解析', sub: '令状で（電磁的記録）', cond: S => S.c.phoneSeized && !S.fin.todaPhone,
+    done: S => { const A_ = S.c.truth === 'A';
+      K.addDoc({ id: 'todaLine', title: 'スマートフォン解析結果（メッセージ）', kind: 'neu', evid: true, body: A_
+        ? P('事件の夜 23時52分、妻あて：「やっちまった」「酔っ払いに頭きて、殴った。倒れて動かない」「救急車呼んだ」')
+        : P('事件の夜 23時52分、妻あて：「酔っ払いに絡まれた」「離せって言ったのに離さなくて、振り払ったら倒れた」「救急車呼んだ。怖い」') });
+      return [['noguchi', A_ ? '奥さんあてのメッセージです。「殴った」と書いてます。' : '奥さんあてに「振り払ったら倒れた」と。通報の直後です。', { scene: sc('noguchi') }]]; } });
   A.push(kit.releaseAction(S => G.trial.estimate(S, TRIAL), (S, how) => finish(S, how)));
   A.push({ id: 'interro', who: 'self', once: false, label: '戸田を取り調べる', sub: S => S.c.recorded ? '録画されている' : '録画の義務はない', primary: true, cond: S => inC(S), run: async S => kit.interro(S, ICFG) });
   A.push({ id: 'zaitakuSend', who: 'self', label: '逮捕せず、在宅のまま送致する', sub: '身柄は拘束しない', cond: S => S.c.arrest == null && S.c.dead && S.day >= 3, run: async S => {
@@ -296,6 +303,7 @@
       if (has('medic')) add(-.3, '解剖医は、頬の打撲が殴打によるか転倒によるかは区別できないとする');
       if (has('video') && c.video) add(c.truth === 'D' ? -6 : 5, c.truth === 'D' ? '目撃者の撮影した動画では、被害者が被告人の襟を掴み、被告人は「離せ」と言って手を振り払い、被害者は自らの勢いで転倒している' : '目撃者の撮影した動画では、被告人が被害者の顔を拳で殴り、被害者が転倒している');
       if (has('autopsy')) add(-.3, '被害者は中程度に酩酊していた');
+      if (has('todaLine')) add(c.truth === 'A' ? 2 : -1, c.truth === 'A' ? '被告人は事件直後、妻に「殴った」とのメッセージを送っている' : '被告人は事件直後、妻に「振り払ったら倒れた」とのメッセージを送っている');
       return { pos, neg, pros, cons };
     },
     admit(S, admit, drop) {

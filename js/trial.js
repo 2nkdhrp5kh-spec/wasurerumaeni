@@ -47,6 +47,12 @@
           const admit = sent.slice();
           const drop = (id, why) => { const i = admit.indexOf(id); if (i >= 0) { admit.splice(i, 1); excluded.push(why); if (/任意性|違法|相当な限度/.test(why)) c.excludedIllegal = (c.excludedIllegal || 0) + 1; } };
           if (c.confession && c.custodyBad && G.rnd() < .7) drop('confession', '自白は、本件の勾留を余罪の取調べに流用し、又は期間の満了後も身柄の拘束を続ける違法な状態の下で得られたもので、証拠能力を否定する');
+          // 逮捕に伴う捜索差押え（220条）で見つけた記録
+          if (c.s220) (S.docs || []).filter(d => d.s220 && d.s220 !== 'legal').forEach(d => {
+            if (d.s220 === 'outHome') drop(d.id, '被告人方の捜索は、逮捕の現場から離れた場所で行われたもので、刑訴法220条1項2号の「逮捕の現場」に当たらない。令状主義に反する重大な違法があり、証拠能力を否定する');
+            else if (d.s220 === 'pre' && G.rnd() < .5) drop(d.id, '被告人の帰宅前に開始された捜索は、逮捕との時間的接着を欠き、「逮捕する場合」に当たらない（緊急処分説の立場）。違法な捜索により得られた証拠として、証拠能力を否定する');
+            else if (d.s220 === 'phoneView' && G.rnd() < .5) drop(d.id, 'スマートフォン内の記録の閲覧は、逮捕に伴う捜索として許される範囲を超え、令状によるべきであった。証拠能力を否定する');
+          });
           T.admit(S, admit, drop);
           const r = T.weigh(S, admit, true);
           const d = T.decide(S, r, admit);
