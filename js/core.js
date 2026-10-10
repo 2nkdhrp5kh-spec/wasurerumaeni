@@ -178,6 +178,8 @@ G.talk = function (lines, opt) {
       window.scrollTo({ top: Math.max(0, window.scrollY + r0.top - 6), behavior: 'smooth' });
     }
     let i = 0, typing = null, full = '', waitArrive = null, startType = null;
+    const tok = G._qtok;   // 中断（G.quit）されたら、この台詞は死ぬ：画面の押下を横取りせず、声も止める
+    const dead = () => G._qtok !== tok;
     let marked = [];
     const finishType = () => { if (typing) { clearInterval(typing); typing = null; box.querySelector('.say').innerHTML = G.renderMarked(marked, marked.length); G.anim.speaking = null; } };
     const next = () => {
@@ -218,6 +220,7 @@ G.talk = function (lines, opt) {
         marked = G.markup(text, !nar); full = marked.map(o => o.ch).join(''); let k = 0;
         const step = nar ? 18 : Math.round(34 / ((c && c.voice && c.voice.rate) || 1));
         typing = setInterval(() => {
+          if (dead()) { clearInterval(typing); typing = null; return; }
           k++; say.innerHTML = G.renderMarked(marked, k);
           if (!nar && c && c.voice && who !== 'you' && k % 2 === 1) G.audio.voice(c.voice, full[k - 1]);
           if (k >= full.length) { clearInterval(typing); typing = null; G.anim.speaking = null; }
@@ -230,6 +233,7 @@ G.talk = function (lines, opt) {
     };
     // 画面のどこを押しても進む（書類・暗転・上の帯のボタン・説明の吹き出しは除く）
     const anyTap = e => {
+      if (dead()) { document.removeEventListener('click', anyTap, true); if (typing) { clearInterval(typing); typing = null; } if (waitArrive) { clearTimeout(waitArrive); waitArrive = null; } return; }
       const t = e.target;
       if (t.closest && (t.closest('#overlay:not([hidden])') || t.closest('#curtain.on') || t.closest('.bar') || t.closest('.coach'))) return;
       const ov = $('#overlay'); if (ov && !ov.hidden) return;
@@ -339,6 +343,7 @@ G.inMode = false;
 G.quit = function () {
   G.inMode = false; const cq = $('#cquit'); if (cq) cq.hidden = true;
   G._ctok = (G._ctok || 0) + 1;                       // 進行中の暗転を無効に
+  G._qtok = (G._qtok || 0) + 1;                       // 進行中の台詞を無効に
   const cur = $('#curtain'); cur.classList.remove('on'); cur.onclick = null; $('#cbox').innerHTML = '';
   G.closePaper(); G.ui.talking = false; G.ui.busy = false; G.anim.speaking = null;
   if (G.keiji && G.keiji.abort) G.keiji.abort();

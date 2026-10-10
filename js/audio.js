@@ -68,8 +68,8 @@
   function stopCurrent(sec) {
     if (!current) return;
     const c = current; current = null;
-    const end = () => { try { c.el && c.el.pause(); } catch (e) {} try { c.node && c.node.stop(); } catch (e) {} };
-    if (c.gain && AC) { fadeTo(c.gain, 0, sec); setTimeout(end, sec * 1000 + 100); }
+    const end = () => { try { if (c.el && c.el._owner === c) c.el.pause(); } catch (e) {} try { c.node && c.node.stop(); } catch (e) {} };
+    if (c.gain && AC) { if (!c.el || c.el._owner === c) fadeTo(c.gain, 0, sec); setTimeout(end, sec * 1000 + 100); }
     else end();
   }
 
@@ -88,17 +88,19 @@
   function playEl(me, c) {
     trackUrl(c.t).then(blobUrl => {
       if (current !== me) return;
-      const el = me.el = new Audio(); el.preload = 'auto';
+      // 画面を押した瞬間に起こしておいた要素を使う（押下の外で新しく作った要素は、埋め込まれた画面では再生を止められることがある）
+      const slot = (blobUrl || location.protocol === 'file:') ? takeSlot() : null;
+      const el = me.el = slot ? slot.el : new Audio(); el.preload = 'auto';
       let gain = null;
-      if (blobUrl || location.protocol === 'file:') {
-        try { const src = AC.createMediaElementSource(el); gain = AC.createGain(); gain.gain.value = 0; src.connect(gain); gain.connect(bgmGain); } catch (e) { gain = null; }
-      }
+      if (slot) { gain = slot.gain; gain.gain.cancelScheduledValues(AC.currentTime); gain.gain.value = 0; el.volume = 1; }
       if (!gain) el.volume = muted ? 0 : .35;
       me.gain = gain;
-      el.addEventListener('loadedmetadata', () => { try { el.currentTime = Math.min(c.at || 0, Math.max(0, el.duration - 5)); } catch (e) {} });
-      el.addEventListener('ended', () => { if (current === me) current = null; });
+      el._owner = me;
+      // 要素を使い回すので、前の曲の受け手が残らないよう on〜 に代入する
+      el.onloadedmetadata = () => { try { el.currentTime = Math.min(c.at || 0, Math.max(0, el.duration - 5)); } catch (e) {} };
+      el.onended = () => { if (current === me) current = null; };
       // audio 要素が使えない環境（読み込みを禁じられている等）：鳴らし方2へ
-      el.addEventListener('error', () => { if (current === me) { lastErr = 'audio要素：' + (el.error ? el.error.code : '?'); playBuf(me, c); } });
+      el.onerror = () => { if (current === me) { lastErr = 'audio要素：' + (el.error ? el.error.code : '?'); playBuf(me, c); } };
       el.src = blobUrl || TRACKS[c.t];
       const p = el.play(); if (p && p.catch) p.catch(e => { lastErr = 'play：' + e.name; });
       if (gain) fadeTo(gain, 1, 3);
@@ -118,6 +120,32 @@
       }).catch(e => { lastErr = (lastErr ? lastErr + '／' : '') + 'デコード：' + (e && e.message || e); if (current === me) current = null; });
   }
   let lastErr = '';
+  // 曲用の audio 要素を2つ（切り替えの重なり用）。最初に画面を押したときに、無音を鳴らして「起こして」おく
+  const slots = [];
+  let slotNext = 0;
+  function silentUrl() {
+    const n = 800, b = new ArrayBuffer(44 + n * 2), v = new DataView(b), w = (o, t) => [...t].forEach((ch, i) => v.setUint8(o + i, ch.charCodeAt(0)));
+    w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, 8000, true); v.setUint32(28, 16000, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n * 2, true);
+    return URL.createObjectURL(new Blob([b], { type: 'audio/wav' }));
+  }
+  function primeSlots() {
+    if (slots.length || !AC) return;
+    const su = silentUrl();
+    for (let k = 0; k < 2; k++) {
+      const el = new Audio(); el.src = su;
+      let gain = null;
+      try { const src = AC.createMediaElementSource(el); gain = AC.createGain(); gain.gain.value = 0; src.connect(gain); gain.connect(bgmGain); } catch (e) { lastErr = '要素の接続：' + e.name; return; }
+      const p = el.play(); if (p && p.then) p.then(() => el.pause(), e => { lastErr = '起こす：' + e.name; });
+      slots.push({ el, gain });
+    }
+  }
+  function takeSlot() {
+    if (!slots.length) return null;
+    const sl = slots[slotNext]; slotNext = (slotNext + 1) % slots.length;
+    try { sl.el.pause(); } catch (e) {}
+    return sl;
+  }
   // 曲ごとに一度だけ読み込み、使い回す
   const blobs = {};
   function trackUrl(name) {
@@ -142,6 +170,7 @@
     await tryEl('audio要素（そのまま）', t);
     if (blob) await tryEl('audio要素（blob）', URL.createObjectURL(blob));
     if (blob) { try { const ab = await blob.arrayBuffer(); const buf = await new Promise((res, rej) => AC.decodeAudioData(ab, res, rej)); out.push('デコード：できる（' + buf.duration.toFixed(0) + '秒）'); } catch (e) { out.push('デコード：失敗 ' + (e && e.message || e)); } }
+    out.push('起こした要素：' + slots.length + '個');
     out.push('いま鳴らしている曲：' + (current ? current.name + (current.node ? '（デコード）' : '（audio要素）') : 'なし'));
     if (lastErr) out.push('最後のエラー：' + lastErr);
     return out;
@@ -260,8 +289,10 @@
     o.start(t); o.stop(t + .1);
   }
 
+  // どこを押しても、最初の押下で音を起こす（押下の中でしか許されない準備があるため）
+  ['pointerdown', 'keydown'].forEach(t => document.addEventListener(t, () => { try { G.audio.unlock(); } catch (e) {} }, true));
   G.audio = {
-    unlock() { if (ctx() && pendingCue) { const p = pendingCue; pendingCue = null; cue(p); } },
+    unlock() { if (ctx()) primeSlots(); if (AC && pendingCue) { const p = pendingCue; pendingCue = null; cue(p); } },
     cue, ambient, sfx, voice, voiceStop() {}, ambientKind: () => amb ? amb.kind : null,
     setMuted(m) { muted = m; if (master) fadeTo(master, m ? 0 : 1, .3); if (current && !current.gain && current.el) current.el.volume = m ? 0 : .35; },
     diag, CUES, TRACKS

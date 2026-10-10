@@ -76,14 +76,18 @@
     if (p.leaks) Q.push(['自白の前に、現場の写真を被疑者に見せたことは？', true, '自白の前に現場の写真を見せた']);
     if (p.todoTook) Q.push(['上司が、あなたに代わって取り調べた夜がありましたね。そのとき、何がありましたか。', true, '課長が一晩取り調べた']);
     if (!Q.length) Q.push(['取調べで、無理な追及をしたことはありますか。', false, '']);
-    let honest = 0, lied = 0, caught = 0;
+    let honest = 0, lied = 0, caught = 0, forgot = 0;
     for (const [q, fact, what] of Q) {
       const v = await G.openPaper({ title: '弁護人の問い', sub: '証言台で', noClose: true, body: G.P(q),
         buttons: [{ label: fact ? 'はい。' + what + '。' : 'いいえ', value: 'truth', small: fact ? 'あったことを、そのまま話す' : 'そのとおりに答える' },
           ...(fact ? [{ label: '記憶にありません', value: 'forget' }, { label: 'いいえ。取調べは適正に行いました', value: 'deny', cls: 'red' }] : [])] });
       if (v === 'truth') { honest++; await G.talk([['you', fact ? 'はい。' + what + '。' : 'いいえ。'], ['bengo', '……ありがとうございます。']]); }
+      else if (v === 'forget') { lied++;
+        // 「記憶にない」：記憶に反していれば偽証になりうる（刑法169条。自分の記憶に反する陳述）。ただ、覚えていたことを証明するのは難しい
+        if (p.recorded) { forgot++; await G.talk([['bengo', '取調べの録画を、再生します。'], ['', '（法廷のモニターに、取調室が映った。そこにいるのは、あなただった。）', { sfx: 'thud' }], ['bengo', '……これでも、記憶にありませんか。'], ['you', '……記憶にありません。'], ['judge', '分かりました。……証人の記憶の点は、映像そのものによって判断します。']]); }
+        else await G.talk([['bengo', '……そうですか。録画は、ありませんでしたね。'], ['', '（弁護人は、それ以上は聞かなかった。傍聴席の誰かが、小さく息を吐いた。）']]); }
       else { lied++;
-        if (p.recorded && fact) { caught++; await G.talk([['bengo', '取調べの録画を、再生します。'], ['', '（法廷のモニターに、取調室が映った。そこにいるのは、あなただった。）', { sfx: 'thud' }], ['judge', '……証人。いまの証言と、映像とが、食い違っているようですが。']]); }
+        if (p.recorded) { caught++; await G.talk([['bengo', '取調べの録画を、再生します。'], ['', '（法廷のモニターに、取調室が映った。そこにいるのは、あなただった。）', { sfx: 'thud' }], ['judge', '……証人。いまの証言と、映像とが、食い違っているようですが。']]); }
         else await G.talk([['bengo', '……そうですか。録画は、ありませんでしたね。'], ['', '（弁護人は、それ以上は聞かなかった。傍聴席の誰かが、小さく息を吐いた。）']]); }
     }
     G.audio.ambient(null);
@@ -92,7 +96,7 @@
     const outcome = r.kind === 'retrial'
       ? '再審公判で、元被告人は無罪となった。' + (honest ? '判決は、取調べについてのあなたの証言を引いて、自白の任意性を否定した。' : '判決は、自白の信用性を否定した。あなたの証言には、触れていなかった。')
       : (honest && (p.C || p.D || p.E) ? '再審請求は棄却された。ただ、決定は、取調べに不適切な点があったことを認めた。' : '再審請求は、棄却された。');
-    await G.curtain([{ html: '<div class="doc-s"><h3>' + (r.kind === 'retrial' ? '再審判決' : '決定') + '</h3>' + outcome + (caught ? '<br><br>あなたの証言について、偽証の告発がされたと聞いた。' : '') + '</div>', wait: 2800 }]);
+    await G.curtain([{ html: '<div class="doc-s"><h3>' + (r.kind === 'retrial' ? '再審判決' : '決定') + '</h3>' + outcome + (caught ? '<br><br>あなたの証言について、偽証の告発がされたと聞いた。' : forgot ? '<br><br>判決は、取調べの様子を、あなたの証言ではなく録画によって認定した。「記憶にない」という証言は、信用できないとされた。' : '') + '</div>', wait: 2800 }]);
     return { kind: r.kind, x, honest, lied, caught };
   }
 
