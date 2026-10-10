@@ -16,8 +16,8 @@
     pathetique: 'audio/pathetique2.mp3',  // ベートーヴェン ピアノソナタ第8番 第2楽章（終幕）
     waldstein:  'audio/waldstein2.mp3',   // ベートーヴェン ピアノソナタ第21番 第2楽章（判事編の公判）
     aria:       'audio/goldberg-aria.mp3',// バッハ ゴルトベルク変奏曲 アリア（令状当番）
-    etude257:   'audio/etude25-7.mp3',    // ショパン 練習曲 作品25-7（経歴の終章・証人）
-    funeral:    'audio/sonata2-3.mp3'     // ショパン ピアノソナタ第2番 第3楽章（重大な場面だけ：死、えん罪の判明、再審）
+    etude257:   'audio/etude25-7.mp3',    // ショパン 練習曲 作品25-7（経歴の終章：再審が来なかったとき）
+    funeral:    'audio/sonata2-3.mp3'     // ショパン ピアノソナタ第2番 第3楽章（自分が捜査した事件の再審に、証人として呼ばれる場面だけ）
   };
   // ---- 場面ごとの指定 ----
   // t: 曲（null は無音）／at: 開始位置（秒）／restart: 同じ曲が鳴っていても頭出しし直す

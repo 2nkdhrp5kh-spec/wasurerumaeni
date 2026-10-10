@@ -56,12 +56,13 @@
   async function witness(cr) {
     const r = pickReturn(cr);
     if (!r) {
+      G.audio.cue('witness');
       await G.curtain([{ html: '<div class="big">数年後</div>', wait: 1200 },
         { html: '<div class="law">あなたが送った事件で、有罪になったものはなかった。<br><br>再審の請求も、証人の呼出しも、来なかった。<br><br>それが正しかったのかどうかは、分からない。</div>', wait: 2600 }]);
       return null;
     }
     const x = r.x, o = ORDER.find(k => k.id === x.id), p = x.proc || {};
-    G.audio.cue(r.kind === 'retrial' ? 'grave' : 'witness');
+    G.audio.cue('grave');
     await G.curtain([{ html: '<div class="big">' + (cr.rank >= 2 ? '六' : '五') + '年後</div>', wait: 1200 },
       { html: '<div class="law">' + o.title + '。<br><br>' + (r.kind === 'retrial' ? '有罪が確定した元被告人の再審が、開始された。' : '有罪が確定した元被告人が、再審を請求した。') + '<br>あなたは、捜査の主任として、証人に呼ばれた。</div>', wait: 2400, sfx: 'crowd' }]);
     G.layout({ role: '証人', date: '', info: '北見坂地方裁判所　' + (r.kind === 'retrial' ? '再審公判' : '再審請求審'), scene: { bg: 'court' }, hint: '（証言台に立つ。宣誓をした。）' });

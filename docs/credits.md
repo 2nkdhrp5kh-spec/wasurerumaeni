@@ -11,11 +11,11 @@
 | 勾留の満期（expiry） | ショパン 夜想曲第13番 作品48-1 | Luke Faulkner | Chopin Nocturne in C minor Op. 48 no. 1 Luke Faulkner.ogg | CC0 | audio/noct48-1.mp3 |
 | 刑事編の公判・判決（trial / verdict） | ベートーヴェン ピアノソナタ第31番 作品110 第3楽章 | Musopen | Ludwig van Beethoven - sonata no. 31 in a flat major, op. 110 - iii. adagio, ma non troppo.ogg | PD-old-100 ＋ PD-author（Musopen） | audio/op110-3.mp3 |
 | 数年後（years） | ショパン 夜想曲第20番 嬰ハ短調 遺作 | Musopen | Chopin, Nocturne in C-sharp minor, Op. Posth.ogg | CC0 | audio/noct20.mp3 |
-| 重大な場面（grave）：死亡の知らせ、えん罪の判明、再審 | ショパン ピアノソナタ第2番 第3楽章 | Andreas Xenopoulos（Musopen） | Frederic Chopin Piano Sonata No.2 in B flat minor Op35 - III Marche Funebre.ogg | CC0 | audio/sonata2-3.mp3 |
+| 経歴モードで、自分が捜査した事件の再審（再審請求審を含む）に証人として呼ばれる場面（grave） | ショパン ピアノソナタ第2番 第3楽章 | Andreas Xenopoulos（Musopen） | Frederic Chopin Piano Sonata No.2 in B flat minor Op35 - III Marche Funebre.ogg | CC0 | audio/sonata2-3.mp3 |
 | 終幕（finale） | ベートーヴェン ピアノソナタ第8番 第2楽章 | Paul Pitman（Musopen） | Beethoven, Sonata No. 8 in C Minor Pathetique, Op. 13 - II. Adagio cantabile.ogg | CC0 | audio/pathetique2.mp3 |
 | 判事編の公判（hanjiTrial） | ベートーヴェン ピアノソナタ第21番 作品53 第2楽章 | Musopen | Ludwig van Beethoven - sonata 'waldstein', op. 53 - ii. introduzione- adagio molto.ogg | PD-old-100 ＋ PD-author（Musopen） | audio/waldstein2.mp3 |
 | 令状当番（warrant） | バッハ ゴルトベルク変奏曲 アリア | Kimiko Ishizaka（Open Goldberg Variations） | Kimiko Ishizaka - 01 - Aria.ogg | CC0 | audio/goldberg-aria.mp3 |
-| 経歴の終章・証人（witness） | ショパン 練習曲 作品25-7 | La Pianista（Wikipedia 利用者） | Chopin - Etude Op. 25, No. 7.ogg | CC BY-SA 3.0（表記が必要。編集したものを配るときは同じライセンスで） | audio/etude25-7.mp3 |
+| 経歴の終章で、再審が来なかったとき（witness） | ショパン 練習曲 作品25-7 | La Pianista（Wikipedia 利用者） | Chopin - Etude Op. 25, No. 7.ogg | CC BY-SA 3.0（表記が必要。編集したものを配るときは同じライセンスで） | audio/etude25-7.mp3 |
 
 ## 使わない候補
 - 舟歌 Olga Gurevich（CC BY-SA 4.0）：編集すると継承義務。Ilinskaya 版（CC BY 3.0）を優先。

@@ -166,11 +166,11 @@
         ['満期', 'ショパン《夜想曲第13番》作品48-1<br>演奏：Luke Faulkner／CC0'],
         ['公判・判決', 'ベートーヴェン《ピアノソナタ第31番》作品110 第3楽章<br>演奏：Musopen／パブリックドメイン'],
         ['数年後', 'ショパン《夜想曲第20番》嬰ハ短調 遺作<br>演奏：Musopen／CC0'],
-        ['重大な場面', 'ショパン《ピアノソナタ第2番》第3楽章（葬送行進曲）<br>演奏：Andreas Xenopoulos（Musopen）／CC0'],
+        ['経歴　再審', 'ショパン《ピアノソナタ第2番》第3楽章（葬送行進曲）<br>演奏：Andreas Xenopoulos（Musopen）／CC0'],
         ['終幕', 'ベートーヴェン《ピアノソナタ第8番》第2楽章<br>演奏：Paul Pitman（Musopen）／CC0'],
         ['判事編　公判', 'ベートーヴェン《ピアノソナタ第21番》作品53 第2楽章<br>演奏：Musopen／パブリックドメイン'],
         ['判事編　令状当番', 'バッハ《ゴルトベルク変奏曲》アリア<br>演奏：Kimiko Ishizaka（Open Goldberg Variations）／CC0'],
-        ['経歴　終章', 'ショパン《練習曲》作品25-7<br>演奏：La Pianista（Wikipedia 利用者）<br>CC BY-SA 3.0 ／ Wikimedia Commons「Chopin - Etude Op. 25, No. 7.ogg」']])
+        ['経歴　終章（再審のないとき）', 'ショパン《練習曲》作品25-7<br>演奏：La Pianista（Wikipedia 利用者）<br>CC BY-SA 3.0 ／ Wikimedia Commons「Chopin - Etude Op. 25, No. 7.ogg」']])
       + '<h4>引用</h4>' + G.kv([['刑事編の冒頭', '平野龍一『刑事訴訟法概説』（東京大学出版会、1968年）1頁'], ['判事編の冒頭', '平野龍一「現行刑事訴訟の診断」『団藤重光博士古稀祝賀論文集 第4巻』（有斐閣、1985年）407頁以下']])
       + '<h4>条文</h4>' + G.P('e-Gov法令検索（デジタル庁）による現行法令')
       + '<h4>フォント</h4>' + G.P('DotGothic16（Fontworks）、Noto Serif JP（Google）、Yuji Syuku（Kinuta Font Factory）。いずれも SIL Open Font License 1.1。ライセンス文は fonts フォルダに同梱。')
