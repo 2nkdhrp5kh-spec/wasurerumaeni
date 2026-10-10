@@ -14,7 +14,7 @@
 | 経歴モードで、自分が捜査した事件の再審（再審請求審を含む）に証人として呼ばれる場面（grave） | ショパン ピアノソナタ第2番 第3楽章 | Andreas Xenopoulos（Musopen） | Frederic Chopin Piano Sonata No.2 in B flat minor Op35 - III Marche Funebre.ogg | CC0 | audio/sonata2-3.mp3 |
 | 終幕（finale） | ベートーヴェン ピアノソナタ第8番 第2楽章 | Paul Pitman（Musopen） | Beethoven, Sonata No. 8 in C Minor Pathetique, Op. 13 - II. Adagio cantabile.ogg | CC0 | audio/pathetique2.mp3 |
 | 判事編の公判（hanjiTrial） | ベートーヴェン ピアノソナタ第21番 作品53 第2楽章 | Musopen | Ludwig van Beethoven - sonata 'waldstein', op. 53 - ii. introduzione- adagio molto.ogg | PD-old-100 ＋ PD-author（Musopen） | audio/waldstein2.mp3 |
-| 令状当番（warrant） | バッハ ゴルトベルク変奏曲 アリア | Kimiko Ishizaka（Open Goldberg Variations） | Kimiko Ishizaka - 01 - Aria.ogg | CC0 | audio/goldberg-aria.mp3 |
+| 令状当番（warrant） | バッハ ゴルトベルク変奏曲 全曲（アリア、第1〜第30変奏、アリア・ダ・カーポ） | Kimiko Ishizaka（Open Goldberg Variations） | Kimiko Ishizaka - 01 - Aria.ogg 〜 32 - Aria da Capo Fine.ogg（Commons の分類「The Open Goldberg Variations by Kimiko Ishizaka (album)」） | CC0（01・16・32で確認） | audio/goldberg-aria.mp3、audio/goldberg-02.mp3〜32.mp3（64kbps） |
 | 経歴の終章で、再審が来なかったとき（witness） | ショパン 練習曲 作品25-7 | La Pianista（Wikipedia 利用者） | Chopin - Etude Op. 25, No. 7.ogg | CC BY-SA 3.0（表記が必要。編集したものを配るときは同じライセンスで） | audio/etude25-7.mp3 |
 
 ## 使わない候補

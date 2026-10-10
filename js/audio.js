@@ -19,6 +19,9 @@
     etude257:   'audio/etude25-7.mp3',    // ショパン 練習曲 作品25-7（経歴の終章：再審が来なかったとき）
     funeral:    'audio/sonata2-3.mp3'     // ショパン ピアノソナタ第2番 第3楽章（自分が捜査した事件の再審に、証人として呼ばれる場面だけ）
   };
+  // ゴルトベルク変奏曲の第1変奏〜アリア・ダ・カーポ（Kimiko Ishizaka、CC0）。令状当番で、アリアから続けて流す
+  const GOLDBERG = [];
+  for (let k = 2; k <= 32; k++) { const id = 'gold' + String(k).padStart(2, '0'); TRACKS[id] = 'audio/goldberg-' + String(k).padStart(2, '0') + '.mp3'; GOLDBERG.push(id); }
   // ---- 場面ごとの指定 ----
   // t: 曲（null は無音）／at: 開始位置（秒）／restart: 同じ曲が鳴っていても頭出しし直す
   // then: 曲が終わったら、少し間をおいて続けて流す曲（最後まで行ったら最初の曲に戻る。最初の曲は loopAt から）
@@ -41,7 +44,7 @@
     grave:        { t: 'funeral', at: 0, restart: true },
     finale:       { t: 'pathetique', at: 0, restart: true },
     hanjiTrial:   { t: 'waldstein', at: 0, then: ['op110'], restart: true },   // 公判の記録を読むのは長い。刑事編の公判の曲に続ける
-    warrant:      { t: 'aria', at: 0, restart: true },
+    warrant:      { t: 'aria', at: 0, then: GOLDBERG, gap: 2, restart: true },   // アリアから全曲を通して。曲のあいだは2秒だけ
     witness:      { t: 'etude257', at: 0, restart: true },
     silence:      { t: null },
     titleOut:     { t: null, fade: 3 }           // 暗転と一緒に消える
@@ -83,7 +86,7 @@
     if (current && current.name === c.t && !c.restart) return;
     stopCurrent(2.5);
     const me = { name: c.t, el: null, node: null, gain: null, idx: 0,
-      seq: [{ t: c.t, at: c.at || 0 }].concat((c.then || []).map(t => ({ t, at: 0 }))), loopAt: c.loopAt || 0 };
+      seq: [{ t: c.t, at: c.at || 0 }].concat((c.then || []).map(t => ({ t, at: 0 }))), loopAt: c.loopAt || 0, gap: c.gap };
     current = me;
     playEl(me, me.seq[0]);
   }
@@ -96,7 +99,7 @@
       me.idx = (me.idx + 1) % me.seq.length;
       const it = me.seq[me.idx];
       playEl(me, { t: it.t, at: me.idx === 0 ? me.loopAt : it.at });
-    }, GAP * 1000);
+    }, (me.gap != null ? me.gap : GAP) * 1000);
   }
   // 鳴らし方1：audio 要素（曲を丸ごと読み込んでページの中の data にしてから。別の場所から配られた曲を Web Audio に通すと無音になるため）
   function playEl(me, c) {
