@@ -274,6 +274,20 @@
   };
   async function doAction(a) {
     if (a.risk && !(await G.confirmRisk(typeof a.risk === 'function' ? a.risk(S) : a.risk))) return;
+    // 実務家：根拠条文を自分で引く（序章を除く）
+    if (G.diff() === 'hard' && C.id !== 'akisu' && G.citeLaw) {
+      const lab0 = typeof a.label === 'function' ? a.label(S) : (a.label || '');
+      const need = G.lawNeed(lab0);
+      S.cited = S.cited || {}; S.citeNo = S.citeNo || {};
+      if (need && !S.cited[need.k]) {
+        if (S.citeNo[need.k] === S.day) { G.toast('根拠が差し戻されたばかり。この種類の行動は、明日まで出せない'); return; }
+        await G.tip('cite', [['todo', '主任。うちの係じゃ、何をするにも根拠を言え。*どの条文で*それをやるのか、だ。', { scene: { bg: 'kacho', who: 'todo' } }], ['todo', '条文帳を開いて、根拠になる条文を自分で選べ。間違えたら差し戻す。その日はもう同じことはさせない。']]);
+        const ok = await G.citeLaw(need);
+        if (ok === null) { K.render(); return; }
+        if (!ok) { S.citeNo[need.k] = S.day; G.audio.sfx('paper'); await G.talk([['todo', '……その条文じゃ通らない。根拠を確かめてから出直せ。', { scene: { bg: 'kacho', who: 'todo' } }]]); K.render(); return; }
+        S.cited[need.k] = true; G.toast('根拠を確認した');
+      }
+    }
     G.audio.sfx('click');
     if (a.who === 'staff') {
       const s = K.freeStaff()[0]; if (!s) return;

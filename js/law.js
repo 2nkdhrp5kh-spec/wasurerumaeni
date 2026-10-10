@@ -139,7 +139,7 @@ G.hanjiLawShown = r => {
   return G.hanjiGen.lawsUpTo(Math.max(1, max)).some(k => r[0].startsWith(k));
 };
 G.lawRows = () => G.lawMode === 'hanji' ? G.LAW_HANJI.filter(G.hanjiLawShown).concat(G.LAW.filter(r => SHARED.test(r[0]) && !G.LAW_HANJI.some(x => x[0] === r[0]))) : G.LAW;
-G.openLaw = function (tab) {
+G.openLaw = function (tab, pick) {
   const hanji = G.lawMode === 'hanji';
   const books = hanji ? ['刑事訴訟法', '刑法', '憲法', '判例・学説', 'その他'] : ['刑法', '刑事訴訟法', '憲法', '判例・学説', 'その他'];
   const key = hanji ? 'lawTabH' : 'lawTab';
@@ -152,14 +152,17 @@ G.openLaw = function (tab) {
       + rows.map(([h, t, k]) => {
         const tool = k && G.lawTools && G.lawTools[k];
         const use = tool && tool.avail() ? '<button class="pbtn lawuse" data-k="' + k + '">この規定を使う：' + tool.label + '</button>' : '';
-        return '<div class="art"><b>' + h + '</b>' + (G.LAW_PLAIN[h] ? '<div class="plain"><span>ひとことで</span>' + G.LAW_PLAIN[h] + '</div>' : '') + t + use + '</div>'; }).join('')
+        const cite = pick ? '<button class="pbtn lawcite" data-h="' + h.replace(/"/g, '&quot;') + '">これを根拠にする</button>' : '';
+        return '<div class="art"><b>' + h + '</b>' + (G.LAW_PLAIN[h] ? '<div class="plain"><span>ひとことで</span>' + G.LAW_PLAIN[h] + '</div>' : '') + t + use + cite + '</div>'; }).join('')
       + G.note('条文は e-Gov法令検索の現行法（2026年10月確認）。判例は要旨。本作はフィクションです。登場する人物・団体・地名・条例は架空のものです。手続は現行法に基づいていますが、ゲームとして日数や手順を簡略化しています。');
   };
   const bind = () => {
     document.querySelectorAll('.lawuse').forEach(b => b.onclick = () => { G.closePaper(); G.lawTools[b.dataset.k].run(); });
+    document.querySelectorAll('.lawcite').forEach(b => b.onclick = () => { G._lawPick = b.dataset.h; G.closePaper(); });
     document.querySelectorAll('.lawtab').forEach(b => b.onclick = () => { tab = b.dataset.b; if (G.ui) G.ui[key] = tab; G.audio.sfx('paper'); document.querySelector('#overlay .paper-b').innerHTML = render(); bind(); });
   };
   setTimeout(bind, 0);
+  if (pick) return G.openPaper({ title: '根拠条文を選ぶ', sub: pick + '。その根拠になる条文を、条文帳から選ぶ。', body: render(), closeLabel: 'やめる' });
   return G.openPaper({ title: hanji ? '条文帳（令状・公判）' : '条文帳（捜査）', sub: (hanji ? '令状の審査と公判で使う条文。' : '捜査で使う条文。') + '法典ごとに分けてある。上の見出しで切り替える。', body: render() });
 };
 
@@ -168,4 +171,26 @@ G.QUOTES = {
     + '<div class="cite">平野龍一『刑事訴訟法概説』<span style="white-space:nowrap">（東京大学出版会、1968年）1頁</span></div>',
   law1a: '<div class="law">この法律は、刑事事件につき、公共の福祉の維持と個人の基本的人権の保障とを全うしつつ、<em>事案の真相を明らかにし</em>、刑罰法令を適正且つ迅速に適用実現することを目的とする。</div><div class="cite">刑事訴訟法　第1条</div>',
   law1b: '<div class="law">この法律は、刑事事件につき、公共の福祉の維持と<em>個人の基本的人権の保障とを全うしつつ</em>、事案の真相を明らかにし、刑罰法令を適正且つ迅速に適用実現することを目的とする。</div><div class="cite">刑事訴訟法　第1条</div>'
+};
+
+/* 実務家：法的な根拠が要る行動の前に、根拠条文を自分で条文帳から選ぶ
+   同じ種類の行動は、一つの事件で一度正しく選べば、以後は聞かない。間違えると差し戻され、その種類の行動はその日もうできない */
+G.LAW_NEED = [
+  { k: 'arrestW', re: /逮捕状の請求/, ok: ['刑事訴訟法 第199条'], what: '逮捕状を請求する' },
+  { k: 'arrest', re: /を逮捕する$/, ok: ['刑事訴訟法 第199条'], what: '逮捕状により逮捕する' },
+  { k: 'searchW', re: /捜索差押許可状を請求|捜索令状を求める|基地局記録（令状）/, ok: ['刑事訴訟法 第218条'], what: '令状を請求して捜索・差押えをする' },
+  { k: 'interro', re: /を取り調べる$|から任意で話を聴く/, ok: ['刑事訴訟法 第198条'], what: '被疑者を取り調べる' },
+  { k: 'inquiry', re: /照会/, ok: ['刑事訴訟法 第197条'], what: '公務所や会社に照会して報告を求める' },
+  { k: 'expert', re: /鑑定|再現実験/, ok: ['刑事訴訟法 第223条'], what: '専門家に鑑定を嘱託する' },
+  { k: 'witness', re: /(被害者|目撃者|店員|同僚|妻|主治医|母キヨ|乗客|管理人|村井さん|畑中).*話を聴く|ほかの目撃者を探す/, ok: ['刑事訴訟法 第223条'], what: '被疑者以外の人から話を聴く' }
+];
+G.lawNeed = label => G.LAW_NEED.find(n => n.re.test(label)) || null;
+// 戻り値：true＝根拠が正しい（または不要）／false＝間違い／null＝やめた
+G.citeLaw = async function (need) {
+  G._lawPick = null;
+  const prev = G.lawMode; G.lawMode = 'keiji';
+  await G.openLaw('刑事訴訟法', need.what);
+  G.lawMode = prev;
+  const h = G._lawPick; if (!h) return null;
+  return need.ok.some(k => h.startsWith(k));
 };
