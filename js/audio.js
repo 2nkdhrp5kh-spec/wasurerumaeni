@@ -68,8 +68,9 @@
   function stopCurrent(sec) {
     if (!current) return;
     const c = current; current = null;
-    if (c.gain && AC) { fadeTo(c.gain, 0, sec); setTimeout(() => { try { c.el.pause(); } catch (e) {} }, sec * 1000 + 100); }
-    else { try { c.el.pause(); } catch (e) {} }
+    const end = () => { try { c.el && c.el.pause(); } catch (e) {} try { c.node && c.node.stop(); } catch (e) {} };
+    if (c.gain && AC) { fadeTo(c.gain, 0, sec); setTimeout(end, sec * 1000 + 100); }
+    else end();
   }
 
   let pendingCue = null;
@@ -79,13 +80,15 @@
     if (!c.t) { stopCurrent(2.5); return; }
     if (current && current.name === c.t && !c.restart) return;
     stopCurrent(2.5);
-    const me = { name: c.t, el: new Audio(), gain: null };
+    const me = { name: c.t, el: null, node: null, gain: null };
     current = me;
-    // 曲のファイルが別の場所から配られているとき、そのまま音量の仕組み（Web Audio）に通すと無音になる。
-    // そこで、まず丸ごと読み込んで、ページの中の data（blob）にしてから鳴らす。読み込めなければ、そのまま鳴らす（音量は要素で調整）
+    playEl(me, c);
+  }
+  // 鳴らし方1：audio 要素（曲を丸ごと読み込んでページの中の data にしてから。別の場所から配られた曲を Web Audio に通すと無音になるため）
+  function playEl(me, c) {
     trackUrl(c.t).then(blobUrl => {
       if (current !== me) return;
-      const el = me.el; el.preload = 'auto'; el.src = blobUrl || TRACKS[c.t];
+      const el = me.el = new Audio(); el.preload = 'auto';
       let gain = null;
       if (blobUrl || location.protocol === 'file:') {
         try { const src = AC.createMediaElementSource(el); gain = AC.createGain(); gain.gain.value = 0; src.connect(gain); gain.connect(bgmGain); } catch (e) { gain = null; }
@@ -94,16 +97,54 @@
       me.gain = gain;
       el.addEventListener('loadedmetadata', () => { try { el.currentTime = Math.min(c.at || 0, Math.max(0, el.duration - 5)); } catch (e) {} });
       el.addEventListener('ended', () => { if (current === me) current = null; });
-      el.addEventListener('error', () => { if (current === me) current = null; });
-      const p = el.play(); if (p && p.catch) p.catch(() => {});
+      // audio 要素が使えない環境（読み込みを禁じられている等）：鳴らし方2へ
+      el.addEventListener('error', () => { if (current === me) { lastErr = 'audio要素：' + (el.error ? el.error.code : '?'); playBuf(me, c); } });
+      el.src = blobUrl || TRACKS[c.t];
+      const p = el.play(); if (p && p.catch) p.catch(e => { lastErr = 'play：' + e.name; });
       if (gain) fadeTo(gain, 1, 3);
     });
   }
+  // 鳴らし方2：曲を Web Audio で直接デコードして鳴らす（メモリを多く使う）
+  function playBuf(me, c) {
+    fetch(TRACKS[c.t]).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
+      .then(ab => new Promise((res, rej) => AC.decodeAudioData(ab, res, rej)))
+      .then(buf => {
+        if (current !== me) return;
+        const node = AC.createBufferSource(); node.buffer = buf;
+        const g = AC.createGain(); g.gain.value = 0; node.connect(g); g.connect(bgmGain);
+        node.onended = () => { if (current === me) current = null; };
+        me.el = null; me.node = node; me.gain = g;
+        node.start(0, Math.min(c.at || 0, Math.max(0, buf.duration - 5))); fadeTo(g, 1, 3);
+      }).catch(e => { lastErr = (lastErr ? lastErr + '／' : '') + 'デコード：' + (e && e.message || e); if (current === me) current = null; });
+  }
+  let lastErr = '';
   // 曲ごとに一度だけ読み込み、使い回す
   const blobs = {};
   function trackUrl(name) {
     if (location.protocol === 'file:') return Promise.resolve(null);
-    return blobs[name] = blobs[name] || fetch(TRACKS[name]).then(r => { if (!r.ok) throw new Error(r.status); return r.blob(); }).then(b => URL.createObjectURL(b)).catch(() => { delete blobs[name]; return null; });
+    return blobs[name] = blobs[name] || fetch(TRACKS[name]).then(r => { if (!r.ok) throw new Error(r.status); return r.blob(); }).then(b => URL.createObjectURL(b)).catch(e => { lastErr = '読み込み：' + (e && e.message || e); delete blobs[name]; return null; });
+  }
+  // 開発用：この環境で、曲をどの方法なら鳴らせるかを調べる
+  async function diag() {
+    const out = [], t = TRACKS.prelude20, wait = ms => new Promise(r => setTimeout(r, ms));
+    ctx();
+    out.push('AudioContext：' + (AC ? AC.state : 'なし') + '　消音：' + (muted ? 'はい' : 'いいえ'));
+    out.push('ページ：' + location.href.slice(0, 80));
+    out.push('曲のURL：' + new URL(t, location.href).href.slice(0, 80));
+    let blob = null;
+    try { const r = await fetch(t); out.push('fetch：' + r.status + ' ' + (r.headers.get('content-type') || '') ); if (r.ok) { blob = await r.blob(); out.push('　大きさ ' + blob.size + ' バイト'); } } catch (e) { out.push('fetch：失敗 ' + e.message); }
+    const tryEl = async (label, src) => {
+      const el = new Audio(); el.muted = true; let ev = '反応なし';
+      el.addEventListener('canplay', () => { ev = '再生できる'; }); el.addEventListener('error', () => { ev = 'エラー ' + (el.error ? el.error.code : ''); });
+      el.src = src; try { await el.play(); } catch (e) { ev += '（play：' + e.name + '）'; }
+      await wait(2500); out.push(label + '：' + ev + '　時刻 ' + el.currentTime.toFixed(1)); el.pause();
+    };
+    await tryEl('audio要素（そのまま）', t);
+    if (blob) await tryEl('audio要素（blob）', URL.createObjectURL(blob));
+    if (blob) { try { const ab = await blob.arrayBuffer(); const buf = await new Promise((res, rej) => AC.decodeAudioData(ab, res, rej)); out.push('デコード：できる（' + buf.duration.toFixed(0) + '秒）'); } catch (e) { out.push('デコード：失敗 ' + (e && e.message || e)); } }
+    out.push('いま鳴らしている曲：' + (current ? current.name + (current.node ? '（デコード）' : '（audio要素）') : 'なし'));
+    if (lastErr) out.push('最後のエラー：' + lastErr);
+    return out;
   }
 
   // ---- 環境音（合成） ----
@@ -222,7 +263,7 @@
   G.audio = {
     unlock() { if (ctx() && pendingCue) { const p = pendingCue; pendingCue = null; cue(p); } },
     cue, ambient, sfx, voice, voiceStop() {}, ambientKind: () => amb ? amb.kind : null,
-    setMuted(m) { muted = m; if (master) fadeTo(master, m ? 0 : 1, .3); if (current && !current.gain) current.el.volume = m ? 0 : .35; },
-    CUES, TRACKS
+    setMuted(m) { muted = m; if (master) fadeTo(master, m ? 0 : 1, .3); if (current && !current.gain && current.el) current.el.volume = m ? 0 : .35; },
+    diag, CUES, TRACKS
   };
 })();

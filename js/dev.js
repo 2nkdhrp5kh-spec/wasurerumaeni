@@ -116,6 +116,7 @@
   async function menu(playCase) {
     const v = await G.openPaper({ title: '場面へ飛ぶ', sub: '開発用（?dev=1 のときだけ）', body: P('事件の中の場面は、自動の捜査官が高速・無音で遊び進め、その場面の曲が鳴った瞬間に止まる。そこからは手で遊べる。', '進捗（記録・記章など）は、ふつうに遊んだときと同じく残る。'),
       buttons: [
+        { label: '音の診断', value: 'diag', small: '曲が鳴らないとき。どの鳴らし方が使えるかを調べる' },
         { label: '事件の中の場面', value: 'case', small: '取調べ・満期・公判・数年後・終幕など' },
         { label: '序章', value: 'prologue', small: 'ワルツ' },
         { label: '経歴：再審の証人', value: 'grave', small: '葬送行進曲。自分が捜査した事件の再審' },
@@ -124,6 +125,7 @@
         { label: '判事編：令状当番', value: 'warrant', small: 'ゴルトベルク アリア' },
         { label: '判事編：公判', value: 'hanjiTrial', small: 'ソナタ21番 第2楽章' }] });
     if (!v) return;
+    if (v === 'diag') { G.toast('調べています（数秒）'); const lines = await G.audio.diag(); await G.openPaper({ title: '音の診断', sub: '開発用', body: '<pre style="white-space:pre-wrap;font-size:12px">' + lines.map(x => x.replace(/</g, '&lt;')).join('\n') + '</pre>', buttons: [{ label: '閉じる', value: 1 }] }); return; }
     G.inMode = true;
     if (v === 'prologue') { G.lawMode = 'keiji'; await G.cases.akisu.run(); return; }
     if (v === 'warrant') { await G.hanji.duty(false); return; }
