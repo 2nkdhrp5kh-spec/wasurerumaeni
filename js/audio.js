@@ -79,17 +79,31 @@
     if (!c.t) { stopCurrent(2.5); return; }
     if (current && current.name === c.t && !c.restart) return;
     stopCurrent(2.5);
-    const el = new Audio(); el.preload = 'auto'; el.src = TRACKS[c.t];
-    let gain = null;
-    try { const src = AC.createMediaElementSource(el); gain = AC.createGain(); gain.gain.value = 0; src.connect(gain); gain.connect(bgmGain); }
-    catch (e) { gain = null; el.volume = muted ? 0 : .5; }
-    const me = { name: c.t, el, gain };
+    const me = { name: c.t, el: new Audio(), gain: null };
     current = me;
-    el.addEventListener('loadedmetadata', () => { try { el.currentTime = Math.min(c.at || 0, Math.max(0, el.duration - 5)); } catch (e) {} });
-    el.addEventListener('ended', () => { if (current === me) current = null; });
-    el.addEventListener('error', () => { if (current === me) current = null; });
-    const p = el.play(); if (p && p.catch) p.catch(() => {});
-    if (gain) fadeTo(gain, 1, 3);
+    // 曲のファイルが別の場所から配られているとき、そのまま音量の仕組み（Web Audio）に通すと無音になる。
+    // そこで、まず丸ごと読み込んで、ページの中の data（blob）にしてから鳴らす。読み込めなければ、そのまま鳴らす（音量は要素で調整）
+    trackUrl(c.t).then(blobUrl => {
+      if (current !== me) return;
+      const el = me.el; el.preload = 'auto'; el.src = blobUrl || TRACKS[c.t];
+      let gain = null;
+      if (blobUrl || location.protocol === 'file:') {
+        try { const src = AC.createMediaElementSource(el); gain = AC.createGain(); gain.gain.value = 0; src.connect(gain); gain.connect(bgmGain); } catch (e) { gain = null; }
+      }
+      if (!gain) el.volume = muted ? 0 : .35;
+      me.gain = gain;
+      el.addEventListener('loadedmetadata', () => { try { el.currentTime = Math.min(c.at || 0, Math.max(0, el.duration - 5)); } catch (e) {} });
+      el.addEventListener('ended', () => { if (current === me) current = null; });
+      el.addEventListener('error', () => { if (current === me) current = null; });
+      const p = el.play(); if (p && p.catch) p.catch(() => {});
+      if (gain) fadeTo(gain, 1, 3);
+    });
+  }
+  // 曲ごとに一度だけ読み込み、使い回す
+  const blobs = {};
+  function trackUrl(name) {
+    if (location.protocol === 'file:') return Promise.resolve(null);
+    return blobs[name] = blobs[name] || fetch(TRACKS[name]).then(r => { if (!r.ok) throw new Error(r.status); return r.blob(); }).then(b => URL.createObjectURL(b)).catch(() => { delete blobs[name]; return null; });
   }
 
   // ---- 環境音（合成） ----
@@ -208,7 +222,7 @@
   G.audio = {
     unlock() { if (ctx() && pendingCue) { const p = pendingCue; pendingCue = null; cue(p); } },
     cue, ambient, sfx, voice, voiceStop() {}, ambientKind: () => amb ? amb.kind : null,
-    setMuted(m) { muted = m; if (master) fadeTo(master, m ? 0 : 1, .3); if (current && !current.gain) current.el.volume = m ? 0 : .5; },
+    setMuted(m) { muted = m; if (master) fadeTo(master, m ? 0 : 1, .3); if (current && !current.gain) current.el.volume = m ? 0 : .35; },
     CUES, TRACKS
   };
 })();
