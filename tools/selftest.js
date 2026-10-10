@@ -23,6 +23,7 @@ const URL = 'file://' + path.resolve(__dirname, '..', 'index.html');
     page.on('pageerror', e => errs.push(e.message + ' @' + ((e.stack || '').split('\n')[1] || '').trim()));
     await page.route('**/fonts.googleapis.com/**', x => x.abort());
     await page.addInitScript(({ pro }) => {
+      window.CHOUSHO_APP = true;   // 起動時の「画面を押して、はじめる」を出さない
       const st = window.setTimeout; window.setTimeout = (f, t, ...a) => st(f, Math.min(t || 0, 3), ...a);
       const si = window.setInterval; window.setInterval = (f, t, ...a) => si(f, Math.min(t || 0, 5), ...a);
       localStorage.setItem('chousho.meta.v1', JSON.stringify({ seenQuote: true, seenWarning3: true, prologueDone: !pro, runs: [], diff: ['easy', 'normal', 'hard'][Math.floor(Math.random() * 3)] }));

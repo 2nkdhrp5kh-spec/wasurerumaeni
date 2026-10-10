@@ -16,6 +16,7 @@ const URL = 'file://' + path.resolve(__dirname, '..', 'index.html');
   fs.mkdirSync(OUT, { recursive: true });
   const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1400, height: 1000 } });
   await p.route('**/fonts.googleapis.com/**', x => x.abort());
+  await p.addInitScript(() => { window.CHOUSHO_APP = true; });
   await p.addInitScript(() => localStorage.setItem('chousho.meta.v1', JSON.stringify({ seenQuote: true, seenWarning3: true, runs: [] })));
   await p.goto(URL); await p.waitForTimeout(400);
   const res = await p.evaluate(() => {

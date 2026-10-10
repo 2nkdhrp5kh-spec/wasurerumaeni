@@ -179,7 +179,19 @@
   }
 
   G.main = { title };
+  // ブラウザは、画面を一度押すまで音を出させない。押す前にタイトル（曲つき）が出ないよう、最初に一枚はさむ
+  // 注意書きが出る初回は、その「はじめる」の押下で足りる。アプリ版（window.CHOUSHO_APP）では要らない
+  function startCard() {
+    if (window.CHOUSHO_APP || !G.meta.seenWarning3) return Promise.resolve();
+    return new Promise(res => {
+      const d = document.createElement('div'); d.className = 'startcard';
+      d.innerHTML = '<div class="sc-t">調書</div><div class="sc-h">画面を押して、はじめる</div><div class="sc-n">音が出ます</div>';
+      d.onclick = () => { G.audio.unlock(); d.classList.add('off'); setTimeout(() => d.remove(), 900); res(); };
+      document.body.appendChild(d);
+    });
+  }
   window.addEventListener('DOMContentLoaded', async () => {
+    await startCard();
     if (!G.meta.seenWarning3) { await G.showWarning(true); G.meta.seenWarning3 = true; G.saveMeta(); }
     if (!G.meta.seenQuote) {
       G.meta.seenQuote = true; G.saveMeta();

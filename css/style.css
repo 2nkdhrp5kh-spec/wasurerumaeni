@@ -389,3 +389,12 @@ button{font:inherit;color:inherit}
 .art .plain span{display:inline-block;font-size:10.5px;background:#b8902a;color:#fff;padding:0 5px;margin-right:6px;font-family:'DotGothic16',sans-serif;vertical-align:1px}
 .paper-b .cn{border-left:4px solid #3f7a4e;padding-left:8px}
 .paper-b .cn.match{border-left-color:#8a7a5e}
+
+/* 起動時の一枚（押すと音が出せるようになる） */
+.startcard{position:fixed;inset:0;z-index:60;background:#000;color:#ddd;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;cursor:pointer;transition:opacity .9s}
+.startcard.off{opacity:0;pointer-events:none}
+.startcard .sc-t{font-family:'Yuji Syuku',serif;font-size:44px;letter-spacing:.3em;padding-left:.3em}
+.startcard .sc-h{font-size:14px;letter-spacing:.15em;animation:scpulse 2.6s ease-in-out infinite;color:#bbb}
+@keyframes scpulse{50%{opacity:.3}}
+@media (prefers-reduced-motion:reduce){.startcard .sc-h{animation:none}}
+.startcard .sc-n{font-size:11px;color:#777}
