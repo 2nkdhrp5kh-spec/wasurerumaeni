@@ -48,10 +48,10 @@
       if (!bs.length) return;
       const good = rough
         ? [/^住居侵入・強盗刑法/, /^傷害致死/, /^現住建造物等放火/, /^迷惑行為防止条例/, /^告げずに/, /夜まで/, /認めれば/, /^指示に従う/]
-        : [/^住居侵入・強盗刑法/, /^傷害致死/, /^現住建造物等放火/, /^迷惑行為防止条例/, /^逮捕しない/, /^黙秘権を告げる/, /^すぐに会わせる/, /^余罪には触れない/, /^断る/, /^証拠を示して/, /^休憩を入れて/, /^弁解を聴く/, /^言い分を聴く/, /^8枚の写真/, /^「示した写真は1枚」/, /^送る$/, /^まだ続ける/, /^一問一答/, /^自分にやらせて/];
+        : [/^住居侵入・強盗刑法/, /^傷害致死/, /^現住建造物等放火/, /^迷惑行為防止条例/, /^逮捕しない/, /^黙秘権を告げる/, /^すぐに会わせる/, /^余罪には触れない/, /^断る/, /^証拠を示して/, /^私人による現行犯逮捕/, /^休憩を入れて/, /^弁解を聴く/, /^言い分を聴く/, /^8枚の写真/, /^「示した写真は1枚」/, /^送る$/, /^まだ続ける/, /^一問一答/, /^自分にやらせて/];
       if (bot.hold) { const b = bs.find(x => /^まだ続ける/.test(x.textContent)); if (b) { b.click(); return; } }
       for (const re of good) { if (bot.hold && String(re) === String(/^送る$/)) continue; const b = bs.find(x => re.test(x.textContent)); if (b) { b.click(); return; } }
-      const pref = bs.filter(b => !/閉じる|やめる|やめておく|条文帳を開く/.test(b.textContent) && !(!rough && /告げずに|夜まで|怒鳴り|認めれば|指紋が出た|明日の午後|中心に聴く|指示に従う|任せる|帰ってくる前|連れて行き、部屋を捜す|その場で中身/.test(b.textContent)));
+      const pref = bs.filter(b => !/閉じる|やめる|やめておく|条文帳を開く/.test(b.textContent) && !(!rough && /告げずに|夜まで|怒鳴り|認めれば|指紋が出た|明日の午後|中心に聴く|指示に従う|任せる|帰ってくる前|連れて行き、部屋を捜す|その場で中身|押さえて採取|改めて現行犯|緊急逮捕に切り替/.test(b.textContent)));
       const b = pref.length && Math.random() < .85 ? pref[Math.floor(Math.random() * pref.length)] : bs[Math.floor(Math.random() * bs.length)];
       b.click(); return;
     }

@@ -19,7 +19,7 @@
     chargeHint: '分けるのは<b>行為の態様と程度</b>。衣服の上から触る行為は、多くは迷惑行為防止条例違反として扱われる。下着の中に手を入れるなど、行為がより重い場合は不同意わいせつ（刑法176条）が問題になる。満員電車で抵抗する間もない状態は、176条1項5号の「いとまがない」にあたりうる。',
     charges: [
       { id: 'jorei', label: '迷惑行為防止条例違反', law: '北見坂県迷惑行為防止条例（衣服の上から触る行為）', fit: true, arts: ['北見坂県迷惑行為防止条例'], req: ['公共の乗物の中で', '衣服の上から身体に触れる', '故意'] },
-      { id: 'fudoi', label: '不同意わいせつ', law: '刑法176条', arts: ['刑法 第176条'], req: ['同意しない意思を表すのが困難な状態', 'わいせつな行為', '故意'], els: (S, e) => [e[0], e[1], { k: 'わいせつな行為（程度）', v: 1 }, e[2]] }
+      { id: 'fudoi', emergencyOk: true, label: '不同意わいせつ', law: '刑法176条', arts: ['刑法 第176条'], req: ['同意しない意思を表すのが困難な状態', 'わいせつな行為', '故意'], els: (S, e) => [e[0], e[1], { k: 'わいせつな行為（程度）', v: 1 }, e[2]] }
     ],
     scene: S => sc(null, 'office'),
     endHint: S => inC(S) ? '満期までに記録を固める' : '',
@@ -93,10 +93,55 @@
     return null;
   };
 
-  A.push({ id: 'swab', who: 'staff', days: 0, label: '佐伯の手指から微物を採取する', short: '微物の採取', sub: '手を洗われる前に', cond: S => S.day === 0,
-    done: S => { S.c.swabbed = true; return [['noguchi', '両手の指先から、テープで採取しました。科捜研に回します。結果は1週間ほど。', { scene: sc('noguchi') }]]; } });
+  // 逮捕の種類：駅で受け取った身柄を、どの手続で扱うか（最初の日だけ。選ばなければ、私人逮捕の引継ぎとして進む）
+  A.push({ id: 'arrestBasis', who: 'self', free: true, primary: true, label: '受け取った身柄の扱いを決める', sub: '私人逮捕の引継ぎか、ほかの逮捕か', cond: S => S.day === 0 && !S.c.arrestBasis, run: async S => {
+    const law = ['刑事訴訟法 第212条', '刑事訴訟法 第213条', '刑事訴訟法 第214条', '刑事訴訟法 第215条', '刑事訴訟法 第210条1項（緊急逮捕）'].map(k => G.lawFind(k)).filter(Boolean).map(r => '<div class="art"><b>' + r[0] + '</b>' + r[1] + '</div>').join('');
+    let v;
+    do {
+      v = await G.openPaper({ title: '受け取った身柄の扱い', sub: '午前7時22分、2番線ホーム。森川さんが手首を掴み、駅員に引き渡した。いま、午前8時10分。', noClose: true,
+        body: P('駅員から、佐伯の身柄を受け取った。この身柄の拘束を、どの手続として扱うか。') + (G.diff() === 'easy' ? law : ''),
+        buttons: [{ label: '私人による現行犯逮捕として引き継ぐ', value: 'private', small: '逮捕した森川さんから、名前と逮捕の理由を聴き取る' },
+          { label: '警察官として、改めて現行犯逮捕する', value: 'police', small: '署で、いま' },
+          { label: '緊急逮捕に切り替える', value: 'emergency', small: 'すぐに逮捕状を請求する' },
+          { label: '条文帳を開く', value: 'law' }] });
+      if (v === 'law') await G.openLaw('刑事訴訟法');
+    } while (v === 'law');
+    S.c.arrestBasis = v;
+    await G.talk(v === 'private' ? [['', '（森川さんから、名前と住所、逮捕したときの様子を聴き取り、書面にした。刑訴法215条2項。）', { scene: sc(null, 'soudan') }]]
+      : v === 'police' ? [['shirai', '……改めて現行犯で、ですか。ホームから50分たって、署の中ですよ。', { scene: sc('shirai') }], ['', '（佐伯に、改めて現行犯逮捕を告げた。）']]
+      : [['shirai', '緊急逮捕なら、罪名が大事です。条例違反じゃ、長期3年に届きませんよ。', { scene: sc('shirai') }], ['', '（佐伯に緊急逮捕を告げ、逮捕状の請求書を書いた。）', { sfx: 'type' }]]);
+  } });
+  // 手指の微物：同意を得るか、身体検査令状・鑑定処分許可状を取るか、拒まれても採るか
+  A.push({ id: 'swab', who: 'self', free: true, label: '佐伯の手指から微物を採取する', sub: '手を洗われる前に', cond: S => S.day === 0 && !S.c.swabTried, run: async S => {
+    const c = S.c;
+    let v;
+    do {
+      v = await G.openPaper({ title: '手指の微物の採取', sub: '佐伯の指先に、被害者のスカートの繊維が残っているかもしれない。手を洗えば、取れなくなる。', noClose: true,
+        body: P('どうやって採取するか。'),
+        buttons: (c.swabRefused ? [] : [{ label: '佐伯に同意を求めて採取する', value: 'consent', small: '断られることもある' }]).concat([
+          { label: '身体検査令状と鑑定処分許可状を請求して採取する', value: 'warrant', small: '発付は午後。それまで手を洗わせないようにはできない' },
+          { label: '断られても、押さえて採取する', value: 'force', cls: 'red', small: '時間がない' },
+          { label: '条文帳を開く', value: 'law' }]) });
+      if (v === 'law') await G.openLaw('刑事訴訟法');
+    } while (v === 'law');
+    c.swabTried = v;
+    if (v === 'consent') {
+      const ok = c.truth === 'I' ? rnd() < .85 : rnd() < .5;
+      if (!ok) { await G.talk([['saeki', '……どうして指まで。やってないって言ってるでしょう。お断りします。', { scene: sc('saeki', 'interro') }], ['', '（佐伯は採取を断った。令状を取るなら、今日のうちに。）']]); c.swabTried = null; c.swabRefused = true; return; }
+      await G.talk([['saeki', '……どうぞ。何も出ませんから。', { scene: sc('saeki', 'interro') }], ['noguchi', '両手の指先から、テープで採取しました。科捜研に回します。結果は1週間ほど。', { scene: sc('noguchi') }]]);
+      c.swabbed = true; return;
+    }
+    if (v === 'warrant') {
+      // 午後までのあいだに、トイレで手を洗っていたら、繊維は残らない
+      const washed = rnd() < .5; if (washed) c.swabWashed = true;
+      await G.talk([['', '（請求書を書き、裁判所へ。午後2時、身体検査令状と鑑定処分許可状が発付された。刑訴法218条1項・225条1項。）', { sfx: 'type' }], ['noguchi', washed ? '採取しました。……ただ、昼に一度トイレで手を洗ってます。残ってるかどうか。' : '令状で採取しました。科捜研に回します。', { scene: sc('noguchi') }]]);
+      c.swabbed = true; return;
+    }
+    c.swabbed = true; c.swabForced = true; c.illegalCount = (c.illegalCount || 0) + 1;
+    await G.talk([['saeki', 'やめてください、何するんですか！', { scene: sc('saeki', 'interro') }], ['', '（二人がかりで手首を押さえ、指先にテープを当てた。）', { sfx: 'thud' }]]);
+  } });
   A.push({ id: 'fiberRes', who: 'staff', days: 7, label: '微物（繊維）の鑑定を急がせる', short: '繊維鑑定', cond: S => S.c.swabbed,
-    done: S => { const c = S.c; c.fiber = c.truth === 'G' ? rnd() < .85 : rnd() < .15;
+    done: S => { const c = S.c; c.fiber = c.truth === 'G' ? rnd() < (c.swabWashed ? .3 : .85) : rnd() < .15;
       K.addDoc({ id: 'fiber', title: '微物鑑定書', kind: 'neu', evid: true, body: c.fiber ? P('佐伯の左手中指・薬指から、被害者のスカート（ポリエステル・紺色）と色調・材質が<b>同種の繊維</b>を検出した。', '同種の生地は広く流通している。') : P('佐伯の両手指から、被害者のスカートと同種の繊維は<b>検出されなかった</b>。') });
       return [['oka', c.fiber ? '繊維、出ました。左手の指から、スカートと同じ種類のが。' : '繊維は……出ませんでした。', { scene: sc('oka') }]]; } });
   A.push({ id: 'victimTalk', who: 'self', label: '被害者から話を聴く', sub: '女性警察官が同席する', cond: S => !S.fin.victimTalk, run: async S => {
@@ -210,7 +255,7 @@
       if (has('confession') && c.confession) add(c.retract && trial ? 1.5 : 3, '被告人は捜査段階で犯行を認めた' + (c.retract && trial ? 'が、公判では「早く帰りたかった」と撤回している' : ''));
       return { pos, neg, pros, cons };
     },
-    admit(S, admit, drop) { const c = S.c; if (c.confession && (c.sess.C || c.sess.D || c.sess.E) && rnd() < .7) drop('confession', '自白は、長時間の取調べ、脅迫的な言動又は利益の約束の下でされたもので、任意性に疑いがある（刑訴法319条1項）'); },
+    admit(S, admit, drop) { const c = S.c; if (c.swabForced) drop('fiber', '被告人の手指からの微物の採取は、被告人が拒んだのに、令状によらず有形力を用いて行われたもので、身体検査令状によるべき処分を令状なしに行った重大な違法がある。証拠能力を否定する'); if (c.confession && (c.sess.C || c.sess.D || c.sess.E) && rnd() < .7) drop('confession', '自白は、長時間の取調べ、脅迫的な言動又は利益の約束の下でされたもので、任意性に疑いがある（刑訴法319条1項）'); },
     decide(S, r) { return (r.pos - r.neg >= 3.5 && r.neg <= 2) ? { verdict: '有罪', main: '被告人を罰金40万円に処する。' } : { verdict: '無罪', main: '被告人は無罪。' }; },
     nothing: v => v.startsWith('有罪') || v.startsWith('略式') ? '佐伯修は会社を辞め、家族と別の町に越したという。' : '佐伯修が会社に戻れたのかどうかは、分からない。',
     finale: '痴漢事件は、取調べの録音・録画の義務の対象ではない。<br>否認すれば勾留が続き、認めれば罰金で帰れる。この構造は「人質司法」と呼ばれ、批判されてきた。',
