@@ -39,11 +39,11 @@
     kominkan:    { name: '東町公民館', x: 3.1, y: 2.9 },
     kajiApt:     { name: '梶のアパート（旭町）', x: 3.8, y: 3.0 },
     juku:        { name: '梶の塾（駅前）', x: 2.2, y: 1.4 },
-    conveni:     { name: '帰り道のコンビニ', x: 3.0, y: 2.2, cams: [{ id: 'camConveni', name: 'コンビニの防犯カメラ', keep: 30 * DAYM, covers: 'road' }] },
-    atmEkimae:   { name: '旭町駅前のATM', x: 3.7, y: 2.8, cams: [{ id: 'camAtmEkimae', name: 'ATMのカメラ', keep: 30 * DAYM }] },
-    atmA:        { name: '南口駅のATM', x: -1.5, y: -0.8, cams: [{ id: 'camAtmA', name: 'ATMのカメラ', keep: 30 * DAYM }] },
-    atmB:        { name: '港町駅のATM', x: -2.2, y: 1.0, cams: [{ id: 'camAtmB', name: 'ATMのカメラ', keep: 30 * DAYM }] },
-    atmC:        { name: '西浜駅のATM', x: 0.8, y: -2.4, cams: [{ id: 'camAtmC', name: 'ATMのカメラ', keep: 30 * DAYM }] },
+    conveni:     { name: '帰り道のコンビニ', x: 3.0, y: 2.2, cams: [{ id: 'camConveni', name: '店の防犯カメラ', keep: 30 * DAYM, covers: 'road' }] },
+    atmEkimae:   { name: '旭町駅前のATM', x: 3.7, y: 2.8, cams: [{ id: 'camAtmEkimae', name: '防犯カメラ', keep: 30 * DAYM }] },
+    atmA:        { name: '南口駅のATM', x: -1.5, y: -0.8, cams: [{ id: 'camAtmA', name: '防犯カメラ', keep: 30 * DAYM }] },
+    atmB:        { name: '港町駅のATM', x: -2.2, y: 1.0, cams: [{ id: 'camAtmB', name: '防犯カメラ', keep: 30 * DAYM }] },
+    atmC:        { name: '西浜駅のATM', x: 0.8, y: -2.4, cams: [{ id: 'camAtmC', name: '防犯カメラ', keep: 30 * DAYM }] },
     sakakiApt:   { name: '榊のアパート（桜台東）', x: 0.9, y: 0.7 },
     bakery:      { name: '榊のパン屋', x: 1.3, y: 0.2 }
   };
@@ -117,8 +117,10 @@
     const call2 = T(12, 2, 18, r.pm(41, 20));
     tr('callKaji', { kind: '着信履歴', place: 'kajiPhone', t: call2, keep: null, about: 'tsuji', key: true, text: '登録のない番号から着信 14秒' });
     tr('telcoCall2', { kind: '通話記録', place: '通信会社', t: call2, keep: 90 * DAYM, about: 'tsuji', text: '発信元：払い込み式携帯（契約者情報なし）' });
+    tr('deliveryKaji', { kind: '配達記録', place: '宅配会社', t: T(12, 3, 18, r.int(0, 59)), keep: null, about: 'aizawa', innocent: '担当区域。梶のアパートの住人の半分近くに荷物を届けている', text: '梶遼様あて 配達完了 担当：相沢' });
     const d2 = (h, m) => T(12, 5, h, m);
     ev('kaji', d2(17, 0), d2(21, 30), 'juku', '塾の授業');
+    mem('jukuColleague', { t: d2(21, 30), place: 'juku', text: '授業が終わって、9時半すぎに自転車で帰りました。いつもより機嫌がよくて「明日は飲みなんで」って', fadeDays: 40 });
     const homeK = d2(21, 30) + travel('juku', 'kajiApt', 'bike') + r.int(0, 10);
     ev('kaji', d2(21, 30), homeK, 'juku', '自転車で帰る', 'bike');
     tr('camConveni2', { kind: '映像', place: 'conveni', cam: 'camConveni', t: homeK - 6, keep: 30 * DAYM, text: '自転車の梶が通り過ぎる' });
@@ -137,7 +139,8 @@
     tr('envelope', { kind: '紙片', place: 'kajiApt', t: visitK + 2, keep: null, about: 'tsuji', key: true, text: '封筒の切れ端（紺の印刷の一部。罫線の形）' });
     tr('sceneK', { kind: '現場', place: 'kajiApt', t: doneK, keep: null, key: true, text: 'ノートパソコンは残っている。財布からキャッシュカードがない' });
     const noise = doneK - r.int(5, 15);
-    mem('downstairs', { t: noise, place: 'kajiApt', text: '何かが倒れるような音', fadeDays: 6, newsAdds: '車の音もした気がする' });
+    mem('downstairs', { t: noise, place: 'kajiApt', text: '夜の' + (Math.floor(noise % 1440 / 60) - 12) + '時' + (noise % 60 < 30 ? 'すぎ' : '半すぎ') + 'だったか、上で何かが倒れるような音がした', fadeDays: 6, newsAdds: '……そういえば、車の音もした気がする。ドアを閉めるような' });
+    mem('shinyu', { t: msgK, place: 'kajiApt', text: '金曜の夜、明日飲もうって。「高い店」って言うから、何かいいことあったのかと。……返事がなくて、土曜も日曜も。それで管理会社に', fadeDays: 365 });
     ev('tsuji', doneK, doneK + 50, 'tsujiHome', '帰る', 'train');
     const atmPlace2 = r.pick(['atmA', 'atmB', 'atmC'].filter(p => p !== atmPlace1)), atmT2 = T(12, 6, 9, r.pm(40, 30));
     ev('tsuji', atmT2 - 40, atmT2 + 5, atmPlace2, 'ATMで引き出す', 'train');
@@ -148,7 +151,7 @@
     tr('atmAizawa', { kind: '引き出し記録', place: 'atmEkimae', t: atmAizawa, keep: null, about: 'aizawa', innocent: '自分の口座。消費者金融の返済日', text: '相沢の口座 3万円' });
     tr('debtAizawa', { kind: '信用情報', place: '信用情報機関', t: T(12, 1, 0), keep: null, about: 'aizawa', innocent: '弁護士に債務整理を相談し、返済計画を始めたばかり', text: '消費者金融3社 約300万円' });
     tr('report2', { kind: '通報', place: '北見坂署', t: T(12, 7, 13, r.pm(0, 40)), keep: null, text: '連絡がつかない親友が管理会社と部屋に入り、発見' });
-    W.case2 = { visit: visitK, found: T(12, 7, 13, 0) };
+    W.case2 = { visit: visitK, found: T(12, 7, 13, 0), noise, news: T(12, 8, 18, 0) };
 
     /* ===== 三件目：1月16日（金）＝ たどり着けば防げる ===== */
     tr('hoshoLogSakaki', { kind: '閲覧記録', place: 'hosho', t: T(1, 8, 21, 30), keep: 365 * DAYM, erasable: true, about: 'tsuji', text: '榊葵 申込書 閲覧（社外から）' });

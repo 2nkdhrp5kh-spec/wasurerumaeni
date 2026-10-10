@@ -118,6 +118,7 @@
       buttons: [
         { label: '音の診断', value: 'diag', small: '曲が鳴らないとき。どの鳴らし方が使えるかを調べる' },
         { label: '事件の中の場面', value: 'case', small: '取調べ・満期・公判・数年後・終幕など' },
+        { label: '第五章（試作）：旭町事件', value: 'go', small: '世界から計算する捜査。二件目の現場まわり' },
         { label: '序章', value: 'prologue', small: 'ワルツ' },
         { label: '経歴：再審の証人', value: 'grave', small: '葬送行進曲。自分が捜査した事件の再審' },
         { label: '経歴：再審請求の証人', value: 'petition', small: '葬送行進曲。再審請求審' },
@@ -127,6 +128,7 @@
     if (!v) return;
     if (v === 'diag') { G.toast('調べています（数秒）'); const lines = await G.audio.diag(); await G.openPaper({ title: '音の診断', sub: '開発用', body: '<pre style="white-space:pre-wrap;font-size:12px">' + lines.map(x => x.replace(/</g, '&lt;')).join('\n') + '</pre>', noClose: true, buttons: [{ label: '閉じる', value: 1 }] }); return; }
     G.inMode = true;
+    if (v === 'go') { G.lawMode = 'keiji'; G.meta.prologueDone = true; G.meta.diffChosen = true; await G.cases.go.run(); return; }
     if (v === 'prologue') { G.lawMode = 'keiji'; await G.cases.akisu.run(); return; }
     if (v === 'warrant') { await G.hanji.duty(false); return; }
     if (v === 'hanjiTrial') { await G.hanji.trials(); return; }

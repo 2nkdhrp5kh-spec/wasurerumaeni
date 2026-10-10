@@ -248,7 +248,7 @@
       const b = document.createElement('button');
       b.className = 'act' + (a.primary ? ' primary' : '');
       const days = typeof a.days === 'function' ? a.days(S) : a.days;
-      const running = K.busy(a.id);
+      const running = !a.multi && K.busy(a.id);
       let dis = running || (tab === 'staff' && !free) || (tab === 'self' && S.selfUsed && !a.free);
       b.innerHTML = '<span class="l">' + (typeof a.label === 'function' ? a.label(S) : a.label) + (a.risk && G.diff() === 'easy' ? '<span class="risk">注意</span>' : '') + '</span><span class="s">' + (running ? '進行中' : (typeof a.sub === 'function' ? a.sub(S) : a.sub) || '') + '</span>'
         + (days != null && tab === 'staff' ? '<span class="d">' + (days === 0 ? '即日' : days + '日') + '</span>' : '');
@@ -293,12 +293,14 @@
       const s = K.freeStaff()[0]; if (!s) return;
       const days = typeof a.days === 'function' ? a.days(S) : a.days;
       if (a.once !== false) S.done[a.id] = true;
-      const t = { aid: a.id, staff: s.id, label: a.short || a.label, doneDay: S.day + days };
+      const t = { aid: a.id, staff: s.id, label: a.short || a.label, doneDay: S.day + days, at: S.day };
       if (a.start) { const r = a.start(S); if (r === false) { delete S.done[a.id]; return; } }
+      // 何を・どこで・いつの分を、を選ぶ行動（答えは task に持たせ、終わったときに渡す）
+      if (a.ask) { const q = await a.ask(S); if (q == null) { delete S.done[a.id]; K.render(); return; } t.q = q; if (q.label) t.label = q.label; }
       if (days === 0) { await finishTask(t, a); K.render(); return; }
       S.tasks.push(t);
       K.refresh();
-      G.toast(s.name + 'に「' + (a.short || a.label) + '」を指示した（' + days + '日）');
+      G.toast(s.name + 'に「' + t.label + '」を指示した（' + days + '日）');
     } else {
       const lab = typeof a.label === 'function' ? a.label(S) : (a.label || '');
       if (/任意で話を聴く/.test(lab)) await G.tip('ninni', [['shirai', '主任。逮捕する前の*任意*の聴取は、*録画の義務*はありません。相手は、いつでも席を立って帰れます。', { scene: { bg: 'office', who: 'shirai' } }], ['shirai', '……ここで無理をすると、あとで「任意じゃなかった」と言われます。まあ、覚えておいてください。']]);
@@ -315,7 +317,7 @@
   }
   async function finishTask(t, a) {
     S.fin[a.id] = true;
-    const lines = a.done ? a.done(S) : [];
+    const lines = a.done ? a.done(S, t) : [];
     if (lines && lines.length) { G.drawScene(C.scene(S)); await G.talk(lines); }
   }
 
@@ -402,7 +404,7 @@
     for (const t of due) {
       const a = C.actions.find(x => x.id === t.aid);
       S.fin[t.aid] = true;
-      const ls = a && a.done ? a.done(S) : [];
+      const ls = a && a.done ? a.done(S, t) : [];
       const s = C.staff.find(x => x.id === t.staff);
       lines.push(['', '（' + (s ? s.name : '') + 'が「' + t.label + '」を終えて戻った。）']);
       (ls || []).forEach(l => lines.push(l));
