@@ -349,7 +349,7 @@
       const S = { c: { truth: G.devTruth || (rnd() < .5 ? 'D' : 'A'), sess: { A: 0, B: 0, C: 0, D: 0, E: 0 } } };
       G.audio.cue('titleOut'); G.audio.ambient('office');   // 前の曲は、事件名の暗転と一緒に消える
       await G.curtain(['<div class="big">北見坂駅前事件</div><div class="small">駅前の路上で、男性が倒れた</div>']);
-      G.audio.cue('main');
+      G.audio.cue('case_ekimae');
       G.auditCtx = { suspect: 'toda', inCustody: () => inC(S) };
       await K.start(C, S);
       G.audio.ambient(null);

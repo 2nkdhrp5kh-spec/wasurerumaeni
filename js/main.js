@@ -164,17 +164,20 @@
     G.openPaper({ title: 'クレジット', body:
       '<h4>音楽（録音）</h4>'
       + G.kv([['導入', 'ショパン《舟歌》作品60<br>演奏：Veronika Ilinskaya（Musopen）<br>CC BY 3.0 ／ Wikimedia Commons「Chopin - Barcarole-op-60.ogg」'],
-        ['序章', 'ショパン《ワルツ第3番》作品34-2<br>演奏：Luke Faulkner（Musopen）／CC0'],
-        ['本章', 'ベートーヴェン《交響曲第3番》第2楽章<br>演奏：Czech National Symphony Orchestra（Musopen）／CC0'],
+        ['序章', 'バッハ《無伴奏チェロ組曲》第1番 プレリュード、アルマンド<br>演奏：John Michel<br>CC BY-SA 3.0 ／ Wikimedia Commons「JOHN MICHEL CELLO-J S BACH CELLO SUITE 1 in G Prelude.ogg」「… Allemande.ogg」'],
+        ['青柳書房事件', 'ベートーヴェン《ピアノソナタ第8番》第2楽章<br>演奏：Paul Pitman（Musopen）／CC0'],
+        ['北見坂駅前事件', 'バッハ《無伴奏チェロ組曲》第3番 サラバンド<br>演奏：John Michel<br>CC BY-SA 3.0 ／ Wikimedia Commons「JOHN MICHEL CELLO-J S BACH CELLO SUITE 3 in C Sarabande.ogg」'],
+        ['7時16分発', 'ショパン《ワルツ第3番》作品34-2<br>演奏：Luke Faulkner（Musopen）／CC0'],
+        ['本町三丁目火災', 'バッハ《無伴奏チェロ組曲》第5番 プレリュード（ヴィオラ演奏）<br>演奏：Elias Goldstein<br>CC BY-SA 2.0 ／ Wikimedia Commons「Bach - Cello Suite No. 5 - 1. Prelude.ogg」<br>ベートーヴェン《ピアノソナタ第12番》第3楽章<br>演奏：Artur Schnabel（1932年）／Wikimedia Commons（PD-EU-audio。仮）'],
+        ['第五章', 'ベートーヴェン《交響曲第3番》第2楽章<br>演奏：Czech National Symphony Orchestra（Musopen）／CC0'],
         ['取調べ', 'ショパン《24の前奏曲》作品28 第20番<br>演奏：Ivan Ilić（Musopen）<br>CC BY 3.0 ／ Wikimedia Commons「Chopin - Preludes, Op. 28 - No. 20 \'Funeral march\'.ogg」'],
         ['満期', 'ショパン《夜想曲第13番》作品48-1<br>演奏：Luke Faulkner／CC0'],
         ['公判・判決', 'ベートーヴェン《ピアノソナタ第31番》作品110 第3楽章<br>演奏：Musopen／パブリックドメイン'],
-        ['数年後', 'ショパン《夜想曲第20番》嬰ハ短調 遺作<br>演奏：Musopen／CC0'],
+        ['数年後・終幕', 'ショパン《夜想曲第20番》嬰ハ短調 遺作<br>演奏：Musopen／CC0'],
         ['経歴　再審', 'ショパン《ピアノソナタ第2番》第3楽章（葬送行進曲）<br>演奏：Andreas Xenopoulos（Musopen）／CC0'],
-        ['終幕', 'ベートーヴェン《ピアノソナタ第8番》第2楽章<br>演奏：Paul Pitman（Musopen）／CC0'],
-        ['判事編　公判', 'ベートーヴェン《ピアノソナタ第21番》作品53 第2楽章<br>演奏：Musopen／パブリックドメイン'],
+        ['経歴　終章（再審のないとき）', 'ショパン《練習曲》作品25-7<br>演奏：La Pianista（Wikipedia 利用者）<br>CC BY-SA 3.0 ／ Wikimedia Commons「Chopin - Etude Op. 25, No. 7.ogg」'],
         ['判事編　令状当番', 'バッハ《ゴルトベルク変奏曲》全曲<br>演奏：Kimiko Ishizaka（Open Goldberg Variations）／CC0'],
-        ['経歴　終章（再審のないとき）', 'ショパン《練習曲》作品25-7<br>演奏：La Pianista（Wikipedia 利用者）<br>CC BY-SA 3.0 ／ Wikimedia Commons「Chopin - Etude Op. 25, No. 7.ogg」']])
+        ['判事編　公判', 'ベートーヴェン《ピアノソナタ第21番》作品53 第2楽章<br>演奏：Musopen／パブリックドメイン']])
       + '<h4>引用</h4>' + G.kv([['刑事編の冒頭', '平野龍一『刑事訴訟法概説』（東京大学出版会、1968年）1頁'], ['判事編の冒頭', '平野龍一「現行刑事訴訟の診断」『団藤重光博士古稀祝賀論文集 第4巻』（有斐閣、1985年）407頁以下']])
       + '<h4>条文</h4>' + G.P('e-Gov法令検索（デジタル庁）による現行法令')
       + '<h4>フォント</h4>' + G.P('DotGothic16（Fontworks）、Noto Serif JP（Google）、Yuji Syuku（Kinuta Font Factory）。いずれも SIL Open Font License 1.1。ライセンス文は fonts フォルダに同梱。')

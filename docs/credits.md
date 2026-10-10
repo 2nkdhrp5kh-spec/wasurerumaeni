@@ -17,9 +17,19 @@
 | 令状当番（warrant） | バッハ ゴルトベルク変奏曲 全曲（アリア、第1〜第30変奏、アリア・ダ・カーポ） | Kimiko Ishizaka（Open Goldberg Variations） | Kimiko Ishizaka - 01 - Aria.ogg 〜 32 - Aria da Capo Fine.ogg（Commons の分類「The Open Goldberg Variations by Kimiko Ishizaka (album)」） | CC0（01・16・32で確認） | audio/goldberg-aria.mp3、audio/goldberg-02.mp3〜32.mp3（64kbps） |
 | 経歴の終章で、再審が来なかったとき（witness） | ショパン 練習曲 作品25-7 | La Pianista（Wikipedia 利用者） | Chopin - Etude Op. 25, No. 7.ogg | CC BY-SA 3.0（表記が必要。編集したものを配るときは同じライセンスで） | audio/etude25-7.mp3 |
 
+| 序章（prologue） | バッハ 無伴奏チェロ組曲1番 プレリュード → アルマンド | John Michel | JOHN MICHEL CELLO-J S BACH CELLO SUITE 1 in G Prelude.ogg ／ … Allemande.ogg | CC BY-SA 3.0（表記が必要） | audio/cello1-prelude.mp3、audio/cello1-allemande.mp3 |
+| 北見坂駅前事件の捜査（case_ekimae） | バッハ 無伴奏チェロ組曲3番 サラバンド | John Michel | JOHN MICHEL CELLO-J S BACH CELLO SUITE 3 in C Sarabande.ogg | CC BY-SA 3.0（表記が必要） | audio/cello3-sarabande.mp3 |
+| 本町三丁目火災の捜査（case_kasai） | バッハ 無伴奏チェロ組曲5番 プレリュード（ヴィオラ演奏） | Elias Goldstein（ibiblio Pandora collection） | Bach - Cello Suite No. 5 - 1. Prelude.ogg | CC BY-SA 2.0（EFF Open Audio License と互換。表記が必要） | audio/cello5-prelude.mp3 |
+| 本町三丁目火災の捜査（続けて） | ベートーヴェン ピアノソナタ12番 第3楽章 | Artur Schnabel（1932年） | Klaviersonate Nr. 12 B-Dur, op. 26 - III.Marcia Funebre - Andante maestoso.ogg | PD-EU-audio。**米国では2032年まで保護されうるので、配る前に別の録音へ差し替える（仮）** | audio/op26-3.mp3 |
+
+曲の割り当ての変更（2026年10月）：序章はワルツからチェロ組曲1番へ。英雄は第五章専用に。悲愴は終幕から青柳書房事件の捜査へ。ワルツは7時16分発の捜査へ。終幕は数年後の夜想曲20番が続く。
+
 ## 使わない候補
 - 舟歌 Olga Gurevich（CC BY-SA 4.0）：編集すると継承義務。Ilinskaya 版（CC BY 3.0）を優先。
 - 舟歌 Martha Argerich 1962／Marcelle Meyer 1950年代：Commons では Public domain 表示だが、米国では1972年以前の録音が2067年まで保護されうるため、一般公開には使わない。
 - 葬送行進曲 Paul Pitman 版（CC-PD 表示）：Xenopoulos 版（CC0）を優先。
 - 前奏曲 28-20 の MIDI 版（Michael Angelkovich）：打ち込み。Ilić 版を優先。
 - 「Here's to You」、ヴァンゲリス「La Petite Fille De La Mer」：作曲・録音とも権利存続。
+- チェロ組曲1番 Pablo Casals（1929〜39年）：PD-EU-audio だが、米国では保護されうるので使わない。
+- チェロ組曲2番 プレリュード：Commons に録音なし（2026年10月）。
+- 《見よ、勇者は帰る》の主題による12の変奏曲 WoO 45：Commons に録音なし（2026年10月）。入手先を探している。

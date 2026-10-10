@@ -17,7 +17,12 @@
     waldstein:  'audio/waldstein2.mp3',   // ベートーヴェン ピアノソナタ第21番 第2楽章（判事編の公判）
     aria:       'audio/goldberg-aria.mp3',// バッハ ゴルトベルク変奏曲 アリア（令状当番）
     etude257:   'audio/etude25-7.mp3',    // ショパン 練習曲 作品25-7（経歴の終章：再審が来なかったとき）
-    funeral:    'audio/sonata2-3.mp3'     // ショパン ピアノソナタ第2番 第3楽章（自分が捜査した事件の再審に、証人として呼ばれる場面だけ）
+    funeral:    'audio/sonata2-3.mp3',     // ショパン ピアノソナタ第2番 第3楽章（自分が捜査した事件の再審に、証人として呼ばれる場面だけ）
+    cello1p:    'audio/cello1-prelude.mp3',   // バッハ 無伴奏チェロ組曲1番 プレリュード（序章）
+    cello1a:    'audio/cello1-allemande.mp3', // 同 アルマンド（序章）
+    cello3s:    'audio/cello3-sarabande.mp3', // 同 3番 サラバンド（北見坂駅前事件）
+    cello5p:    'audio/cello5-prelude.mp3',   // 同 5番 プレリュード（ヴィオラ演奏。本町三丁目火災）
+    op26:       'audio/op26-3.mp3'            // ベートーヴェン ピアノソナタ12番 第3楽章「ある英雄の死を悼む葬送行進曲」（本町三丁目火災。仮：1932年録音）
   };
   // ゴルトベルク変奏曲の第1変奏〜アリア・ダ・カーポ（Kimiko Ishizaka、CC0）。令状当番で、アリアから続けて流す
   const GOLDBERG = [];
@@ -30,19 +35,25 @@
     title:        { t: 'barcarolle', at: 0 },
     quote:        { t: 'barcarolle', at: 0 },
     law1:         { t: null, fade: 3 },          // タイトルから刑事編へ：暗転と一緒に消える
-    prologue:     { t: 'waltz', at: 0, restart: true },
-    prologueSolve:{ t: 'waltz', at: 150, restart: true },
-    main:         { t: 'eroica', at: 0, restart: true },
-    arrest:       { t: 'eroica', at: 255, restart: true },
-    confession:   { t: 'eroica', at: 470, restart: true },
-    soutchi:      { t: 'eroica', at: 760, restart: true },
+    // 捜査中の曲は事件ごと。経歴が進むほど重くなる（序章 → 青柳 → 駅前 → 7時16分発 → 火災 → 第五章）
+    prologue:     { t: 'cello1p', at: 0, then: ['cello1a'], restart: true },
+    prologueSolve:{ keep: true },
+    case_aoyagi:  { t: 'pathetique', at: 0, restart: true },
+    case_ekimae:  { t: 'cello3s', at: 0, restart: true },
+    case_chikan:  { t: 'waltz', at: 0, restart: true },
+    case_kasai:   { t: 'cello5p', at: 0, then: ['op26'], restart: true },
+    case_eiyu:    { t: 'eroica', at: 0, restart: true },   // 第五章（英雄）専用
+    main:         { keep: true },
+    arrest:       { keep: true },          // 逮捕・自白・送致では曲を変えない（事件の曲が続く）
+    confession:   { keep: true },
+    soutchi:      { keep: true },
     interro:      { t: 'prelude20', at: 0, then: ['noct48'] },   // 取調べのたびに頭から鳴らし直さない
     expiry:       { t: 'noct48', at: 0, restart: true },
     trial:        { t: 'op110', at: OP110_START, loopAt: OP110_START, restart: true },
     verdict:      { t: 'op110', at: OP110_START, loopAt: OP110_START },   // 公判から鳴っていれば、そのまま続ける
     years:        { t: 'noct20', at: 0, restart: true },
     grave:        { t: 'funeral', at: 0, restart: true },
-    finale:       { t: 'pathetique', at: 0, restart: true },
+    finale:       { keep: true },          // 数年後の曲（夜想曲20番）が、終幕まで続く
     hanjiTrial:   { t: 'waldstein', at: 0, then: ['op110'], restart: true },   // 公判の記録を読むのは長い。刑事編の公判の曲に続ける
     warrant:      { t: 'aria', at: 0, then: GOLDBERG, gap: 2, restart: true },   // アリアから全曲を通して。曲のあいだは2秒だけ
     witness:      { t: 'etude257', at: 0, restart: true },
@@ -80,7 +91,7 @@
 
   let pendingCue = null;
   function cue(id) {
-    const c = CUES[id]; if (!c) return;
+    const c = CUES[id]; if (!c || c.keep) return;
     if (!AC) { pendingCue = id; return; }
     if (!c.t) { stopCurrent(c.fade || 2.5); return; }
     if (current && current.name === c.t && !c.restart) return;
